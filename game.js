@@ -96,8 +96,8 @@ function sidePos(s,a,b){ const d=SD[s]; return [d.o[0]*H+d.t[0]*a+d.o[0]*b, d.o[
 function localOf(s,x,z){ const d=SD[s]; const cx=d.o[0]*H, cz=d.o[1]*H; return [(x-cx)*d.t[0]+(z-cz)*d.t[1], (x-cx)*d.o[0]+(z-cz)*d.o[1]]; }
 function inW(x,z){ return Math.abs(x)<H&&Math.abs(z)<H; }
 function inBase(x,z){ return Math.abs(x)<H+1.2&&Math.abs(z)<H+1.2; }
-const DEPOT=new THREE.Vector3(-8.4,0,-9.0), STALL=new THREE.Vector3(H-5.5,0,4.2), TREASURY=new THREE.Vector3(H-3.2,0,8.4);
-function placeBuildings(){ DEPOT.set(-8.4,0,-9.0); STALL.set(H-5.5,0,4.2); TREASURY.set(H-3.2,0,8.4); if(typeof depot!=='undefined') depot.position.copy(DEPOT); if(typeof stall!=='undefined') stall.position.copy(STALL); if(typeof treasury!=='undefined') treasury.position.copy(TREASURY); for(const L of (typeof labels!=='undefined'?labels:[])){ if(L.src) L.pos.copy(L.src); } }
+const DEPOT=new THREE.Vector3(-8.4,0,-9.0), STALL=new THREE.Vector3(H-5.5,0,3.0), TREASURY=new THREE.Vector3(H-3.2,0,8.4);
+function placeBuildings(){ DEPOT.set(-8.4,0,-9.0); STALL.set(H-5.5,0,3.0); TREASURY.set(H-3.2,0,8.4); if(typeof depot!=='undefined') depot.position.copy(DEPOT); if(typeof stall!=='undefined') stall.position.copy(STALL); if(typeof treasury!=='undefined') treasury.position.copy(TREASURY); for(const L of (typeof labels!=='undefined'?labels:[])){ if(L.src) L.pos.copy(L.src); } }
 const ROADS={ N:[[0,-98],[-4,-84],[3,-68],[-3,-52],[2,-40],[0,-34]], E:[[98,0],[84,4],[68,-3],[52,3],[40,-2],[34,0]], S:[[0,98],[4,84],[-3,68],[3,52],[-2,40],[0,34]], W:[[-98,0],[-84,-4],[-68,3],[-52,-3],[-40,2],[-34,0]] };
 function roadPath(s){ return ROADS[s].concat([sidePos(s,0,0),[0,0]]); }
 function roadDist(x,z){ let best=1e9; for(const s of SIDES){ const P=roadPath(s); for(let i=0;i<P.length-1;i++){ const [ax,az]=P[i],[bx,bz]=P[i+1]; const dx=bx-ax,dz=bz-az; const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1); const d=Math.hypot(ax+dx*t-x,az+dz*t-z); if(d<best) best=d; } } return best; }
@@ -347,7 +347,7 @@ const LOOT_MAX=200; const lootMesh=new THREE.InstancedMesh(helmGeo,M.enemy,LOOT_
 function dropLoot(x,z){ if(loot.length>=LOOT_MAX) loot.shift(); loot.push({x:x+rand(-.6,.6),y:1,z:z+rand(-.6,.6),vy:rand(3,6),ry:rand(0,6),t:0,fly:false,auto:false,taken:false}); }
 function updateLoot(dt){ const p=player.g.position; const R=D.magnet(); let got=0;
   for(let i=loot.length-1;i>=0;i--){ const l=loot[i]; l.t+=dt;
-    if(l.auto){ const dx=STALL.x-l.x, dy=1.4-l.y, dz=STALL.z-l.z, d=Math.hypot(dx,dy,dz); const sp=(9+l.t*30)*dt; if(d<Math.max(0.5,sp)){ loot.splice(i,1); S.stall++; continue; } l.x+=dx/d*sp; l.y+=dy/d*sp+Math.sin(l.t*3)*0.02; l.z+=dz/d*sp; continue; }
+    if(l.auto){ const dx=STALL.x-l.x, dy=1.4-l.y, dz=STALL.z+0.6-l.z, d=Math.hypot(dx,dy,dz); const sp=(9+l.t*30)*dt; if(d<Math.max(0.5,sp)){ loot.splice(i,1); S.stall++; continue; } l.x+=dx/d*sp; l.y+=dy/d*sp+Math.sin(l.t*3)*0.02; l.z+=dz/d*sp; continue; }
     if(!l.fly){ if(l.y>0.02||l.vy>0){ l.vy-=20*dt; l.y=Math.max(0.02,l.y+l.vy*dt); if(l.y<=0.02) l.vy=0; } const d=Math.hypot(l.x-p.x,l.z-p.z); if(l.t>0.4&&d<R&&S.loot<D.cap()&&!l.taken){ l.fly=true; l.t=0; } else if(l.t>7&&!l.taken){ l.auto=true; l.t=0; } }
     else { l.t+=dt; const dx=p.x-l.x, dy=1.2-l.y, dz=p.z-l.z, d=Math.hypot(dx,dy,dz); const sp=(7+l.t*40)*dt; if(d<Math.max(0.5,sp)){ loot.splice(i,1); if(S.loot<D.cap()){ S.loot++; setBack(player); got++; } continue; } l.x+=dx/d*sp; l.y+=dy/d*sp; l.z+=dz/d*sp; } }
   if(got>0) SFX.sell();
@@ -378,28 +378,29 @@ function coinPop(){ const el=$('coinChip'); el.style.transform='scale(1.18)'; se
 
 // ---------- Ganimet tezgâhı, hazine, müşteriler (doğu kapısından gelir) ----------
 const stall=new THREE.Group(); const stallPile=new THREE.InstancedMesh(helmGeo,M.enemy,30); stallPile.count=0; stallPile.castShadow=true;
-(function(){ const counter=mesh(G.box,M.plank,1.2,1.0,4.2); counter.position.set(0.6,0.5,0); const top=mesh(G.box,M.woodDark,1.4,0.12,4.4); top.position.set(0.6,1.05,0); for(const z of [-1.9,1.9]){ const p=mesh(G.cyl,M.woodDark,0.1,3.2,0.1); p.position.set(0.6,1.6,z); stall.add(p);} const awn=mesh(G.box,M.banner,2.4,0.1,4.6); awn.position.set(1.0,3.1,0); awn.rotation.z=0.25; const awn2=mesh(G.box,M.flag,2.4,0.1,0.5); awn2.position.set(1.0,3.1,0); awn2.rotation.z=0.25; stall.add(counter,top,awn,awn2);
-  for(let i=0;i<30;i++){ const row=Math.floor(i/6), col=i%6; vp.set(0.6+(row%2)*0.2,1.15+row*0.35,-1.6+col*0.62); e3.set(0,rand(0,6),0); q.setFromEuler(e3); vs.set(0.6,0.6,0.6); m4.compose(vp,q,vs); stallPile.setMatrixAt(i,m4);} stall.add(stallPile); stall.rotation.y=Math.PI/2; stall.position.copy(STALL); scene.add(stall); })();
+(function(){ const counter=mesh(G.box,M.plank,1.2,1.0,4.2); counter.position.set(0.6,0.5,0); const top=mesh(G.box,M.woodDark,1.4,0.12,4.4); top.position.set(0.6,1.05,0); for(const z of [-1.9,1.9]){ for(const x of [-0.3,1.3]){ const p=mesh(G.cyl,M.woodDark,0.09,3.0,0.09); p.position.set(x,1.5,z); stall.add(p);} } const skirt=mesh(G.box,M.woodDark,1.25,0.35,4.25,false); skirt.position.set(0.6,0.2,0); stall.add(skirt); for(let i=0;i<7;i++){ const st=mesh(G.box,i%2?M.flower:M.banner,2.6,0.08,4.6/7); st.position.set(0.5,3.05,-2.3+4.6/7*(i+0.5)); st.rotation.z=0.22; stall.add(st);} const ridge=mesh(G.box,M.woodDark,0.12,0.12,4.7,false); ridge.position.set(-0.75,3.35,0); stall.add(ridge); const back=mesh(G.box,M.plank,0.12,2.2,4.2,false); back.position.set(-0.4,1.9,0); stall.add(back); const sign=mesh(G.box,M.flag,0.1,0.5,2.0,false); sign.position.set(-0.32,2.2,0); stall.add(sign); const shelf=mesh(G.box,M.woodDark,0.5,0.08,3.8,false); shelf.position.set(-0.2,1.5,0); stall.add(shelf); stall.add(counter,top);
+  for(let i=0;i<30;i++){ const row=Math.floor(i/6), col=i%6; vp.set(0.6+(row%2)*0.2,1.15+row*0.35,-1.6+col*0.62); e3.set(0,rand(0,6),0); q.setFromEuler(e3); vs.set(0.6,0.6,0.6); m4.compose(vp,q,vs); stallPile.setMatrixAt(i,m4);} stall.add(stallPile); stall.rotation.y=-Math.PI/2; stall.position.copy(STALL); scene.add(stall); })();
 const treasury=new THREE.Group(); const bankPile=new THREE.InstancedMesh(G.coin,M.coin,90); bankPile.count=0; bankPile.castShadow=true;
 (function(){ const base=mesh(G.box,M.plank,2.8,0.3,2.8); base.position.y=0.15; const rim=mesh(G.box,M.woodDark,3.0,0.12,3.0); rim.position.y=0.02; for(let i=0;i<90;i++){ const col=i%9, row=Math.floor(i/9); const cx=(col%3)-1, cz=Math.floor(col/3)-1; vp.set(cx*0.85,0.4+row*0.15,cz*0.85); e3.set(0,rand(0,6),0); q.setFromEuler(e3); vs.set(0.9,0.9,0.9); m4.compose(vp,q,vs); bankPile.setMatrixAt(i,m4);} treasury.add(base,rim,bankPile); treasury.position.copy(TREASURY); scene.add(treasury); })();
 const bankLabel=addLabel(TREASURY,'',2.6); bankLabel.near=-1; let withdrawT=0;
 function bankIn(amount){ S.bank+=amount; }
 function updateTreasury(dt){ const p=player.g.position; bankPile.count=Math.min(90,Math.ceil(S.bank/4)); bankLabel.el.innerHTML=`Hazine<small><b>${Math.floor(S.bank)}</b> altın</small>`;
   if(S.bank>0.5&&p.distanceTo(TREASURY)<2.6){ withdrawT-=dt; if(withdrawT<=0){ withdrawT=0.05; const amt=Math.min(S.bank,Math.max(3,S.bank/12)); S.bank-=amt; fly(TREASURY.clone().setY(0.9),player.g,()=>{ S.coins+=amt; coinPop(); },false,5); if(coinSfxT<=0){ coinSfxT=0.08; SFX.coin(); } } } }
-const customers=[]; const CUST_N=5; let stallT=0, custSpawnT=0;
-function custSlot(i){ return [STALL.x+1.9-i*1.3, 1.6]; }
+const customers=[]; const CUST_N=4; let stallT=0, custSpawnT=0;
+function custSlot(i){ return [STALL.x+1.9-i*1.3, 5.6]; }
+const stallDrop=()=>STALL.clone().add(new THREE.Vector3(rand(-1.5,1.5),1.4,0.6));
 function makeCustomer(){ const g=makeGuy('worker'); g.tool.visible=false; g.g.position.set(H+30,0,1.6+rand(-.3,.3)); scene.add(g.g); customers.push({guy:g,state:'walk',t:0}); }
 function updateCustomers(dt){
   custSpawnT-=dt; if(customers.filter(c=>c.state!=='leave').length<CUST_N&&custSpawnT<=0){ custSpawnT=0.8; makeCustomer(); }
   let qi=0;
   for(let i=customers.length-1;i>=0;i--){ const c=customers[i]; const p=c.guy.g.position;
-    if(c.state==='leave'){ c.t+=dt; if(p.z>-1.6&&p.x<H-1){ p.z-=3*dt; } p.x+=6*dt; c.guy.g.rotation.y=Math.PI/2; animGuy(c.guy,dt,true,0.9); if(p.x>H+26){ scene.remove(c.guy.g); customers.splice(i,1); } continue; }
-    const [sx,sz]=custSlot(qi); qi++; const dx=sx-p.x, dz=sz-p.z, d=Math.hypot(dx,dz);
+    if(c.state==='leave'){ c.t+=dt; let dx=6,dz=0; if(p.x<H-2.4&&p.z>-1.6){ dx=6; dz=0; } else if(p.z>-1.6){ dx=0; dz=-5; } p.x+=dx*dt; p.z+=dz*dt; c.guy.g.rotation.y=Math.atan2(dx,dz); animGuy(c.guy,dt,true,0.9); if(p.x>H+26){ scene.remove(c.guy.g); customers.splice(i,1); } continue; }
+    let [sx,sz]=custSlot(qi); qi++; if(p.x>H-2.5){ sx=H-2.6; sz=1.6; } else if(p.z<5.3&&p.x>sx+0.2){ sx=H-2.6; sz=5.6; } const dx=sx-p.x, dz=sz-p.z, d=Math.hypot(dx,dz);
     if(d>0.15){ p.x+=dx/d*Math.min(d,4.2*dt); p.z+=dz/d*Math.min(d,4.2*dt); c.guy.g.rotation.y=Math.atan2(dx,dz); animGuy(c.guy,dt,true,0.9); c.state='walk'; }
     else { c.state='queue'; c.guy.g.rotation.y=Math.PI; animGuy(c.guy,dt,false,1); }
   }
   const first=customers.find(c=>c.state==='queue'); stallT-=dt;
-  if(first&&S.stall>0&&stallT<=0){ stallT=D.buyTime(); S.stall--; stallPile.count=Math.min(30,S.stall); const price=D.lootPrice(); first.state='leave'; first.t=0; SFX.coin(); const from=STALL.clone().add(new THREE.Vector3(rand(-1.5,1.5),1.4,-0.4)); const n=Math.max(2,Math.round(price/6)); for(let i=0;i<n;i++) setTimeout(()=>fly(from,TREASURY.clone().setY(0.6),()=>{ bankIn(price/n); },false,4),i*50); floatText(from,`+${Math.round(price)}`,''); }
+  if(first&&S.stall>0&&stallT<=0){ stallT=D.buyTime(); S.stall--; stallPile.count=Math.min(30,S.stall); const price=D.lootPrice(); first.state='leave'; first.t=0; SFX.coin(); const from=STALL.clone().add(new THREE.Vector3(rand(-1.5,1.5),1.4,0.5)); const n=Math.max(2,Math.round(price/6)); for(let i=0;i<n;i++) setTimeout(()=>fly(from,TREASURY.clone().setY(0.6),()=>{ bankIn(price/n); },false,4),i*50); floatText(from,`+${Math.round(price)}`,''); }
   stallPile.count=Math.min(30,S.stall);
 }
 stallPile.count=Math.min(30,S.stall);
@@ -559,10 +560,10 @@ for(let i=0;i<(S.lv.collector||0);i++) addCollector();
 function updateCollectors(dt){ for(const c of collectors){ const p=c.guy.g.position;
   if(c.state==='idle'){ c.moving=false; let best=null,bd=1e9; for(const l of loot){ if(l.fly||l.auto||l.taken) continue; const d=Math.hypot(l.x-p.x,l.z-p.z); if(d<bd){bd=d;best=l;} } if(best&&c.logs<c.cap){ c.target=best; best.taken=true; c.state='toLoot'; } else if(c.logs>0){ c.state='toStall'; } else if(Math.hypot(p.x,p.z-3)>3){ walkTo(c,rand(-2,2),rand(2,4),1.5,dt); } }
   else if(c.state==='toLoot'){ const l=c.target; if(!l||!loot.includes(l)||l.fly||l.auto){ if(l) l.taken=false; c.state='idle'; continue; } if(walkTo(c,l.x,l.z,0.9,dt)){ const i=loot.indexOf(l); if(i>=0) loot.splice(i,1); c.logs++; setLootBack(c.guy,c.logs); c.state='idle'; } }
-  else if(c.state==='toStall'){ if(walkTo(c,STALL.x-2.4,STALL.z-1.2,1.4,dt)){ c.sellT=(c.sellT||0)-dt; if(c.sellT<=0&&c.logs>0){ c.sellT=0.08; c.logs--; setLootBack(c.guy,c.logs); fly(p.clone().setY(1.4),STALL.clone().add(new THREE.Vector3(rand(-1.5,1.5),1.4,-0.6)),()=>{ S.stall++; },false,5); } if(c.logs<=0) c.state='idle'; } }
+  else if(c.state==='toStall'){ if(walkTo(c,STALL.x-2.9,STALL.z+0.8,1.4,dt)){ c.sellT=(c.sellT||0)-dt; if(c.sellT<=0&&c.logs>0){ c.sellT=0.08; c.logs--; setLootBack(c.guy,c.logs); fly(p.clone().setY(1.4),stallDrop(),()=>{ S.stall++; },false,5); } if(c.logs<=0) c.state='idle'; } }
   animGuy(c.guy,dt,c.moving,0.9); } }
 let traderNpc=null;
-function updateTraderNpc(dt){ if(S.lv.trader>=1&&!traderNpc){ traderNpc=makeGuy('worker'); traderNpc.tool.visible=false; const hat=mesh(G.cone,M.flag,0.45,0.5,0.45); hat.position.y=2.1; traderNpc.root.add(hat); scene.add(traderNpc.g); } if(traderNpc){ traderNpc.g.position.set(STALL.x,0,STALL.z+0.9); traderNpc.g.rotation.y=Math.PI; animGuy(traderNpc,dt,false,1); traderNpc.armR.rotation.x=-0.6+Math.sin(performance.now()/300)*0.3; } }
+function updateTraderNpc(dt){ if(S.lv.trader>=1&&!traderNpc){ traderNpc=makeGuy('worker'); traderNpc.tool.visible=false; const hat=mesh(G.cone,M.flag,0.45,0.5,0.45); hat.position.y=2.1; traderNpc.root.add(hat); scene.add(traderNpc.g); } if(traderNpc){ traderNpc.g.position.set(STALL.x,0,STALL.z-1.0); traderNpc.g.rotation.y=0; animGuy(traderNpc,dt,false,1); traderNpc.armR.rotation.x=-0.6+Math.sin(performance.now()/300)*0.3; } }
 
 // ---------- İşçiler ve yol bulma (dört kapı) ----------
 const workers=[];
@@ -575,7 +576,7 @@ function inChannel(s,x,z){ const [a,b]=localOf(s,x,z); return Math.abs(a)<1.3&&b
 function bestGate(px,pz,tx,tz){ let best='N',bd=1e9; for(const s of SIDES){ const i=gIn(s),o=gOut(s); const d=Math.hypot(px-i[0],pz-i[1])+Math.hypot(tx-o[0],tz-o[1]); if(d<bd){bd=d;best=s;} } return best; }
 function routeGoal(p,tx,tz){
   const inP=inW(p.x,p.z), inT=inW(tx,tz); const ch=SIDES.find(s=>inChannel(s,p.x,p.z));
-  if(inP&&inT){ if(ch){ const i=gIn(ch); if(Math.hypot(p.x-i[0],p.z-i[1])>0.6) return i; } return [tx,tz]; }
+  if(inP&&inT){ if(ch){ const b=localOf(ch,p.x,p.z)[1]; if(b>-1.3) return gIn(ch); } return [tx,tz]; }
   if(inP&&!inT){ const s=ch||bestGate(p.x,p.z,tx,tz); const i=gIn(s); if(ch||Math.hypot(p.x-i[0],p.z-i[1])<0.6) return gOut(s); return i; }
   if(!inP&&inT){ const s=ch||bestGate(tx,tz,p.x,p.z); const o=gOut(s); if(ch||Math.hypot(p.x-o[0],p.z-o[1])<0.6) return gIn(s); if(segHitsW(p.x,p.z,o[0],o[1])) return cornerVia(p,o[0],o[1]); return o; }
   if(segHitsW(p.x,p.z,tx,tz)) return cornerVia(p,tx,tz); return [tx,tz];
@@ -663,7 +664,7 @@ function updatePlayer(dt){
   animGuy(player,dt,moving,0.85+inp.l*0.3);
   if(S.logs>0&&p.distanceTo(DEPOT)<3.6){ sellT-=dt; if(sellT<=0){ sellT=0.05; S.logs--; setBack(player); storeLog(p); } }
   if(sellGain>0){ sellFlushT-=dt; if(sellFlushT<=0){ sellFlushT=0.4; floatText(p,`+${Math.round(sellGain)}`,''); sellGain=0; } }
-  if(S.loot>0&&p.distanceTo(STALL)<3.4){ sellT-=dt; if(sellT<=0){ sellT=0.06; S.loot--; setBack(player); fly(p.clone().setY(1.6),STALL.clone().add(new THREE.Vector3(rand(-1.5,1.5),1.4,-0.6)),()=>{ S.stall++; },false,5); } }
+  if(S.loot>0&&p.distanceTo(STALL)<3.4){ sellT-=dt; if(sellT<=0){ sellT=0.06; S.loot--; setBack(player); fly(p.clone().setY(1.6),stallDrop(),()=>{ S.stall++; },false,5); } }
   atkCd-=dt; const e=nearestEnemy(p,D.swordRange());
   if(e&&atkCd<=0){ atkCd=0.45; player.swing=0.3; SFX.slash(); const ang=Math.atan2(e.g.position.x-p.x,e.g.position.z-p.z); player.g.rotation.y=ang; slash.position.set(p.x,1.4,p.z); slash.rotation.z=-ang+Math.PI/2; slashT=0.22; for(const o of enemies){ if(o.dead) continue; const dx=o.g.position.x-p.x, dz=o.g.position.z-p.z; const d=Math.hypot(dx,dz); if(d<D.swordRange()+0.4&&(dx*Math.sin(ang)+dz*Math.cos(ang))/d>0.1) damageEnemy(o,D.swordDmg()); } }
   if(slashT>0){ slashT-=dt; slash.material.opacity=slashT/0.22*0.8; slash.scale.setScalar(1+(0.22-slashT)*1.5); } else slash.material.opacity=0;
