@@ -5,6 +5,6 @@ stamp=datetime.date.today().strftime('%-d %b %Y').replace('Sep','Eyl').replace('
 t=t.replace('<div class="sub">','<div class="sub">Sürüm '+ver+' · '+stamp+' · ')
 page=t.replace('// GAME_SCRIPT',s)
 full='<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#e8dcc0">'+page.replace('<canvas','</head><body><canvas',1)+'</body></html>'
-import os; os.makedirs('dist',exist_ok=True); open('dist/index.html','w').write(full)
+import os; os.makedirs('docs',exist_ok=True); open('docs/index.html','w').write(full)
 open('ormanin-bekcisi.html','w').write(page)
 print(len(full))
