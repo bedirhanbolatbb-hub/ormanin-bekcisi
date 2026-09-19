@@ -70,6 +70,12 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .bubble b{display:block;font-size:16px;font-weight:800;color:#ffd75e}
 .bubble span{display:block;font-family:var(--font-body);font-size:13px;font-weight:600;opacity:.92;margin-top:2px;white-space:normal}
 .bubble em{display:block;font-style:normal;font-size:13px;font-weight:800;margin-top:4px;color:#8ee38f}
+.bubble i{font-style:normal;font-size:12px;color:#fff;opacity:.8;font-weight:700}
+.bubble .bb{display:flex;gap:6px;justify-content:center;margin-top:7px;pointer-events:auto}
+.bubble button{font-family:var(--font-display);font-weight:800;font-size:14px;border:0;border-radius:10px;padding:7px 12px;background:#38b95d;color:#fff;cursor:pointer;touch-action:manipulation;box-shadow:0 3px 0 #23803d}
+.bubble button.off{background:#556;box-shadow:0 3px 0 #334;opacity:.85}
+.bubble button[data-act=no]{background:#d9534f;box-shadow:0 3px 0 #9c2f2c}
+.bubble button:active{transform:translateY(2px);box-shadow:none}
 .guide::after{content:"";position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:var(--ink);transform:translateX(-50%) rotate(45deg);border-radius:2px}
 .wl{position:fixed;left:0;top:0;transform:translate(-50%,-100%);pointer-events:none;z-index:3;background:rgba(255,253,247,.92);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:14px;padding:4px 10px;border-radius:10px;white-space:nowrap;text-align:center;line-height:1.15;box-shadow:0 2px 8px rgba(43,58,46,.18)}
 .wl.pad{background:rgba(43,58,46,.88);color:#fff;font-size:11px;padding:3px 7px;border-radius:9px;transform:translate(-50%,-100%);line-height:1.1}
@@ -116,9 +122,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="intro" id="intro">
   <div class="card">
     <h1>Ormanın Bekçisi</h1>
-    <p>Ağaç kes, odunla kule ve sur kur. Kapıya gelen kırmızı orduyu kılıçla biç; düştükleri miğferleri topla, tezgâhta müşterilere sat, altınla büyü.</p>
+    <p>Ormanın ortasındaki kaleyi dört kapısından koru. Ağaç kes, odunla sur ve kule kur; kırmızı orduyu kılıçla biç, miğferlerini tezgâhta sat, altınla büyü.</p>
     <button id="startBtn">Oyna</button>
-    <div class="sub">Telefonda: parmağınla sürükle · Bilgisayarda: WASD / ok tuşları</div>
+    <div class="sub">Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
   </div>
 </div>
 
