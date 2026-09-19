@@ -348,7 +348,7 @@ function dropLoot(x,z){ if(loot.length>=LOOT_MAX) loot.shift(); loot.push({x:x+r
 function updateLoot(dt){ const p=player.g.position; const R=D.magnet(); let got=0;
   for(let i=loot.length-1;i>=0;i--){ const l=loot[i]; l.t+=dt;
     if(l.auto){ const dx=STALL.x-l.x, dy=1.4-l.y, dz=STALL.z+0.6-l.z, d=Math.hypot(dx,dy,dz); const sp=(9+l.t*30)*dt; if(d<Math.max(0.5,sp)){ loot.splice(i,1); S.stall++; continue; } l.x+=dx/d*sp; l.y+=dy/d*sp+Math.sin(l.t*3)*0.02; l.z+=dz/d*sp; continue; }
-    if(!l.fly){ if(l.y>0.02||l.vy>0){ l.vy-=20*dt; l.y=Math.max(0.02,l.y+l.vy*dt); if(l.y<=0.02) l.vy=0; } const d=Math.hypot(l.x-p.x,l.z-p.z); if(l.t>0.4&&d<R&&S.loot<D.cap()&&!l.taken){ l.fly=true; l.t=0; } else if(l.t>7&&!l.taken){ l.auto=true; l.t=0; } }
+    if(!l.fly){ if(l.y>0.02||l.vy>0){ l.vy-=20*dt; l.y=Math.max(0.02,l.y+l.vy*dt); if(l.y<=0.02) l.vy=0; } const d=Math.hypot(l.x-p.x,l.z-p.z); if(l.t>0.4&&d<R&&S.loot<D.cap()){ l.fly=true; l.t=0; } else if(l.t>(l.taken?12:7)){ l.auto=true; l.t=0; } }
     else { l.t+=dt; const dx=p.x-l.x, dy=1.2-l.y, dz=p.z-l.z, d=Math.hypot(dx,dy,dz); const sp=(7+l.t*40)*dt; if(d<Math.max(0.5,sp)){ loot.splice(i,1); if(S.loot<D.cap()){ S.loot++; setBack(player); got++; } continue; } l.x+=dx/d*sp; l.y+=dy/d*sp; l.z+=dz/d*sp; } }
   if(got>0) SFX.sell();
   loot.forEach((l,i)=>{ vp.set(l.x,l.y,l.z); e3.set(l.fly||l.auto?l.t*10:0,l.ry,0); q.setFromEuler(e3); vs.set(1,1,1); m4.compose(vp,q,vs); lootMesh.setMatrixAt(i,m4); }); lootMesh.count=loot.length; lootMesh.instanceMatrix.needsUpdate=true; }
@@ -439,7 +439,7 @@ const PADS=[
 function towerPos(i){ const t=S.towers[i]; if(t.side==='C') return [0,0]; return sidePos(t.side,t.a,-1.5); }
 const FLANK_BASE={N:15,E:30,S:45,W:60};
 function towerDef(i){ const t=S.towers[i]; const isC=t.side==='C'; const name=t.k==='c'?'Topçu Kulesi':isC?'Merkez Kule':'Okçu Kulesi'; const desc=t.k==='c'?'Gülle atar; seviye = hasar + hız':isC?'Uzun menzilli, iki okçu; seviye = hasar + hız':'Ok atar; seviye = hasar + hız';
-  return {id:'t'+i, ti:i, name, desc, kind:'tower', max:MAXL, pos:()=>towerPos(i), res:l=>l===0?'wood':'gold', cost:l=>l===0?(isC?60:FLANK_BASE[t.side]):Math.round((t.k==='c'?60:40)*Math.pow(1.3,l-1)),
+  return {id:'t'+i, ti:i, name, desc, kind:'tower', max:MAXL, sc:isC?1.7:1.15, r:isC?2.9:2.0, pos:()=>towerPos(i), res:l=>l===0?'wood':'gold', cost:l=>l===0?(isC?60:FLANK_BASE[t.side]):Math.round((t.k==='c'?60:40)*Math.pow(1.3,l-1)),
     show:()=> isC? S.lv.expand>=1 : t.fixed? SIDES.indexOf(t.side)<sidesShown() : true }; }
 function padLevel(d){ return d.kind==='tower'? S.towers[d.ti].lvl : d.kind==='newTower'? d.lvl() : (S.lv[d.key]||0); }
 function padTexture(){ const c=document.createElement('canvas'); c.width=256; c.height=256; const tex=new THREE.CanvasTexture(c); tex.encoding=THREE.sRGBEncoding; return {c,tex}; }
@@ -457,7 +457,7 @@ function makePad(def){
   const g=new THREE.Group(); const pp=def.pos(); g.position.set(pp[0],0,pp[1]);
   const tex=padTexture(); const plane=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.2),new THREE.MeshBasicMaterial({map:tex.tex,transparent:true,depthWrite:false})); plane.rotation.x=-Math.PI/2; plane.position.y=0.05; plane.renderOrder=1;
   const fill=new THREE.Mesh(new THREE.PlaneGeometry(2.0,2.0),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:0.35,depthWrite:false})); fill.rotation.x=-Math.PI/2; fill.position.y=0.04; fill.scale.set(1,0.001,1);
-  g.add(plane,fill); scene.add(g); g.scale.setScalar(0.001); const pd={def,g,plane,fill,tex,payT:0,pop:0,cool:0,last:'',shown:0}; pads.push(pd); padById[def.id]=pd; return pd; }
+  g.add(plane,fill); scene.add(g); g.scale.setScalar(0.001); const pd={def,g,plane,fill,tex,payT:0,pop:0,cool:0,last:'',shown:0,sc:def.sc||1,r:def.r||1.5}; pads.push(pd); padById[def.id]=pd; return pd; }
 for(const d of PADS) makePad(d);
 function ensureTowerPads(){ S.towers.forEach((t,i)=>{ if(!padById['t'+i]) makePad(towerDef(i)); }); }
 ensureTowerPads();
@@ -488,10 +488,10 @@ function updatePads(dt){ const p=player.g.position; bubblePad=null;
     const cost=padCost(pd); const paid=S.paid[pd.def.id]||0; const lvl=padLevel(pd.def);
     pd.shown=Math.min(1,pd.shown+dt*2.5); const ease=1-Math.pow(1-pd.shown,3); const over=pd.shown<1? ease*(1+0.18*Math.sin(pd.shown*Math.PI)) : 1;
     const pulse=(S.paid[pd.def.id]||0)<cost&&padAvail(pd)? 1+0.05*Math.sin(performance.now()/180) : 1;
-    if(pd.pop>0){ pd.pop-=dt*2; const s2=1+Math.sin((1-pd.pop)*Math.PI)*0.25; pd.g.scale.set(s2*over,1,s2*over); } else pd.g.scale.set(over*pulse,1,over*pulse);
+    if(pd.pop>0){ pd.pop-=dt*2; const s2=1+Math.sin((1-pd.pop)*Math.PI)*0.25; pd.g.scale.set(s2*over*pd.sc,1,s2*over*pd.sc); } else pd.g.scale.set(over*pulse*pd.sc,1,over*pulse*pd.sc);
     pd.plane.position.y=0.05+(padAvail(pd)?0.02+0.02*Math.sin(performance.now()/180):0);
     pd.cool=Math.max(0,pd.cool-dt);
-    const nearAny=Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z)<1.5; if(nearAny) bubblePad=pd; const near=nearAny&&!playerMoving;
+    const nearAny=Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z)<pd.r; if(nearAny) bubblePad=pd; const near=nearAny&&!playerMoving;
     if(near&&pd.cool<=0&&paid<cost){ if(padRes(pd)==='gold'){ if(S.coins>0.01){ const rate=Math.max(60,cost/0.8); const amt=Math.min(rate*dt,S.coins,cost-paid); S.coins-=amt; S.paid[pd.def.id]=paid+amt; pd.payT-=dt; if(pd.payT<=0){ pd.payT=0.05; fly(p.clone().setY(2.4),pd.g.position.clone().setY(0.3),null,false,6); SFX.pay(); } } }
       else { pd.acc=(pd.acc||0)+Math.max(20,cost/0.8)*dt; let n=Math.floor(pd.acc); pd.acc-=n; let cur=paid; while(n>0&&(S.logs>0||S.wood>0)&&cur<cost){ n--; const fromBack=S.logs>0; if(fromBack){ S.logs--; } else { S.wood--; } cur++; S.paid[pd.def.id]=cur; pd.payT-=0.05; if(pd.payT<=0){ pd.payT=0.06; fly((fromBack?p.clone().setY(1.6):DEPOT.clone().setY(1.2)),pd.g.position.clone().setY(0.3),null,true,fromBack?6:4); SFX.pay(); } } setBack(player); setPile(Math.min(24,S.wood)); } }
     const cur=S.paid[pd.def.id]||0; const k=clamp(cur/cost,0,1); pd.fill.scale.set(1,Math.max(0.001,k),1); pd.fill.position.z=(1-k)*1.0;
@@ -559,7 +559,7 @@ function addCollector(){ const g=makeGuy('worker'); g.tool.visible=false; g.g.po
 for(let i=0;i<(S.lv.collector||0);i++) addCollector();
 function updateCollectors(dt){ for(const c of collectors){ const p=c.guy.g.position;
   if(c.state==='idle'){ c.moving=false; let best=null,bd=1e9; for(const l of loot){ if(l.fly||l.auto||l.taken) continue; const d=Math.hypot(l.x-p.x,l.z-p.z); if(d<bd){bd=d;best=l;} } if(best&&c.logs<c.cap){ c.target=best; best.taken=true; c.state='toLoot'; } else if(c.logs>0){ c.state='toStall'; } else if(Math.hypot(p.x,p.z-3)>3){ walkTo(c,rand(-2,2),rand(2,4),1.5,dt); } }
-  else if(c.state==='toLoot'){ const l=c.target; if(!l||!loot.includes(l)||l.fly||l.auto){ if(l) l.taken=false; c.state='idle'; continue; } if(walkTo(c,l.x,l.z,0.9,dt)){ const i=loot.indexOf(l); if(i>=0) loot.splice(i,1); c.logs++; setLootBack(c.guy,c.logs); c.state='idle'; } }
+  else if(c.state==='toLoot'){ const l=c.target; c.tryT=(c.tryT||0)+dt; if(!l||!loot.includes(l)||l.fly||l.auto||c.tryT>8){ if(l&&loot.includes(l)&&c.tryT>8){ l.auto=true; l.t=0; } if(l) l.taken=false; c.tryT=0; c.state='idle'; continue; } if(walkTo(c,l.x,l.z,1.6,dt)){ c.tryT=0; const i=loot.indexOf(l); if(i>=0) loot.splice(i,1); c.logs++; setLootBack(c.guy,c.logs); c.state='idle'; } }
   else if(c.state==='toStall'){ if(walkTo(c,STALL.x-2.9,STALL.z+0.8,1.4,dt)){ c.sellT=(c.sellT||0)-dt; if(c.sellT<=0&&c.logs>0){ c.sellT=0.08; c.logs--; setLootBack(c.guy,c.logs); fly(p.clone().setY(1.4),stallDrop(),()=>{ S.stall++; },false,5); } if(c.logs<=0) c.state='idle'; } }
   animGuy(c.guy,dt,c.moving,0.9); } }
 let traderNpc=null;
@@ -609,8 +609,8 @@ function makeEnemy(boss,hp,side){
   const bar=document.createElement('div'); bar.className='hpbar'+(boss?' boss':''); bar.innerHTML='<i></i>'; document.body.appendChild(bar);
   enemies.push({g,guy,hp,maxHp:hp,boss,sc,side,speed:(boss?2.0:3.4)*rand(0.97,1.03),atk:boss?16:4,atkCd:0,dead:false,hitT:0,wp:1,off,bar,swing:0});
 }
-let waveT=12, waveActive=false, spawnQueue=0, spawnT=0, spawnIdx=0, waveSeed=0;
-function startWave(){ waveActive=true; const w=gw(); spawnQueue=6+Math.floor(w*1.7); spawnT=0; spawnIdx=0; waveSeed=Math.floor(Math.random()*4); SFX.wave(); const k=sidesActive(); toast(S.wave===WAVES? 'Son dalga — patron geliyor!' : k>1? `${S.wave}. dalga: ${k} yönden saldırı!` : `${S.wave}. dalga geliyor!`); }
+let waveT=8, waveActive=false, spawnQueue=0, spawnT=0, spawnIdx=0, waveSeed=0;
+function startWave(){ waveActive=true; const w=gw(); spawnQueue=7+Math.floor(w*1.9); spawnT=0; spawnIdx=0; waveSeed=Math.floor(Math.random()*4); SFX.wave(); const k=sidesActive(); toast(S.wave===WAVES? 'Son dalga — patron geliyor!' : k>1? `${S.wave}. dalga: ${k} yönden saldırı!` : `${S.wave}. dalga geliyor!`); }
 function spawnOne(){ const w=gw(); const boss=(S.wave===WAVES)&&spawnQueue===1; const hp=Math.round(9*Math.pow(1.14,w-1)*(boss?14:1)); const k=sidesActive(); const side=SIDES[(Math.floor(spawnIdx/4)+waveSeed)%k]; spawnIdx++; makeEnemy(boss,hp,side); }
 function damageEnemy(e,dmg){ if(e.dead) return; e.hp-=dmg; e.hitT=0.18; SFX.hit(); if(e.hp<=0) killEnemy(e); }
 function killEnemy(e){ e.dead=true; e.bar.remove(); S.kills++; SFX.die(); burst(e.g.position.clone().setY(0.8),9,M.enemy,1); const reward=(8+gw()*2.5)*(e.boss?10:1); scene.remove(e.g); const nl=e.boss?12:1; for(let i=0;i<nl;i++) dropLoot(e.g.position.x,e.g.position.z); if(e.boss){ dropCoins(e.g.position.clone().setY(0.8),60,reward/60,8,1.3); } else if(Math.random()<0.35){ dropCoins(e.g.position.clone().setY(0.8),2,Math.round(reward/6),2.5,1); } }
@@ -620,15 +620,16 @@ function showLevelCard(){ if($('levelCard')) return; const card=document.createE
 function updateEnemies(dt){
   if(celebT>0||$('levelCard')){ }
   else if(!waveActive){ waveT-=dt; if(waveT<=0) startWave(); }
-  else if(spawnQueue>0){ spawnT-=dt; if(spawnT<=0){ spawnT=0.42; spawnQueue--; spawnOne(); } }
-  else if(enemies.every(e=>e.dead)){ waveActive=false; if(S.wave>=WAVES){ levelComplete(); return; } S.wave++; waveT=Math.max(7,14-gw()*0.3); const bonus=15+gw()*5; toast(`Dalga temizlendi! +${bonus}`,'good'); const n=Math.min(40,10+gw()*2); dropCoins(new THREE.Vector3(0,2,4),n,bonus/n,4,1.2); save(); }
+  else if(spawnQueue>0){ spawnT-=dt; if(spawnT<=0){ spawnT=0.36; spawnQueue--; spawnOne(); } }
+  else if(enemies.every(e=>e.dead)){ waveActive=false; if(S.wave>=WAVES){ levelComplete(); return; } S.wave++; waveT=Math.max(5,10-gw()*0.3); const bonus=15+gw()*5; toast(`Dalga temizlendi! +${bonus}`,'good'); const n=Math.min(40,10+gw()*2); dropCoins(new THREE.Vector3(0,2,4),n,bonus/n,4,1.2); save(); }
   if(celebT>0){ celebT-=dt; celebSpawn-=dt; if(celebSpawn<=0&&celebT>4){ celebSpawn=0.1; const cx=rand(-H+2,H-2), cz=rand(-H+2,H-2); dropCoins(new THREE.Vector3(cx,6,cz),8,levelReward/260,2.5,0.4); } if(celebT<=0||(celebT<4&&coins.length===0)){ celebT=0; showLevelCard(); } }
   for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i]; if(e.dead){ enemies.splice(i,1); continue; }
     const path=ROADS[e.side]; const d0=SD[e.side]; const last=e.wp>=path.length; let tx,tz; if(last){ [tx,tz]=sidePos(e.side,e.off*0.8,1.7); } else { tx=path[e.wp][0]+d0.t[0]*e.off; tz=path[e.wp][1]+d0.t[1]*e.off; }
     const dx=tx-e.g.position.x, dz=tz-e.g.position.z, d=Math.hypot(dx,dz);
-    let blocked=false; for(const o of enemies){ if(o===e||o.dead) continue; const ox=o.g.position.x-e.g.position.x, oz=o.g.position.z-e.g.position.z; const ahead=ox*dx+oz*dz>0; if(ahead&&Math.hypot(ox,oz)<1.15*e.sc){ blocked=true; break; } }
+    let blocked=null; for(const o of enemies){ if(o===e||o.dead) continue; const ox=o.g.position.x-e.g.position.x, oz=o.g.position.z-e.g.position.z; const od=Math.hypot(ox,oz); if(od<1.15*e.sc&&od>0.001&&(ox*dx+oz*dz)/(od*d)>0.55){ blocked=o; break; } }
+    if(e.stuckT>2.5) blocked=null;
     if(!last&&d<0.6){ e.wp++; }
-    else if(!last||d>0.5){ if(!blocked){ e.g.position.x+=dx/d*e.speed*dt; e.g.position.z+=dz/d*e.speed*dt; } e.g.rotation.y=Math.atan2(dx,dz); animGuy(e.guy,dt,!blocked,1.1); }
+    else if(!last||d>0.5){ const ox0=e.g.position.x, oz0=e.g.position.z; if(!blocked){ e.g.position.x+=dx/d*e.speed*dt; e.g.position.z+=dz/d*e.speed*dt; } else { const bx=blocked.g.position.x-e.g.position.x, bz=blocked.g.position.z-e.g.position.z, bd=Math.hypot(bx,bz)||1; e.g.position.x+=(dx/d*0.3-bx/bd*0.5)*e.speed*dt; e.g.position.z+=(dz/d*0.3-bz/bd*0.5)*e.speed*dt; } const adv=Math.hypot(e.g.position.x-ox0,e.g.position.z-oz0); e.stuckT=adv<e.speed*dt*0.5? (e.stuckT||0)+dt : (e.stuckT>2.5&&e.stuckT<3.5? e.stuckT+dt : 0); e.g.rotation.y=Math.atan2(dx,dz); animGuy(e.guy,dt,!blocked,1.1); }
     else { e.atkCd-=dt; animGuy(e.guy,dt,false,1); if(e.atkCd<=0){ e.atkCd=1.0; e.guy.swing=0.3; S.gateHp-=e.atk; SFX.gate(); gateShake=0.25; const [bx,bz]=sidePos(e.side,rand(-1.5,1.5),0); burst(new THREE.Vector3(bx,1.4,bz),4,M.wood,0.6); if(S.gateHp<=0) gateBroken(); } }
     if(e.hitT>0){ e.hitT-=dt; const k=1+e.hitT*0.8; e.g.scale.set(e.sc*k,e.sc/k,e.sc*k); } else e.g.scale.setScalar(e.sc);
     v3.set(e.g.position.x,2.4*e.sc,e.g.position.z).project(camera); e.bar.style.left=((v3.x+1)/2*innerWidth)+'px'; e.bar.style.top=((1-v3.y)/2*innerHeight)+'px'; e.bar.firstElementChild.style.width=(clamp(e.hp/e.maxHp,0,1)*100)+'%';
@@ -705,7 +706,7 @@ function updateGuide(target,text,dt){
 
 // ---------- Kapılar ----------
 function updateGates(dt){
-  if(gateDownT>0){ gateDownT-=dt; S.gateHp=D.gateMax()*(1-gateDownT/7); if(gateDownT<=0){ S.gateHp=D.gateMax(); toast('Sur onarıldı!','good'); waveT=Math.max(waveT,8); } }
+  if(gateDownT>0){ gateDownT-=dt; S.gateHp=D.gateMax()*(1-gateDownT/7); if(gateDownT<=0){ S.gateHp=D.gateMax(); toast('Sur onarıldı!','good'); waveT=Math.max(waveT,6); } }
   else if(!waveActive&&S.gateHp<D.gateMax()) S.gateHp=Math.min(D.gateMax(),S.gateHp+5*dt);
   if(gateShake>0) gateShake-=dt;
   const p=player.g.position; const down=gateDownT>0;
