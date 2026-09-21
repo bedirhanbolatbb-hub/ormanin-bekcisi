@@ -145,7 +145,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
     <h1>Ormanın Bekçisi</h1>
     <p>Ormanın ortasındaki kaleyi dört kapısından koru. Ağaç kes, odunla sur ve kule kur; kırmızı orduyu kılıçla biç, miğferlerini tezgâhta sat, altınla büyü.</p>
     <button id="startBtn">Oyna</button>
-    <div class="sub">Sürüm 17 · 21 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
+    <div class="sub">Sürüm 18 · 21 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
   </div>
 </div>
 
@@ -184,7 +184,7 @@ const sidesShown=()=>Math.min(4,sidesActive()+1);
 
 // ---------- Ses ----------
 let AC=null;
-function audio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==='suspended') AC.resume(); }
+function audio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==='suspended') AC.resume(); if(AC) musicInit(); }
 function tone(f0,f1,dur,type,vol){ if(S.muted||!AC) return; const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,AC.currentTime); o.frequency.exponentialRampToValueAtTime(f1,AC.currentTime+dur); g.gain.setValueAtTime(vol||0.08,AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+dur); }
 function noise(dur,vol){ if(S.muted||!AC) return; const n=AC.sampleRate*dur, b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.value=vol||0.25; s.connect(f).connect(g).connect(AC.destination); s.start(); }
 const SFX = {
@@ -195,6 +195,20 @@ const SFX = {
   gate:()=>{ noise(0.12,0.3); tone(90,40,0.15,'square',0.06); }, wave:()=>{ tone(220,330,0.25,'triangle',0.08); setTimeout(()=>tone(330,440,0.3,'triangle',0.08),200); },
   boom:()=>{ noise(0.35,0.5); tone(90,30,0.35,'sawtooth',0.08); },
 };
+// ---------- Müzik: gündüz sakin, gece gergin (tamamen kod ile üretilir, dosya yok) ----------
+const MUS={next:0,step:0,mel:4,vol:null,lp:null,mode:'day'};
+const NOTE=n=>440*Math.pow(2,(n-69)/12);
+const SCALES={day:[60,62,64,67,69,72,74,76],night:[57,60,62,64,67,69,72,74]};
+const ROOTS={day:[48,45,41,43],night:[45,41,43,40]};
+function musicInit(){ if(MUS.vol||!AC) return; MUS.vol=AC.createGain(); MUS.vol.gain.value=0; MUS.lp=AC.createBiquadFilter(); MUS.lp.type='lowpass'; MUS.lp.frequency.value=1800; MUS.lp.connect(MUS.vol).connect(AC.destination); MUS.next=AC.currentTime+0.1; }
+function mnote(midi,t,dur,type,vol,det){ const o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.value=NOTE(midi); if(det) o.detune.value=det; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g).connect(MUS.lp); o.start(t); o.stop(t+dur+0.05); }
+function musicTick(night){ if(!AC||!MUS.vol) return; const target=S.muted?0:(night>0.5?0.09:0.07); MUS.vol.gain.setTargetAtTime(target,AC.currentTime,0.8); const mode=night>0.5?'night':'day'; if(mode!==MUS.mode){ MUS.mode=mode; MUS.lp.frequency.setTargetAtTime(mode==='night'?1200:1800,AC.currentTime,0.5); }
+  const bpm=mode==='night'?132:96; const st=60/bpm/2; while(MUS.next<AC.currentTime+0.4){ const t=MUS.next; const i=MUS.step; const bar=Math.floor(i/16), beat=i%16; const root=ROOTS[mode][Math.floor(bar/2)%4]; const sc=SCALES[mode];
+    if(beat===0){ mnote(root,t,st*16,'sine',0.5); mnote(root+7,t,st*16,'sine',0.25,6); mnote(root+12,t,st*16,'triangle',0.12,-5); }
+    if(beat%4===0) mnote(root-12,t,st*3,mode==='night'?'sawtooth':'triangle',mode==='night'?0.28:0.2);
+    if(mode==='night'&&beat%4===2) mnote(root-12,t,st*1.2,'square',0.06);
+    if(beat%2===0&&Math.random()<(mode==='night'?0.75:0.55)){ MUS.mel=clamp(MUS.mel+(Math.random()<0.5?-1:1)*(Math.random()<0.25?2:1),0,sc.length-1); mnote(sc[MUS.mel],t,st*(Math.random()<0.3?4:2),mode==='night'?'square':'triangle',mode==='night'?0.12:0.16); }
+    MUS.step++; MUS.next+=st; } }
 
 // ---------- Sahne ----------
 const canvas=$('c');
@@ -209,8 +223,10 @@ scene.fog=new THREE.Fog(0xe8dcc0,120,230);
 const camera=new THREE.PerspectiveCamera(36,1,0.5,360);
 const YAW=0.55;
 const camOff=new THREE.Vector3(Math.sin(YAW)*30,44,Math.cos(YAW)*30);
-scene.add(new THREE.HemisphereLight(0xfff4e0,0x8f7a55,0.5));
+const hemi=new THREE.HemisphereLight(0xfff4e0,0x8f7a55,0.5); scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff1d2,1.25);
+const DAY={bg:new THREE.Color(0xe8dcc0),sun:new THREE.Color(0xfff1d2),hemi:new THREE.Color(0xfff4e0),sunI:1.25,hemiI:0.5,exp:1.12}, NIGHT={bg:new THREE.Color(0x3b4160),sun:new THREE.Color(0x8fa6ff),hemi:new THREE.Color(0x6f7fb8),sunI:0.55,hemiI:0.32,exp:0.95}; let night=0; const tmpC=new THREE.Color();
+function applyNight(k){ scene.background.copy(DAY.bg).lerp(NIGHT.bg,k); scene.fog.color.copy(scene.background); sun.color.copy(DAY.sun).lerp(NIGHT.sun,k); sun.intensity=lerp(DAY.sunI,NIGHT.sunI,k); hemi.color.copy(DAY.hemi).lerp(NIGHT.hemi,k); hemi.intensity=lerp(DAY.hemiI,NIGHT.hemiI,k); renderer.toneMappingExposure=lerp(DAY.exp,NIGHT.exp,k); }
 sun.position.set(14,26,10); sun.castShadow=true;
 sun.shadow.mapSize.set(isMobile?1024:2048,isMobile?1024:2048);
 Object.assign(sun.shadow.camera,{left:-60,right:60,top:60,bottom:-60,near:1,far:120});
@@ -963,13 +979,14 @@ function frame(now){
   if(follow){ camPan.multiplyScalar(Math.pow(0.001,dt)); } camTarget.set(p.x+camPan.x,0,p.z+camPan.z);
   zoom=lerp(zoom,zoomTarget,1-Math.pow(0.002,dt)); camPos.copy(camTarget).addScaledVector(camOff,zoom); camera.position.lerp(camPos,1-Math.pow(0.0005,dt));
   camera.lookAt(camera.position.x-camOff.x*zoom,0,camera.position.z-camOff.z*zoom);
+  const nightT=(waveActive&&celebT<=0)?1:0; const nk=1-Math.pow(0.35,dt); night+=(nightT-night)*nk; applyNight(night); for(const t of torches) t.l.intensity=0.5+1.5*night; musicTick(night);
   if(wallPop<1&&wallGroup){ wallPop=Math.min(1,wallPop+dt*2.2); const k=1-Math.pow(1-wallPop,3); wallGroup.scale.set(1,0.05+0.95*k*(1+0.12*Math.sin(wallPop*Math.PI)),1); }
   sun.position.set(p.x+14,26,p.z+10); sun.target.position.set(p.x,0,p.z);
   renderHud(); miniT+=dt; if(miniT>0.12){ miniT=0; drawMini(); }
   renderer.render(scene,camera);
 }
 requestAnimationFrame(frame);
-window.__dbg={damageEnemy,addWorker,questEvent,awayReport,showAway,ensureQuests,camPan,panBy,recenter,get follow(){return follow;},drawMiniBase,get plan(){return plan;},S,player,trees,enemies,workers,soldiers,towers,pads,D,coins,dropCoins,tick,loot,customers,setBack,STALL,TREASURY,DEPOT,orbit,collectors,get H(){return H;},get zoom(){return zoom;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},bubbleEl,get bubblePad(){return bubblePad;},get placing(){return placing;},placeGhostAt,confirmPlace,instantBuy,cancelPad,get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},gates,routeGoal,startWave,spawnOne,makeEnemy,sidePos};
+window.__dbg={get night(){return night;},set night(v){night=v;},damageEnemy,addWorker,questEvent,awayReport,showAway,ensureQuests,camPan,panBy,recenter,get follow(){return follow;},drawMiniBase,get plan(){return plan;},S,player,trees,enemies,workers,soldiers,towers,pads,D,coins,dropCoins,tick,loot,customers,setBack,STALL,TREASURY,DEPOT,orbit,collectors,get H(){return H;},get zoom(){return zoom;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},bubbleEl,get bubblePad(){return bubblePad;},get placing(){return placing;},placeGhostAt,confirmPlace,instantBuy,cancelPad,get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},gates,routeGoal,startWave,spawnOne,makeEnemy,sidePos};
 })();
 
 </script>
