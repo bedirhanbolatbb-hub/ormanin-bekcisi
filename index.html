@@ -15,6 +15,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .chip{background:var(--panel);border-radius:14px;padding:6px 12px;box-shadow:var(--shadow);font-family:var(--font-display);font-weight:800;font-size:18px;display:flex;align-items:center;gap:8px;pointer-events:auto;font-variant-numeric:tabular-nums}
 .chip small{font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--ink-soft)}
 .coin-dot{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe28a,var(--coin) 60%,#c98a12);box-shadow:inset 0 0 0 2px rgba(107,74,5,.35)}
+.stone-dot{width:16px;height:13px;border-radius:4px;background:linear-gradient(#c4beb0,#8f8a80);box-shadow:inset 0 0 0 2px rgba(60,58,52,.35)}
 .log-dot{width:18px;height:12px;border-radius:6px;background:linear-gradient(#c68a4a,#8b5e3c);box-shadow:inset 0 0 0 2px rgba(60,35,15,.35)}
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .left{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
@@ -120,7 +121,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="hud">
   <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><button class="chip quest" id="questBtn">📜 <span id="questTxt">0/3</span></button></div>
   <div class="right">
-    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div>
+    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div>
     <div class="chip wave">
       <div class="row"><span id="waveLbl">Dalga 1</span><small id="waveT">20 sn</small></div>
       <div class="next" id="waveNext"></div>
