@@ -152,7 +152,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
     <h1>Ormanın Bekçisi</h1>
     <p>Ormanın ortasındaki kaleyi dört kapısından koru. Ağaç kes, odunla sur ve kule kur; kırmızı orduyu kılıçla biç, miğferlerini tezgâhta sat, altınla büyü.</p>
     <button id="startBtn">Oyna</button>
-    <div class="sub">Sürüm 20 · 21 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
+    <div class="sub">Sürüm 21 · 21 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
   </div>
 </div>
 
@@ -173,7 +173,7 @@ const isMobile=isTouch||innerWidth<700;
 const SAVE_KEY='ormanin-bekcisi-v6';
 const WAVES=8; const MAXL=10;
 const LV0={axe:0,bag:0,feet:0,worker:0,stoneWorker:0,sword:0,wall:0,soldier:0,expand:0,trader:0,towerTrain:0,magnet:0,collector:0,gateLv:0,range:0,depotLv:0,workerSpd:0,price:0,soldierTrain:0,cannonTrain:0};
-const SIDES=['N','E','S','W'];
+const SIDES=['N','E','S','W']; const SIDE_TR={N:'Kuzey',E:'Doğu',S:'Güney',W:'Batı'};
 function defaultTowers(){ const t=[{k:'a',side:'C',a:0,lvl:0,fixed:true}]; for(const s of SIDES) for(const a of [-5.2,5.2]) t.push({k:'a',side:s,a,lvl:0,fixed:true}); return t; }
 const S = { coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:1, gateHp:150, muted:false, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{} };
 function load(){ try{ const j=JSON.parse(localStorage.getItem(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); for(const t of S.towers){ if(t.fixed&&Math.abs(t.a)===4.8) t.a=Math.sign(t.a)*5.2; } S.paid=j.paid||{}; } }catch(e){} }
@@ -490,7 +490,7 @@ const slash=new THREE.Mesh(new THREE.RingGeometry(1.4,2.9,24,1,-0.9,1.8),new THR
 // ---------- Yönlendirme, baloncuk ----------
 const bubbleEl=(function(){ const el=document.createElement('div'); el.className='bubble'; el.style.display='none'; document.body.appendChild(el); el.addEventListener('pointerdown',e=>{ e.stopPropagation(); }); el.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!bubblePad) return; e.stopPropagation(); audio(); if(b.dataset.act==='buy') instantBuy(bubblePad); else cancelPad(bubblePad); }); return el; })();
 let bubbleKey='';
-function updateBubble(){ const pd=bubblePad; if(!pd){ bubbleEl.style.display='none'; bubbleKey=''; return; } const lvl=padLevel(pd.def); const cost=padCost(pd); const cur=S.paid[pd.def.id]||0; const need=Math.max(0,Math.ceil(cost-cur)); const pr=padRes(pd); const wood=pr==='wood'; const res=pr==='stone'?'taş':wood?'odun':'altın'; const have=pr==='stone'?S.stones+S.stone:wood?S.logs+S.wood:S.coins; const can=have>=need-0.01;
+function updateBubble(){ const pd=bubblePad; if(!pd){ bubbleEl.style.display='none'; bubbleKey=''; return; } if(pd.locked){ const key='L'+pd.def.id; if(key!==bubbleKey){ bubbleKey=key; bubbleEl.innerHTML=`<b>🔒 ${pd.def.name}</b><span>${pd.def.desc}</span><em>${pd.def.lock} ile açılır</em>`; } bubbleEl.style.display='block'; const p=player.g.position; v3.set(p.x,4.6,p.z).project(camera); bubbleEl.style.left=((v3.x+1)/2*innerWidth)+'px'; bubbleEl.style.top=((1-v3.y)/2*innerHeight)+'px'; return; } const lvl=padLevel(pd.def); const cost=padCost(pd); const cur=S.paid[pd.def.id]||0; const need=Math.max(0,Math.ceil(cost-cur)); const pr=padRes(pd); const wood=pr==='wood'; const res=pr==='stone'?'taş':wood?'odun':'altın'; const have=pr==='stone'?S.stones+S.stone:wood?S.logs+S.wood:S.coins; const can=have>=need-0.01;
   const key=pd.def.id+'|'+lvl+'|'+need+'|'+can+'|'+(cur>0.5); if(key!==bubbleKey){ bubbleKey=key; const lv=pd.def.kind==='up'||pd.def.kind==='tower'||pd.def.kind==='wall'||pd.def.kind==='expand'? `<i>Sv ${lvl}/${pd.def.max}</i>` : `<i>${lvl}/${pd.def.max}</i>`; bubbleEl.innerHTML=`<b>${pd.def.name} ${lv}</b><span>${pd.def.desc}</span><em>${need} ${res}</em><div class="bb"><button data-act="buy" class="${can?'':'off'}">${can?'Hemen yükselt':'Yetersiz '+res}</button>${cur>0.5?'<button data-act="no">Vazgeç</button>':''}</div>`; }
   bubbleEl.style.display='block'; const p=player.g.position; v3.set(p.x,4.6,p.z).project(camera); bubbleEl.style.left=((v3.x+1)/2*innerWidth)+'px'; bubbleEl.style.top=((1-v3.y)/2*innerHeight)+'px'; }
 const guide=(function(){
@@ -614,40 +614,44 @@ const P=(x,z)=>()=>[x,z];
 const nFree=k=>S.towers.filter(t=>!t.fixed&&t.k===k).length;
 const PADS=[
   // Kuzeybatı: sur işleri (kereste) + yeni kuleler
-  {id:'wall', name:'Sur', desc:'Sur ve kapılar güçlenir; 4. seviyeden sonra taş ister', res:l=>l>=3?'stone':'wood', pos:P(-3.2,-3.2), kind:'wall', key:'wall', cost:l=>l>=3?Math.round(30*Math.pow(1.45,l-3)):Math.round(40*Math.pow(1.55,l)), max:MAXL, show:()=>S.towers[1].lvl>=1},
-  {id:'gate', name:'Kapı Onarım', desc:'Kapıların canı artar; ileri seviyeler taş ister', res:l=>l>=3?'stone':'wood', pos:P(-5.9,-3.2), kind:'up', key:'gateLv', cost:l=>l>=3?Math.round(28*Math.pow(1.4,l-3)):Math.round(50*Math.pow(1.4,l)), max:MAXL, show:()=>S.lv.wall>=1},
-  {id:'expand', name:'Genişlet', desc:'Sur kare olarak büyür; 4. kademeden sonra taş ister', res:l=>l>=3?'stone':'wood', pos:P(-8.6,-3.2), kind:'expand', key:'expand', cost:l=>l>=3?Math.round(45*Math.pow(1.5,l-3)):Math.round(60*Math.pow(1.6,l)), max:MAXL, show:()=>S.towers[1].lvl>=1&&S.towers[2].lvl>=1},
-  {id:'newTower', name:'Yeni Okçu Kulesi', desc:'Sur kenarında istediğin yere kurarsın', res:'gold', pos:P(-3.2,-5.9), kind:'newTower', tk:'a', cost:l=>Math.round(120*Math.pow(1.35,l)), max:MAXL, show:()=>S.lv.expand>=1, lvl:()=>nFree('a')},
-  {id:'newCannon', name:'Yeni Topçu Kulesi', desc:'Gülle atar, toplu hasar verir; yerini sen seçersin', res:'gold', pos:P(-5.9,-5.9), kind:'newTower', tk:'c', cost:l=>Math.round(160*Math.pow(1.4,l)), max:MAXL, show:()=>S.lv.expand>=1, lvl:()=>nFree('c')},
-  {id:'cannonTrain', name:'Topçu Talimi', desc:'Tüm topçu kulelerinin hasarı artar', res:'gold', pos:P(-8.6,-5.9), kind:'up', key:'cannonTrain', cost:l=>Math.round(100*Math.pow(1.3,l)), max:MAXL, show:()=>nFree('c')>=1},
+  {id:'wall', lock:'Kuzey kulesi kur', name:'Sur', desc:'Sur ve kapılar güçlenir; 4. seviyeden sonra taş ister', res:l=>l>=3?'stone':'wood', pos:P(-3.2,-3.2), kind:'wall', key:'wall', cost:l=>l>=3?Math.round(30*Math.pow(1.45,l-3)):Math.round(40*Math.pow(1.55,l)), max:MAXL, show:()=>S.towers[1].lvl>=1},
+  {id:'gate', lock:'Sur 1', name:'Kapı Onarım', desc:'Kapıların canı artar; ileri seviyeler taş ister', res:l=>l>=3?'stone':'wood', pos:P(-5.9,-3.2), kind:'up', key:'gateLv', cost:l=>l>=3?Math.round(28*Math.pow(1.4,l-3)):Math.round(50*Math.pow(1.4,l)), max:MAXL, show:()=>S.lv.wall>=1},
+  {id:'expand', lock:'İki kuzey kulesi', name:'Genişlet', desc:'Sur kare olarak büyür; 4. kademeden sonra taş ister', res:l=>l>=3?'stone':'wood', pos:P(-8.6,-3.2), kind:'expand', key:'expand', cost:l=>l>=3?Math.round(45*Math.pow(1.5,l-3)):Math.round(60*Math.pow(1.6,l)), max:MAXL, show:()=>S.towers[1].lvl>=1&&S.towers[2].lvl>=1},
+  {id:'newTower', lock:'Genişlet 1', name:'Yeni Okçu Kulesi', desc:'Sur kenarında istediğin yere kurarsın', res:'gold', pos:P(-3.2,-5.9), kind:'newTower', tk:'a', cost:l=>Math.round(120*Math.pow(1.35,l)), max:MAXL, show:()=>S.lv.expand>=1, lvl:()=>nFree('a')},
+  {id:'newCannon', lock:'Genişlet 1', name:'Yeni Topçu Kulesi', desc:'Gülle atar, toplu hasar verir; yerini sen seçersin', res:'gold', pos:P(-5.9,-5.9), kind:'newTower', tk:'c', cost:l=>Math.round(160*Math.pow(1.4,l)), max:MAXL, show:()=>S.lv.expand>=1, lvl:()=>nFree('c')},
+  {id:'cannonTrain', lock:'Bir topçu kulesi', name:'Topçu Talimi', desc:'Tüm topçu kulelerinin hasarı artar', res:'gold', pos:P(-8.6,-5.9), kind:'up', key:'cannonTrain', cost:l=>Math.round(100*Math.pow(1.3,l)), max:MAXL, show:()=>nFree('c')>=1},
   // Kuzeydoğu: savunma
   {id:'soldier', name:'Asker', desc:'Kapılar arasında düşmana göre yer değiştirir', res:'gold', pos:P(3.2,-3.2), kind:'soldier', key:'soldier', cost:l=>Math.round(30*Math.pow(1.35,l)), max:MAXL, show:()=>true},
-  {id:'soldierTrain', name:'Asker Talimi', desc:'Askerler daha sert ve hızlı vurur', res:'gold', pos:P(5.9,-3.2), kind:'up', key:'soldierTrain', cost:l=>Math.round(50*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.soldier>=1},
-  {id:'sword', name:'Kılıç', desc:'Kılıç hasarı ve menzili artar', res:'gold', pos:P(8.6,-3.2), kind:'up', key:'sword', cost:l=>Math.round(40*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.soldier>=1},
-  {id:'towerTrain', name:'Okçu Talimi', desc:'Tüm okçu kulelerinin hasarı artar', res:'gold', pos:P(3.2,-5.9), kind:'up', key:'towerTrain', cost:l=>Math.round(80*Math.pow(1.3,l)), max:MAXL, show:()=>S.towers[1].lvl>=1},
-  {id:'range', name:'Kule Menzili', desc:'Kuleler daha uzağa atar', res:'gold', pos:P(5.9,-5.9), kind:'up', key:'range', cost:l=>Math.round(120*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.expand>=1},
-  {id:'collector', name:'Toplayıcı', desc:'Yerdeki miğferleri toplayıp tezgâha taşır', res:'gold', pos:P(8.6,-5.9), kind:'collector', key:'collector', cost:l=>Math.round(70*Math.pow(1.5,l)), max:MAXL, show:()=>S.lv.soldier>=1},
+  {id:'soldierTrain', lock:'Bir asker', name:'Asker Talimi', desc:'Askerler daha sert ve hızlı vurur', res:'gold', pos:P(5.9,-3.2), kind:'up', key:'soldierTrain', cost:l=>Math.round(50*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.soldier>=1},
+  {id:'sword', lock:'Bir asker', name:'Kılıç', desc:'Kılıç hasarı ve menzili artar', res:'gold', pos:P(8.6,-3.2), kind:'up', key:'sword', cost:l=>Math.round(40*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.soldier>=1},
+  {id:'towerTrain', lock:'Kuzey kulesi kur', name:'Okçu Talimi', desc:'Tüm okçu kulelerinin hasarı artar', res:'gold', pos:P(3.2,-5.9), kind:'up', key:'towerTrain', cost:l=>Math.round(80*Math.pow(1.3,l)), max:MAXL, show:()=>S.towers[1].lvl>=1},
+  {id:'range', lock:'Genişlet 1', name:'Kule Menzili', desc:'Kuleler daha uzağa atar', res:'gold', pos:P(5.9,-5.9), kind:'up', key:'range', cost:l=>Math.round(120*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.expand>=1},
+  {id:'collector', lock:'Bir asker', name:'Toplayıcı', desc:'Yerdeki miğferleri toplayıp tezgâha taşır', res:'gold', pos:P(8.6,-5.9), kind:'collector', key:'collector', cost:l=>Math.round(70*Math.pow(1.5,l)), max:MAXL, show:()=>S.lv.soldier>=1},
   // Güneybatı: odun ekonomisi
   {id:'axe', name:'Balta', desc:'Pervane daha hızlı döner, daha hızlı keser', res:'gold', pos:P(-3.2,3.2), kind:'up', key:'axe', cost:l=>Math.round(30*Math.pow(1.3,l)), max:MAXL, show:()=>true},
   {id:'bag', name:'Sırt', desc:'Sırtta daha çok odun ve miğfer taşırsın', res:'gold', pos:P(-5.9,3.2), kind:'up', key:'bag', cost:l=>Math.round(30*Math.pow(1.3,l)), max:MAXL, show:()=>true},
-  {id:'worker', name:'Oduncu', desc:'Senin yerine ağaç kesip depoya taşır', res:'gold', pos:P(-8.6,3.2), kind:'worker', key:'worker', cost:l=>Math.round(60*Math.pow(1.5,l)), max:MAXL, show:()=>S.lv.axe+S.lv.bag>=1},
-  {id:'feet', name:'Midilli', desc:'Midilli daha hızlı koşar', res:'gold', pos:P(-3.2,5.9), kind:'up', key:'feet', cost:l=>Math.round(40*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.worker>=1},
-  {id:'magnet', name:'Mıknatıs', desc:'Altın ve ganimeti daha uzaktan çeker', res:'gold', pos:P(-5.9,5.9), kind:'up', key:'magnet', cost:l=>Math.round(60*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.worker>=1},
-  {id:'stoneWorker', name:'Taşçı', desc:'Taş ocağından taş çıkarıp depoya taşır', res:'gold', pos:P(-3.2,8.6), kind:'stoneWorker', key:'stoneWorker', cost:l=>Math.round(80*Math.pow(1.5,l)), max:MAXL, show:()=>S.lv.wall>=2||S.lv.expand>=2},
-  {id:'worker2', name:'Oduncu Hızı', desc:'Oduncular daha hızlı yürür', res:'gold', pos:P(-8.6,5.9), kind:'up', key:'workerSpd', cost:l=>Math.round(90*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.worker>=2},
+  {id:'worker', lock:'Balta ya da sırt', name:'Oduncu', desc:'Senin yerine ağaç kesip depoya taşır', res:'gold', pos:P(-8.6,3.2), kind:'worker', key:'worker', cost:l=>Math.round(60*Math.pow(1.5,l)), max:MAXL, show:()=>S.lv.axe+S.lv.bag>=1},
+  {id:'feet', lock:'Bir oduncu', name:'Midilli', desc:'Midilli daha hızlı koşar', res:'gold', pos:P(-3.2,5.9), kind:'up', key:'feet', cost:l=>Math.round(40*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.worker>=1},
+  {id:'magnet', lock:'Bir oduncu', name:'Mıknatıs', desc:'Altın ve ganimeti daha uzaktan çeker', res:'gold', pos:P(-5.9,5.9), kind:'up', key:'magnet', cost:l=>Math.round(60*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.worker>=1},
+  {id:'stoneWorker', lock:'Sur 2 ya da genişlet 2', name:'Taşçı', desc:'Taş ocağından taş çıkarıp depoya taşır', res:'gold', pos:P(-3.2,8.6), kind:'stoneWorker', key:'stoneWorker', cost:l=>Math.round(80*Math.pow(1.5,l)), max:MAXL, show:()=>S.lv.wall>=2||S.lv.expand>=2},
+  {id:'worker2', lock:'İki oduncu', name:'Oduncu Hızı', desc:'Oduncular daha hızlı yürür', res:'gold', pos:P(-8.6,5.9), kind:'up', key:'workerSpd', cost:l=>Math.round(90*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.worker>=2},
   // Güneydoğu: ticaret
-  {id:'depot', name:'Odun Deposu', desc:'Oduncular daha çok taşır', res:'gold', pos:P(3.2,4.4), kind:'up', key:'depotLv', cost:l=>Math.round(80*Math.pow(1.4,l)), max:MAXL, show:()=>S.lv.worker>=1},
-  {id:'trader', name:'Tüccar', desc:'Tezgâhta satış daha hızlı, fiyat daha yüksek', res:'gold', pos:P(3.2,7.4), kind:'up', key:'trader', cost:l=>Math.round(80*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.soldier>=1},
-  {id:'price', name:'Ganimet Fiyatı', desc:'Müşteriler miğfere daha çok öder', res:'gold', pos:P(5.9,7.4), kind:'up', key:'price', cost:l=>Math.round(120*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.trader>=1},
+  {id:'depot', lock:'Bir oduncu', name:'Odun Deposu', desc:'Oduncular daha çok taşır', res:'gold', pos:P(3.2,4.4), kind:'up', key:'depotLv', cost:l=>Math.round(80*Math.pow(1.4,l)), max:MAXL, show:()=>S.lv.worker>=1},
+  {id:'trader', lock:'Bir asker', name:'Tüccar', desc:'Tezgâhta satış daha hızlı, fiyat daha yüksek', res:'gold', pos:P(3.2,7.4), kind:'up', key:'trader', cost:l=>Math.round(80*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.soldier>=1},
+  {id:'price', lock:'Tüccar 1', name:'Ganimet Fiyatı', desc:'Müşteriler miğfere daha çok öder', res:'gold', pos:P(5.9,7.4), kind:'up', key:'price', cost:l=>Math.round(120*Math.pow(1.3,l)), max:MAXL, show:()=>S.lv.trader>=1},
 ];
 function towerPos(i){ const t=S.towers[i]; if(t.side==='C') return [0,0]; return sidePos(t.side,t.a,-1.5); }
 const FLANK_BASE={N:15,E:30,S:45,W:60};
 function towerDef(i){ const t=S.towers[i]; const isC=t.side==='C'; const name=t.k==='c'?'Topçu Kulesi':isC?'Merkez Kule':'Okçu Kulesi'; const desc=t.k==='c'?'Gülle atar; seviye = hasar + hız':isC?'Uzun menzilli, iki okçu; seviye = hasar + hız':'Ok atar; seviye = hasar + hız';
   return {id:'t'+i, ti:i, name, desc, kind:'tower', max:MAXL, sc:isC?1.7:1.15, r:isC?2.9:2.0, pos:()=>towerPos(i), res:l=>l===0?'wood':'gold', cost:l=>l===0?(isC?60:FLANK_BASE[t.side]):Math.round((t.k==='c'?60:40)*Math.pow(1.3,l-1)),
-    show:()=> isC? S.lv.expand>=1 : t.fixed? SIDES.indexOf(t.side)<sidesShown() : true }; }
+    lock: isC? 'Genişlet 1' : t.fixed? (SIDE_TR[t.side]+' kapısı — dalga '+(1+2*(SIDES.indexOf(t.side)-1))) : '', show:()=> isC? S.lv.expand>=1 : t.fixed? SIDES.indexOf(t.side)<sidesShown() : true }; }
 function padLevel(d){ return d.kind==='tower'? S.towers[d.ti].lvl : d.kind==='newTower'? d.lvl() : (S.lv[d.key]||0); }
 function padTexture(){ const c=document.createElement('canvas'); c.width=256; c.height=256; const tex=new THREE.CanvasTexture(c); tex.encoding=THREE.sRGBEncoding; return {c,tex}; }
 function rr(x,X,Y,W,Hh,r){ x.beginPath(); x.moveTo(X+r,Y); x.lineTo(X+W-r,Y); x.quadraticCurveTo(X+W,Y,X+W,Y+r); x.lineTo(X+W,Y+Hh-r); x.quadraticCurveTo(X+W,Y+Hh,X+W-r,Y+Hh); x.lineTo(X+r,Y+Hh); x.quadraticCurveTo(X,Y+Hh,X,Y+Hh-r); x.lineTo(X,Y+r); x.quadraticCurveTo(X,Y,X+r,Y); x.closePath(); }
+function drawLocked(pd,name,hint){ const x=pd.tex.c.getContext('2d'); x.clearRect(0,0,256,256); x.fillStyle='rgba(40,44,50,0.55)'; rr(x,10,10,236,236,22); x.fill(); x.strokeStyle='rgba(255,255,255,0.45)'; x.lineWidth=6; x.setLineDash([22,14]); rr(x,14,14,228,228,20); x.stroke(); x.setLineDash([]);
+  x.fillStyle='rgba(255,255,255,0.85)'; x.textAlign='center'; let fs=26; x.font=`bold ${fs}px "Baloo 2","Nunito",sans-serif`; while(x.measureText(name).width>210&&fs>16){ fs-=2; x.font=`bold ${fs}px "Baloo 2","Nunito",sans-serif`; } x.fillText(name,128,62);
+  x.fillStyle='#d9d4c8'; rr(x,104,92,48,40,8); x.fill(); x.strokeStyle='#d9d4c8'; x.lineWidth=8; x.beginPath(); x.arc(128,92,18,Math.PI,0); x.stroke(); x.fillStyle='#3a3f48'; x.beginPath(); x.arc(128,110,6,0,7); x.fill();
+  x.fillStyle='#ffd75e'; fs=22; x.font=`800 ${fs}px "Baloo 2","Nunito",sans-serif`; while(x.measureText(hint).width>216&&fs>13){ fs-=1; x.font=`800 ${fs}px "Baloo 2","Nunito",sans-serif`; } x.fillText(hint,128,178); x.fillStyle='rgba(255,255,255,0.7)'; x.font='700 17px "Nunito",sans-serif'; x.fillText('ile açılır',128,204); pd.tex.tex.needsUpdate=true; }
 function drawPad(pd,name,lvlTxt,cur,cost,can){ const x=pd.tex.c.getContext('2d'); x.clearRect(0,0,256,256); const wood=padRes(pd)==='wood';
   x.fillStyle=can?(padRes(pd)==='stone'?'rgba(90,92,100,0.92)':wood?'rgba(120,80,30,0.92)':'rgba(30,110,60,0.9)'):'rgba(35,50,40,0.75)'; rr(x,10,10,236,236,22); x.fill();
   x.strokeStyle='#ffffff'; x.lineWidth=7; x.setLineDash([26,16]); rr(x,14,14,228,228,20); x.stroke(); x.setLineDash([]);
@@ -691,7 +695,8 @@ function completePad(pd){ const d=pd.def; S.paid[d.id]=0; pd.pop=1; pd.cool=1.2;
   questEvent('build'); SFX.build(); burst(pd.g.position.clone().setY(0.8),16,M.gold,1.2); if(d.kind!=='newTower') floatText(pd.g.position,d.name+(d.kind==='tower'||d.kind==='wall'?' ↑':' ↑'),'green'); save(); }
 let bubblePad=null;
 function updatePads(dt){ const p=player.g.position; bubblePad=null;
-  for(const pd of pads){ const vis=padVisible(pd)&&!placing; if(!vis){ pd.shown=0; } pd.g.visible=vis; if(!vis) continue;
+  for(const pd of pads){ const unlocked=pd.def.show(); const lockable=!!pd.def.lock; const vis=padLevel(pd.def)<pd.def.max&&!placing&&(unlocked||lockable); if(!vis){ pd.shown=0; } pd.g.visible=vis; pd.locked=!unlocked; if(!vis) continue;
+    if(pd.locked){ pd.shown=Math.min(1,pd.shown+dt*2.5); pd.g.scale.set(0.72*pd.shown*pd.sc,1,0.72*pd.shown*pd.sc); pd.plane.position.y=0.05; pd.fill.scale.set(1,0.001,1); const key='L|'+pd.def.name+'|'+pd.def.lock; if(key!==pd.last){ pd.last=key; drawLocked(pd,pd.def.name,pd.def.lock); } if(Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z)<pd.r*0.8) bubblePad=pd; continue; }
     const cost=padCost(pd); const paid=S.paid[pd.def.id]||0; const lvl=padLevel(pd.def);
     pd.shown=Math.min(1,pd.shown+dt*2.5); const ease=1-Math.pow(1-pd.shown,3); const over=pd.shown<1? ease*(1+0.18*Math.sin(pd.shown*Math.PI)) : 1;
     const pulse=(S.paid[pd.def.id]||0)<cost&&padAvail(pd)? 1+0.05*Math.sin(performance.now()/180) : 1;
@@ -833,7 +838,7 @@ function makeEnemy(kind,side){ const K=EK[kind]||EK.grunt; const w=gw(); const h
   enemies.push({g,guy,pushers,ramLog,kind,K,hp,maxHp:hp,boss:kind==='boss',sc,rad:K.rad,side,speed:3.4*K.spd*rand(0.97,1.03),atk:K.atk,atkCd:0,atkT:kind==='ram'?1.6:1.0,dead:false,hitT:0,wp:1,off,bar,swing:0,ramT:0});
 }
 let waveT=8, waveActive=false, spawnQueue=0, spawnT=0, spawnIdx=0, waveSeed=0; let plan=null;
-const SIDE_TR={N:'Kuzey',E:'Doğu',S:'Güney',W:'Batı'};
+
 function pickKind(w,i,total){ if(S.wave===WAVES&&i===total-1) return 'boss'; if(w>=5&&i%12===6&&(w>=9||S.wave%2===0)) return 'ram'; const r=Math.random(); if(w>=3&&r<0.2+0.01*w) return 'shield'; if(w>=2&&r<0.45+0.01*w) return 'runner'; return 'grunt'; }
 function planWave(){ const w=gw(); const total=7+Math.floor(w*1.9); const k=sidesActive(); const seed=Math.floor(Math.random()*4); const cnt={N:0,E:0,S:0,W:0}; const kinds=[]; const kc={}; for(let i=0;i<total;i++){ cnt[SIDES[(Math.floor(i/4)+seed)%k]]++; const kd=pickKind(w,i,total); kinds.push(kd); kc[kd]=(kc[kd]||0)+1; } plan={seed,cnt,total,kinds,kc}; return plan; }
 function planText(){ if(!plan) planWave(); let t=SIDES.filter(s=>plan.cnt[s]>0).map(s=>SIDE_TR[s]+' '+plan.cnt[s]).join(' · '); const ex=[]; if(plan.kc.shield) ex.push('kalkanlı '+plan.kc.shield); if(plan.kc.ram) ex.push('kuşatma '+plan.kc.ram); if(plan.kc.boss) ex.push('patron'); if(ex.length) t+=' · '+ex.join(', '); return t; }
@@ -848,7 +853,7 @@ function levelComplete(){ levelReward=Math.round(200*Math.pow(1.6,S.level-1)); c
 function showLevelCard(){ if($('levelCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='levelCard'; card.innerHTML=`<div class="card"><div class="stars">★ ★ ★</div><h1>Bölüm ${S.level} tamamlandı!</h1><p>${S.kills} düşman, ${S.treesCut} ağaç. ${Math.floor(S.coins)} altının var.<br>Sıradaki bölümde düşmanlar daha güçlü, ödüller daha büyük.</p><button id="nextLevel">Bölüm ${S.level+1}'e geç</button></div>`; document.body.appendChild(card); $('nextLevel').addEventListener('click',()=>{ for(const c of coins) S.coins+=c.value; coins.length=0; stackH.clear(); S.level++; S.wave=1; waveT=12; plan=null; planWave(); S.perkOffer=null; save(); card.remove(); toast(`Bölüm ${S.level} başladı!`,'good'); setTimeout(()=>{ showPerkCard(); S.gateHp=D.gateMax(); },100); }); }
 function updateEnemies(dt){
   if(celebT>0||$('levelCard')){ }
-  else if(!waveActive){ waveT-=dt; if(waveT<=0) startWave(); }
+  else if(!waveActive){ if(S.level===1&&S.wave===1&&S.towers[1].lvl<1&&S.towers[2].lvl<1&&introT<30) waveT=Math.max(waveT,4); waveT-=dt; if(waveT<=0) startWave(); }
   else if(spawnQueue>0){ spawnT-=dt; if(spawnT<=0){ spawnT=0.36; spawnQueue--; spawnOne(); } }
   else if(enemies.every(e=>e.dead)){ waveActive=false; if(S.wave>=WAVES){ levelComplete(); return; } S.wave++; questEvent('wave'); waveT=Math.max(5,10-gw()*0.3); plan=null; planWave(); const bonus=15+gw()*5; toast(`Dalga temizlendi! +${bonus}`,'good'); const n=Math.min(40,10+gw()*2); dropCoins(new THREE.Vector3(0,2,4),n,bonus/n,4,1.2); save(); }
   if(celebT>0){ celebT-=dt; celebSpawn-=dt; if(celebSpawn<=0&&celebT>4){ celebSpawn=0.1; const cx=rand(-H+2,H-2), cz=rand(-H+2,H-2); dropCoins(new THREE.Vector3(cx,6,cz),8,levelReward/260,2.5,0.4); } if(celebT<=0||(celebT<4&&coins.length===0)){ celebT=0; showLevelCard(); } }
