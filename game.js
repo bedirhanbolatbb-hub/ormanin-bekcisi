@@ -20,11 +20,13 @@ function load(){ try{ const j=JSON.parse(localStorage.getItem(SAVE_KEY)); if(j){
 function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
 load();
 const gw=()=>(S.level-1)*WAVES+S.wave;
+const PERKS={ trample:{n:'Midilli Ezme',d:'Midilli koşarken çarptığı düşmanı ezer'}, arrows:{n:'Ok Yağmuru',d:'Okçu kuleleri %35 daha hızlı atar'}, mason:{n:'Duvarcı',d:'Sur canı +%50, saldırıda kendini onarır'}, gold:{n:'Tüccar Dostu',d:'Miğferler %40 daha pahalı satılır'}, lumber:{n:'Odun Bereketi',d:'Ağaç 6 odun verir, pervane %25 hızlı'}, magnet:{n:'Büyük Mıknatıs',d:'Altın ve ganimet iki kat uzaktan gelir'}, cannon:{n:'Barut',d:'Topçu kuleleri %50 daha sert vurur'} };
+const hasPerk=k=>S.perk===k&&S.perkLevel===S.level;
 const D = {
-  chopRate:()=>4.0*(1+0.2*S.lv.axe), treeHits:()=>1, logsPerTree:()=>4,
-  cap:()=>40+15*S.lv.bag, speed:()=>8.4+0.55*S.lv.feet, magnet:()=>3.8+0.8*S.lv.magnet, lootPrice:()=>8+gw()*1.5+3*S.lv.trader+4*S.lv.price, buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
+  chopRate:()=>4.0*(1+0.2*S.lv.axe)*(hasPerk('lumber')?1.25:1), treeHits:()=>1, logsPerTree:()=>hasPerk('lumber')?6:4,
+  cap:()=>40+15*S.lv.bag, speed:()=>8.4+0.55*S.lv.feet, magnet:()=>(3.8+0.8*S.lv.magnet)*(hasPerk('magnet')?2:1), lootPrice:()=>(8+gw()*1.5+3*S.lv.trader+4*S.lv.price)*(hasPerk('gold')?1.4:1), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
   swordDmg:()=>9+4*S.lv.sword, swordRange:()=>2.9+0.1*S.lv.sword,
-  gateMax:()=>150+120*S.lv.wall+60*S.lv.gateLv, towerDmg:l=>5+3*(l-1)+2*S.lv.towerTrain, towerRange:()=>17+2*S.lv.range, cannonDmg:l=>14+7*(l-1)+4*S.lv.cannonTrain, soldierDmg:()=>6+2*S.lv.sword+3*S.lv.soldierTrain,
+  gateMax:()=>Math.round((150+120*S.lv.wall+60*S.lv.gateLv)*(hasPerk('mason')?1.5:1)), towerDmg:l=>5+3*(l-1)+2*S.lv.towerTrain, towerRange:()=>17+2*S.lv.range, towerRate:()=>hasPerk('arrows')?1.35:1, cannonDmg:l=>(14+7*(l-1)+4*S.lv.cannonTrain)*(hasPerk('cannon')?1.5:1), soldierDmg:()=>6+2*S.lv.sword+3*S.lv.soldierTrain,
 };
 const sidesActive=()=>Math.min(4,1+Math.floor((gw()-1)/2));
 const sidesShown=()=>Math.min(4,sidesActive()+1);
@@ -565,7 +567,7 @@ function rebuildTowers(){ S.towers.forEach((t,i)=>{ buildTower(i); if(towers[i])
 rebuildTowers(); layoutPads(); placeBuildings();
 function updateTowers(dt){ for(const t of towers){ if(!t) continue; if(t.pop<1){ t.pop=Math.min(1,t.pop+dt*2.2); const s=t.pop<1? (1.18-0.18*Math.cos(t.pop*Math.PI*1.5))*t.pop : 1; t.g.scale.setScalar(Math.max(0.01,s)); if(t.pop<1) continue; t.g.scale.setScalar(1); }
   t.cd=Math.max(-0.05,t.cd-dt); const range=D.towerRange()+(t.isC?8:0)+(t.kind==='c'?3:0); const e=nearestEnemy(t.g.position,range);
-  if(t.kind==='a'){ if(e){ const ang=Math.atan2(e.g.position.x-t.g.position.x,e.g.position.z-t.g.position.z)-t.g.rotation.y; for(const a of t.archers){ a.g.rotation.y=ang; a.aim=true; a.armR.rotation.x=lerp(a.armR.rotation.x,-1.4,dt*8); } if(t.cd<=0){ t.cd=1/((1.5+0.35*(t.lvl-1))*(t.isC?1.4:1)); for(const a of t.archers) shoot(t.top,e,D.towerDmg(t.lvl)*(t.isC?1.3:1)); } } else { for(const a of t.archers) a.aim=false; } for(const a of t.archers) animGuy(a,dt,false,1); }
+  if(t.kind==='a'){ if(e){ const ang=Math.atan2(e.g.position.x-t.g.position.x,e.g.position.z-t.g.position.z)-t.g.rotation.y; for(const a of t.archers){ a.g.rotation.y=ang; a.aim=true; a.armR.rotation.x=lerp(a.armR.rotation.x,-1.4,dt*8); } if(t.cd<=0){ t.cd=1/((1.5+0.35*(t.lvl-1))*(t.isC?1.4:1)*D.towerRate()); for(const a of t.archers) shoot(t.top,e,D.towerDmg(t.lvl)*(t.isC?1.3:1)); } } else { for(const a of t.archers) a.aim=false; } for(const a of t.archers) animGuy(a,dt,false,1); }
   else { const b=t.archers[0].barrel; if(e){ const ang=Math.atan2(e.g.position.x-t.g.position.x,e.g.position.z-t.g.position.z)-t.g.rotation.y; b.rotation.y=lerp(b.rotation.y,ang,Math.min(1,dt*6)); if(t.cd<=0){ t.cd=1/(0.45+0.08*(t.lvl-1)); fireCannon(t,e); b.position.z=-0.35; } } b.position.z=lerp(b.position.z,0,Math.min(1,dt*4)); } } }
 // Yerleştirme modu: yeni kule sur kenarında istenen yere
 let placing=null;
@@ -683,7 +685,7 @@ function damageEnemy(e,dmg,src){ if(e.dead) return; const m=src&&e.K&&e.K[src]!=
 function killEnemy(e){ e.dead=true; e.bar.remove(); S.kills++; questEvent('kill'); SFX.die(); burst(e.g.position.clone().setY(0.8),9,M.enemy,1); const reward=(8+gw()*2.5)*(e.boss?10:e.kind==='ram'?3:1); scene.remove(e.g); const nl=e.K?e.K.loot:1; for(let i=0;i<nl;i++) dropLoot(e.g.position.x,e.g.position.z); if(e.kind==='ram'){ burst(e.g.position.clone().setY(1),16,M.woodDark,1.2); burst(e.g.position.clone().setY(1),8,M.trunk,1); } if(e.boss){ dropCoins(e.g.position.clone().setY(0.8),60,reward/60,8,1.3); } else if(Math.random()<0.35){ dropCoins(e.g.position.clone().setY(0.8),2,Math.round(reward/6),2.5,1); } }
 let gateShake=0, gateDownT=0, levelReward=0;
 function levelComplete(){ levelReward=Math.round(200*Math.pow(1.6,S.level-1)); celebT=10; celebSpawn=0; SFX.wave(); setTimeout(SFX.wave,300); toast(`Bölüm ${S.level} tamamlandı! Altınları topla`,'good'); dropCoins(new THREE.Vector3(0,3,4),60,levelReward/260,6,1.4); }
-function showLevelCard(){ if($('levelCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='levelCard'; card.innerHTML=`<div class="card"><div class="stars">★ ★ ★</div><h1>Bölüm ${S.level} tamamlandı!</h1><p>${S.kills} düşman, ${S.treesCut} ağaç. ${Math.floor(S.coins)} altının var.<br>Sıradaki bölümde düşmanlar daha güçlü, ödüller daha büyük.</p><button id="nextLevel">Bölüm ${S.level+1}'e geç</button></div>`; document.body.appendChild(card); $('nextLevel').addEventListener('click',()=>{ for(const c of coins) S.coins+=c.value; coins.length=0; stackH.clear(); S.level++; S.wave=1; waveT=12; S.gateHp=D.gateMax(); plan=null; planWave(); save(); card.remove(); toast(`Bölüm ${S.level} başladı!`,'good'); }); }
+function showLevelCard(){ if($('levelCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='levelCard'; card.innerHTML=`<div class="card"><div class="stars">★ ★ ★</div><h1>Bölüm ${S.level} tamamlandı!</h1><p>${S.kills} düşman, ${S.treesCut} ağaç. ${Math.floor(S.coins)} altının var.<br>Sıradaki bölümde düşmanlar daha güçlü, ödüller daha büyük.</p><button id="nextLevel">Bölüm ${S.level+1}'e geç</button></div>`; document.body.appendChild(card); $('nextLevel').addEventListener('click',()=>{ for(const c of coins) S.coins+=c.value; coins.length=0; stackH.clear(); S.level++; S.wave=1; waveT=12; plan=null; planWave(); S.perkOffer=null; save(); card.remove(); toast(`Bölüm ${S.level} başladı!`,'good'); setTimeout(()=>{ showPerkCard(); S.gateHp=D.gateMax(); },100); }); }
 function updateEnemies(dt){
   if(celebT>0||$('levelCard')){ }
   else if(!waveActive){ waveT-=dt; if(waveT<=0) startWave(); }
@@ -726,6 +728,7 @@ function updatePlayer(dt){
   p.x=clamp(p.x,-WORLD+2,WORLD-2); p.z=clamp(p.z,-WORLD+2,WORLD-2);
   const before=[p.x,p.z]; fenceCollide(p); pushOutOfTrunks(p,1.1); pushOutOfCenter(p,1.9);
   if(moveTarget&&moving&&Math.hypot(p.x-before[0],p.z-before[1])>0.001){ moveStuck=(moveStuck||0)+dt; if(moveStuck>1.2){ moveStuck=0; moveTarget=null; moveMark.visible=false; } } else moveStuck=0;
+  if(hasPerk('trample')&&moving){ trampleT-=dt; if(trampleT<=0){ trampleT=0.45; for(const o of enemies){ if(o.dead) continue; const dd=Math.hypot(o.g.position.x-p.x,o.g.position.z-p.z); if(dd<1.9){ damageEnemy(o,D.swordDmg()*0.6); burst(o.g.position.clone().setY(0.6),4,M.ponyDark,0.6); } } } }
   playerRing.position.set(p.x,0.04,p.z);
   player.coinMesh.count=Math.min(COIN_STACK,Math.floor(S.coins/25));
   const canChop=S.logs<D.cap()&&!nearestEnemy(p,4); let chopping=false;
@@ -767,7 +770,7 @@ function updatePlayer(dt){
   tipEl.textContent=tip; tipEl.classList.toggle('hide',!tip);
   introT+=dt;
 }
-let moveStuck=0;
+let moveStuck=0, trampleT=0;
 function updateGuide(target,text,dt){
   const p=player.g.position;
   if(!target){ guide.arrow.visible=guide.ring.visible=guide.pin.visible=false; guide.el.style.display='none'; return; }
@@ -785,6 +788,7 @@ function updateGuide(target,text,dt){
 function updateGates(dt){
   if(gateDownT>0){ gateDownT-=dt; S.gateHp=D.gateMax()*(1-gateDownT/7); if(gateDownT<=0){ S.gateHp=D.gateMax(); toast('Sur onarıldı!','good'); waveT=Math.max(waveT,6); } }
   else if(!waveActive&&S.gateHp<D.gateMax()) S.gateHp=Math.min(D.gateMax(),S.gateHp+5*dt);
+  else if(waveActive&&hasPerk('mason')&&S.gateHp<D.gateMax()) S.gateHp=Math.min(D.gateMax(),S.gateHp+3*dt);
   if(gateShake>0) gateShake-=dt;
   const p=player.g.position; const down=gateDownT>0;
   for(const s of SIDES){ const gt=gates[s]; let near=Math.hypot(p.x-gt.x,p.z-gt.z)<4.5;
@@ -811,7 +815,7 @@ function renderHud(){
 $('muteBtn').addEventListener('click',()=>{ audio(); S.muted=!S.muted; $('muteBtn').textContent=S.muted?'🔇':'🔊'; save(); });
 $('muteBtn').textContent=S.muted?'🔇':'🔊';
 let started=false;
-$('startBtn').addEventListener('click',()=>{ audio(); $('intro').remove(); started=true; ensureQuests(); renderQuests(); const rep=awayReport(); S.lastSeen=Date.now(); showAway(rep); save(); });
+$('startBtn').addEventListener('click',()=>{ audio(); $('intro').remove(); started=true; ensureQuests(); renderQuests(); renderPerkChip(); const rep=awayReport(); S.lastSeen=Date.now(); showAway(rep); save(); });
 if(S.coins>0||S.wave>1||S.level>1){ $('startBtn').textContent='Devam et'; $('intro').querySelector('p').textContent=`Kaldığın yerden: Bölüm ${S.level}, ${S.wave}. dalga, ${Math.floor(S.coins)} altın.`; }
 
 // ---------- Günlük görevler, günlük ödül, sen yokken kazanç ----------
@@ -829,10 +833,14 @@ function awayReport(){ const now=Date.now(); const last=S.lastSeen||0; const sec
   if(last&&sec>=90){ const min=sec/60; const wpm=workers.filter(w=>w.kind!=='stone').length*4*(1+0.15*(S.lv.workerSpd||0)); out.wood=Math.round(wpm*min); out.stone=Math.round(workers.filter(w=>w.kind==='stone').length*2.5*min); const def=S.towers.reduce((a,t)=>a+t.lvl,0)+soldiers.length*2; if(def>0){ const raids=Math.floor(min/3); out.gold=Math.round(raids*Math.min(def,12)*D.lootPrice()*0.35); } out.sec=sec; }
   const k=dayKey(); if(S.dailyDate!==k){ const y=new Date(); y.setDate(y.getDate()-1); const yk=y.getFullYear()+'-'+(y.getMonth()+1)+'-'+y.getDate(); S.streak=(S.dailyDate===yk)?(S.streak||0)+1:1; S.dailyDate=k; out.streak=S.streak; out.daily=50+25*Math.min(7,S.streak); }
   return out; }
-function showAway(rep){ if(rep.sec<=0&&!rep.daily) return; const card=document.createElement('div'); card.className='intro'; card.id='awayCard'; const rows=[]; if(rep.sec>0){ rows.push(`<div><span>Sen yokken geçen süre</span><b>${fmtDur(rep.sec)}</b></div>`); if(rep.wood>0) rows.push(`<div><span>Oduncular kesti</span><b>+${rep.wood} odun</b></div>`); if(rep.stone>0) rows.push(`<div><span>Taşçılar çıkardı</span><b>+${rep.stone} taş</b></div>`); if(rep.gold>0) rows.push(`<div><span>Nöbetçiler baskın püskürttü</span><b>+${rep.gold} altın</b></div>`); if(!rep.wood&&!rep.gold&&!rep.stone) rows.push(`<div><span>Oduncu ve nöbetçi yoktu</span><b>—</b></div>`); }
+function showAway(rep){ if(rep.sec<=0&&!rep.daily){ showPerkCard(); return; } const card=document.createElement('div'); card.className='intro'; card.id='awayCard'; const rows=[]; if(rep.sec>0){ rows.push(`<div><span>Sen yokken geçen süre</span><b>${fmtDur(rep.sec)}</b></div>`); if(rep.wood>0) rows.push(`<div><span>Oduncular kesti</span><b>+${rep.wood} odun</b></div>`); if(rep.stone>0) rows.push(`<div><span>Taşçılar çıkardı</span><b>+${rep.stone} taş</b></div>`); if(rep.gold>0) rows.push(`<div><span>Nöbetçiler baskın püskürttü</span><b>+${rep.gold} altın</b></div>`); if(!rep.wood&&!rep.gold&&!rep.stone) rows.push(`<div><span>Oduncu ve nöbetçi yoktu</span><b>—</b></div>`); }
   if(rep.daily) rows.push(`<div><span>Günlük giriş ödülü · ${rep.streak}. gün</span><b>+${rep.daily} altın</b></div>`);
   card.innerHTML=`<div class="card"><h1>${rep.sec>0?'Sen yokken':'Hoş geldin!'}</h1><div class="away">${rows.join('')}</div><button id="awayTake">Topla</button></div>`; document.body.appendChild(card);
-  $('awayTake').addEventListener('click',()=>{ audio(); card.remove(); S.wood+=rep.wood; setPile(Math.min(24,S.wood)); S.stone+=(rep.stone||0); setStonePile(Math.min(18,S.stone)); const g=rep.gold+rep.daily; if(g>0){ dropCoins(player.g.position.clone().setY(3),Math.min(80,Math.round(g/3)+6),g/Math.min(80,Math.round(g/3)+6),5,1.4); } if(rep.wood>0) burst(DEPOT.clone().setY(1.5),20,M.log,1); SFX.build(); save(); }); }
+  $('awayTake').addEventListener('click',()=>{ audio(); card.remove(); setTimeout(showPerkCard,150); S.wood+=rep.wood; setPile(Math.min(24,S.wood)); S.stone+=(rep.stone||0); setStonePile(Math.min(18,S.stone)); const g=rep.gold+rep.daily; if(g>0){ dropCoins(player.g.position.clone().setY(3),Math.min(80,Math.round(g/3)+6),g/Math.min(80,Math.round(g/3)+6),5,1.4); } if(rep.wood>0) burst(DEPOT.clone().setY(1.5),20,M.log,1); SFX.build(); save(); }); }
+function renderPerkChip(){ const el=$('perkChip'); if(S.perk&&S.perkLevel===S.level){ el.style.display='flex'; $('perkTxt').textContent=PERKS[S.perk].n; } else el.style.display='none'; }
+function showPerkCard(){ if($('perkCard')||$('awayCard')) return; if(S.perkLevel===S.level&&S.perk) return; if(!S.perkOffer||S.perkOfferLevel!==S.level){ const keys=Object.keys(PERKS); const pick=[]; while(pick.length<3){ const k=keys[Math.floor(Math.random()*keys.length)]; if(!pick.includes(k)) pick.push(k); } S.perkOffer=pick; S.perkOfferLevel=S.level; save(); }
+  const card=document.createElement('div'); card.className='intro'; card.id='perkCard'; card.innerHTML=`<div class="card"><h1>Bölüm ${S.level} · Yetenek seç</h1><p>Bu bölüm boyunca geçerli. Bir tane seç.</p><div class="perks">${S.perkOffer.map(k=>`<button data-k="${k}"><b>${PERKS[k].n}</b><small>${PERKS[k].d}</small></button>`).join('')}</div></div>`; document.body.appendChild(card);
+  card.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ audio(); S.perk=b.dataset.k; S.perkLevel=S.level; S.perkOffer=null; card.remove(); renderPerkChip(); S.gateHp=Math.min(S.gateHp,D.gateMax()); toast('Yetenek: '+PERKS[S.perk].n,'good'); SFX.build(); save(); })); }
 function markSeen(){ S.lastSeen=Date.now(); save(); }
 addEventListener('pagehide',markSeen); document.addEventListener('visibilitychange',()=>{ if(document.hidden) markSeen(); });
 // ---------- Mini harita ----------
@@ -852,7 +860,7 @@ function tick(dt){ updateGateMarks(dt); updatePlayer(dt); updateTrees(dt); updat
 function frame(now){
   requestAnimationFrame(frame);
   let dt=Math.min(0.05,(now-last)/1000); last=now;
-  if(started&&!document.hidden&&!$('awayCard')){ tick(dt); updateFloats(dt); updateLabels(); updateBubble(); autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; S.lastSeen=Date.now(); save(); } }
+  if(started&&!document.hidden&&!$('awayCard')&&!$('perkCard')){ tick(dt); updateFloats(dt); updateLabels(); updateBubble(); autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; S.lastSeen=Date.now(); save(); } }
   const p=player.g.position;
   if(follow){ camPan.multiplyScalar(Math.pow(0.001,dt)); } camTarget.set(p.x+camPan.x,0,p.z+camPan.z);
   zoom=lerp(zoom,zoomTarget,1-Math.pow(0.002,dt)); camPos.copy(camTarget).addScaledVector(camOff,zoom); camera.position.lerp(camPos,1-Math.pow(0.0005,dt));

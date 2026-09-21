@@ -22,6 +22,12 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .chip.enemy{background:#d63a3a;color:#fff}
 .chip.loot{background:#fff}
 .chip.quest{border:0;cursor:pointer;background:#fff3cf;color:var(--coin-ink)}
+.chip.perk{background:#e6e9ff;color:#2b3a8a;font-size:14px}
+.perks{display:flex;flex-direction:column;gap:8px;margin:6px 0 4px}
+.intro .perks button{width:100%;text-align:left;border:2px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:10px 12px;font-family:var(--font-body);font-size:14px;font-weight:700;cursor:pointer}
+.intro .perks button b{display:block;font-family:var(--font-display);font-size:18px;color:var(--green)}
+.intro .perks button small{color:var(--ink-soft);font-weight:700}
+.intro .perks button:active{background:#f1fae9}
 .chip.quest.done{background:var(--coin);color:#fff;animation:pulse 1.4s ease-in-out infinite}
 .q{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--line);border-radius:14px;margin-bottom:8px;background:#fff}
 .q b{font-family:var(--font-display);font-size:16px;display:block}
@@ -119,7 +125,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="vig"></div>
 
 <div class="hud">
-  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><button class="chip quest" id="questBtn">📜 <span id="questTxt">0/3</span></button></div>
+  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><button class="chip quest" id="questBtn">📜 <span id="questTxt">0/3</span></button><div class="chip perk" id="perkChip" style="display:none">⚡ <span id="perkTxt"></span></div></div>
   <div class="right">
     <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div>
     <div class="chip wave">
