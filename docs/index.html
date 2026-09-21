@@ -152,13 +152,17 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
     <h1>Ormanın Bekçisi</h1>
     <p>Ormanın ortasındaki kaleyi dört kapısından koru. Ağaç kes, odunla sur ve kule kur; kırmızı orduyu kılıçla biç, miğferlerini tezgâhta sat, altınla büyü.</p>
     <button id="startBtn">Oyna</button>
-    <div class="sub">Sürüm 21 · 21 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
+    <div class="sub">Sürüm 22 · 21 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js"></script>
 <script>
-(function(){
+// CrazyGames köprüsü: site dışında sessizce çalışmaz, oyunu etkilemez
+const CG={sdk:null,env:'none',playing:false,lastMid:0};
+function cgCall(fn){ try{ if(CG.sdk) return fn(CG.sdk); }catch(e){} }
+(async function boot(){ const s=window.CrazyGames&&window.CrazyGames.SDK; if(s){ try{ await Promise.race([s.init(),new Promise(r=>setTimeout(r,3000))]); CG.sdk=s; CG.env=s.environment||'unknown'; cgCall(k=>k.game.loadingStart()); }catch(e){} } startGame(); })();
+function startGame(){
 'use strict';
 const THREE = window.THREE;
 if(THREE.ColorManagement) THREE.ColorManagement.legacyMode=false;
@@ -176,8 +180,9 @@ const LV0={axe:0,bag:0,feet:0,worker:0,stoneWorker:0,sword:0,wall:0,soldier:0,ex
 const SIDES=['N','E','S','W']; const SIDE_TR={N:'Kuzey',E:'Doğu',S:'Güney',W:'Batı'};
 function defaultTowers(){ const t=[{k:'a',side:'C',a:0,lvl:0,fixed:true}]; for(const s of SIDES) for(const a of [-5.2,5.2]) t.push({k:'a',side:s,a,lvl:0,fixed:true}); return t; }
 const S = { coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:1, gateHp:150, muted:false, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{} };
-function load(){ try{ const j=JSON.parse(localStorage.getItem(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); for(const t of S.towers){ if(t.fixed&&Math.abs(t.a)===4.8) t.a=Math.sign(t.a)*5.2; } S.paid=j.paid||{}; } }catch(e){} }
-function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+const store={ get:k=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem(k); }catch(e){} if(v==null){ try{ v=localStorage.getItem(k); }catch(e){} } return v; }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem(k,v); }catch(e){} } };
+function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); for(const t of S.towers){ if(t.fixed&&Math.abs(t.a)===4.8) t.a=Math.sign(t.a)*5.2; } S.paid=j.paid||{}; } }catch(e){} }
+function save(){ store.set(SAVE_KEY, JSON.stringify(S)); }
 load();
 const gw=()=>(S.level-1)*WAVES+S.wave;
 const PERKS={ trample:{n:'Midilli Ezme',d:'Midilli koşarken çarptığı düşmanı ezer'}, arrows:{n:'Ok Yağmuru',d:'Okçu kuleleri %35 daha hızlı atar'}, mason:{n:'Duvarcı',d:'Sur canı +%50, saldırıda kendini onarır'}, gold:{n:'Tüccar Dostu',d:'Miğferler %40 daha pahalı satılır'}, lumber:{n:'Odun Bereketi',d:'Ağaç 6 odun verir, pervane %25 hızlı'}, magnet:{n:'Büyük Mıknatıs',d:'Altın ve ganimet iki kat uzaktan gelir'}, cannon:{n:'Barut',d:'Topçu kuleleri %50 daha sert vurur'} };
@@ -194,8 +199,9 @@ const sidesShown=()=>Math.min(4,sidesActive()+1);
 // ---------- Ses ----------
 let AC=null;
 function audio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==='suspended') AC.resume(); if(AC) musicInit(); }
-function tone(f0,f1,dur,type,vol){ if(S.muted||!AC) return; const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,AC.currentTime); o.frequency.exponentialRampToValueAtTime(f1,AC.currentTime+dur); g.gain.setValueAtTime(vol||0.08,AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+dur); }
-function noise(dur,vol){ if(S.muted||!AC) return; const n=AC.sampleRate*dur, b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.value=vol||0.25; s.connect(f).connect(g).connect(AC.destination); s.start(); }
+let adMute=false;
+function tone(f0,f1,dur,type,vol){ if(S.muted||adMute||!AC) return; const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,AC.currentTime); o.frequency.exponentialRampToValueAtTime(f1,AC.currentTime+dur); g.gain.setValueAtTime(vol||0.08,AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+dur); }
+function noise(dur,vol){ if(S.muted||adMute||!AC) return; const n=AC.sampleRate*dur, b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.value=vol||0.25; s.connect(f).connect(g).connect(AC.destination); s.start(); }
 const SFX = {
   chop:()=>{ noise(0.08,0.35); tone(180,90,0.08,'square',0.04); }, fall:()=>{ noise(0.3,0.4); tone(120,50,0.3,'sawtooth',0.05); },
   coin:()=>{ tone(880,1320,0.12,'sine',0.06); }, sell:()=>{ tone(660,990,0.08,'triangle',0.05); }, pay:()=>{ tone(740,520,0.05,'triangle',0.03); },
@@ -211,7 +217,7 @@ const SCALES={day:[60,62,64,67,69,72,74,76],night:[57,60,62,64,67,69,72,74]};
 const ROOTS={day:[48,45,41,43],night:[45,41,43,40]};
 function musicInit(){ if(MUS.vol||!AC) return; MUS.vol=AC.createGain(); MUS.vol.gain.value=0; MUS.lp=AC.createBiquadFilter(); MUS.lp.type='lowpass'; MUS.lp.frequency.value=1800; MUS.lp.connect(MUS.vol).connect(AC.destination); MUS.next=AC.currentTime+0.1; }
 function mnote(midi,t,dur,type,vol,det){ const o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.value=NOTE(midi); if(det) o.detune.value=det; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g).connect(MUS.lp); o.start(t); o.stop(t+dur+0.05); }
-function musicTick(night){ if(!AC||!MUS.vol) return; const target=S.muted?0:(night>0.5?0.09:0.07); MUS.vol.gain.setTargetAtTime(target,AC.currentTime,0.8); const mode=night>0.5?'night':'day'; if(mode!==MUS.mode){ MUS.mode=mode; MUS.lp.frequency.setTargetAtTime(mode==='night'?1200:1800,AC.currentTime,0.5); }
+function musicTick(night){ if(!AC||!MUS.vol) return; const target=(S.muted||adMute)?0:(night>0.5?0.09:0.07); MUS.vol.gain.setTargetAtTime(target,AC.currentTime,0.8); const mode=night>0.5?'night':'day'; if(mode!==MUS.mode){ MUS.mode=mode; MUS.lp.frequency.setTargetAtTime(mode==='night'?1200:1800,AC.currentTime,0.5); }
   const bpm=mode==='night'?132:96; const st=60/bpm/2; while(MUS.next<AC.currentTime+0.4){ const t=MUS.next; const i=MUS.step; const bar=Math.floor(i/16), beat=i%16; const root=ROOTS[mode][Math.floor(bar/2)%4]; const sc=SCALES[mode];
     if(beat===0){ mnote(root,t,st*16,'sine',0.5); mnote(root+7,t,st*16,'sine',0.25,6); mnote(root+12,t,st*16,'triangle',0.12,-5); }
     if(beat%4===0) mnote(root-12,t,st*3,mode==='night'?'sawtooth':'triangle',mode==='night'?0.28:0.2);
@@ -847,10 +853,10 @@ function spawnOne(){ const k=sidesActive(); const side=SIDES[(Math.floor(spawnId
 const gateMarks={}; for(const s of SIDES){ const g=new THREE.Group(); const cone=mesh(G.cone,M.enemy,0.55,0.9,0.55,false); cone.rotation.x=Math.PI; const ring=new THREE.Mesh(new THREE.RingGeometry(2.2,2.7,32),new THREE.MeshBasicMaterial({color:0xd63a3a,transparent:true,opacity:0.7,depthWrite:false,side:THREE.DoubleSide})); ring.rotation.x=-Math.PI/2; ring.position.y=-5.4; g.add(cone,ring); g.visible=false; scene.add(g); gateMarks[s]={g,cone,ring}; }
 function updateGateMarks(dt){ const t=performance.now()/1000; for(const s of SIDES){ const m=gateMarks[s]; let on=false; if(celebT<=0&&!$('levelCard')){ if(!waveActive&&plan&&plan.cnt[s]>0) on=true; if(waveActive&&(enemies.some(e=>!e.dead&&e.side===s)||(spawnQueue>0&&plan&&plan.cnt[s]>0))) on=true; } m.g.visible=on; if(!on) continue; const [x,z]=sidePos(s,0,2.2); m.g.position.set(x,5.6+Math.sin(t*4)*0.3,z); m.g.rotation.y=t*2; const k=1+0.15*Math.sin(t*6); m.ring.scale.set(k,k,1); } }
 function damageEnemy(e,dmg,src){ if(e.dead) return; const m=src&&e.K&&e.K[src]!==undefined? e.K[src] : 1; e.hp-=dmg*m; e.hitT=0.18; SFX.hit(); if(m<0.7&&src==='arrow'&&Math.random()<0.3) burst(e.g.position.clone().setY(1.2),3,M.metal,0.5); if(e.hp<=0) killEnemy(e); }
-function killEnemy(e){ e.dead=true; e.bar.remove(); S.kills++; questEvent('kill'); SFX.die(); burst(e.g.position.clone().setY(0.8),9,M.enemy,1); const reward=(8+gw()*2.5)*(e.boss?10:e.kind==='ram'?3:1); scene.remove(e.g); const nl=e.K?e.K.loot:1; for(let i=0;i<nl;i++) dropLoot(e.g.position.x,e.g.position.z); if(e.kind==='ram'){ burst(e.g.position.clone().setY(1),16,M.woodDark,1.2); burst(e.g.position.clone().setY(1),8,M.trunk,1); } if(e.boss){ dropCoins(e.g.position.clone().setY(0.8),60,reward/60,8,1.3); } else if(Math.random()<0.35){ dropCoins(e.g.position.clone().setY(0.8),2,Math.round(reward/6),2.5,1); } }
+function killEnemy(e){ e.dead=true; e.bar.remove(); S.kills++; questEvent('kill'); if(e.boss) cgCall(k=>k.game.happytime()); SFX.die(); burst(e.g.position.clone().setY(0.8),9,M.enemy,1); const reward=(8+gw()*2.5)*(e.boss?10:e.kind==='ram'?3:1); scene.remove(e.g); const nl=e.K?e.K.loot:1; for(let i=0;i<nl;i++) dropLoot(e.g.position.x,e.g.position.z); if(e.kind==='ram'){ burst(e.g.position.clone().setY(1),16,M.woodDark,1.2); burst(e.g.position.clone().setY(1),8,M.trunk,1); } if(e.boss){ dropCoins(e.g.position.clone().setY(0.8),60,reward/60,8,1.3); } else if(Math.random()<0.35){ dropCoins(e.g.position.clone().setY(0.8),2,Math.round(reward/6),2.5,1); } }
 let gateShake=0, gateDownT=0, levelReward=0;
-function levelComplete(){ levelReward=Math.round(200*Math.pow(1.6,S.level-1)); celebT=10; celebSpawn=0; SFX.wave(); setTimeout(SFX.wave,300); toast(`Bölüm ${S.level} tamamlandı! Altınları topla`,'good'); dropCoins(new THREE.Vector3(0,3,4),60,levelReward/260,6,1.4); }
-function showLevelCard(){ if($('levelCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='levelCard'; card.innerHTML=`<div class="card"><div class="stars">★ ★ ★</div><h1>Bölüm ${S.level} tamamlandı!</h1><p>${S.kills} düşman, ${S.treesCut} ağaç. ${Math.floor(S.coins)} altının var.<br>Sıradaki bölümde düşmanlar daha güçlü, ödüller daha büyük.</p><button id="nextLevel">Bölüm ${S.level+1}'e geç</button></div>`; document.body.appendChild(card); $('nextLevel').addEventListener('click',()=>{ for(const c of coins) S.coins+=c.value; coins.length=0; stackH.clear(); S.level++; S.wave=1; waveT=12; plan=null; planWave(); S.perkOffer=null; save(); card.remove(); toast(`Bölüm ${S.level} başladı!`,'good'); setTimeout(()=>{ showPerkCard(); S.gateHp=D.gateMax(); },100); }); }
+function levelComplete(){ cgCall(k=>k.game.happytime()); levelReward=Math.round(200*Math.pow(1.6,S.level-1)); celebT=10; celebSpawn=0; SFX.wave(); setTimeout(SFX.wave,300); toast(`Bölüm ${S.level} tamamlandı! Altınları topla`,'good'); dropCoins(new THREE.Vector3(0,3,4),60,levelReward/260,6,1.4); }
+function showLevelCard(){ if($('levelCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='levelCard'; card.innerHTML=`<div class="card"><div class="stars">★ ★ ★</div><h1>Bölüm ${S.level} tamamlandı!</h1><p>${S.kills} düşman, ${S.treesCut} ağaç. ${Math.floor(S.coins)} altının var.<br>Sıradaki bölümde düşmanlar daha güçlü, ödüller daha büyük.</p><button id="nextLevel">Bölüm ${S.level+1}'e geç</button></div>`; document.body.appendChild(card); $('nextLevel').addEventListener('click',()=>{ const go=()=>{ for(const c of coins) S.coins+=c.value; coins.length=0; stackH.clear(); S.level++; S.wave=1; waveT=12; plan=null; planWave(); S.perkOffer=null; save(); card.remove(); toast(`Bölüm ${S.level} başladı!`,'good'); setTimeout(()=>{ showPerkCard(); S.gateHp=D.gateMax(); },100); }; $('nextLevel').disabled=true; cgAd('midgame',go,go); }); }
 function updateEnemies(dt){
   if(celebT>0||$('levelCard')){ }
   else if(!waveActive){ if(S.level===1&&S.wave===1&&S.towers[1].lvl<1&&S.towers[2].lvl<1&&introT<30) waveT=Math.max(waveT,4); waveT-=dt; if(waveT<=0) startWave(); }
@@ -980,6 +986,7 @@ function renderHud(){
 $('muteBtn').addEventListener('click',()=>{ audio(); S.muted=!S.muted; $('muteBtn').textContent=S.muted?'🔇':'🔊'; save(); });
 $('muteBtn').textContent=S.muted?'🔇':'🔊';
 let started=false;
+cgCall(k=>k.game.loadingStop());
 $('startBtn').addEventListener('click',()=>{ audio(); $('intro').remove(); started=true; ensureQuests(); renderQuests(); renderPerkChip(); const rep=awayReport(); S.lastSeen=Date.now(); showAway(rep); save(); });
 if(S.coins>0||S.wave>1||S.level>1){ $('startBtn').textContent='Devam et'; $('intro').querySelector('p').textContent=`Kaldığın yerden: Bölüm ${S.level}, ${S.wave}. dalga, ${Math.floor(S.coins)} altın.`; }
 
@@ -1000,12 +1007,14 @@ function awayReport(){ const now=Date.now(); const last=S.lastSeen||0; const sec
   return out; }
 function showAway(rep){ if(rep.sec<=0&&!rep.daily){ showPerkCard(); return; } const card=document.createElement('div'); card.className='intro'; card.id='awayCard'; const rows=[]; if(rep.sec>0){ rows.push(`<div><span>Sen yokken geçen süre</span><b>${fmtDur(rep.sec)}</b></div>`); if(rep.wood>0) rows.push(`<div><span>Oduncular kesti</span><b>+${rep.wood} odun</b></div>`); if(rep.stone>0) rows.push(`<div><span>Taşçılar çıkardı</span><b>+${rep.stone} taş</b></div>`); if(rep.gold>0) rows.push(`<div><span>Nöbetçiler baskın püskürttü</span><b>+${rep.gold} altın</b></div>`); if(!rep.wood&&!rep.gold&&!rep.stone) rows.push(`<div><span>Oduncu ve nöbetçi yoktu</span><b>—</b></div>`); }
   if(rep.daily) rows.push(`<div><span>Günlük giriş ödülü · ${rep.streak}. gün</span><b>+${rep.daily} altın</b></div>`);
-  card.innerHTML=`<div class="card"><h1>${rep.sec>0?'Sen yokken':'Hoş geldin!'}</h1><div class="away">${rows.join('')}</div><button id="awayTake">Topla</button></div>`; document.body.appendChild(card);
+  const canAd=!!CG.sdk&&(rep.wood+rep.gold+(rep.stone||0))>0; card.innerHTML=`<div class="card"><h1>${rep.sec>0?'Sen yokken':'Hoş geldin!'}</h1><div class="away">${rows.join('')}</div><button id="awayTake">Topla</button>${canAd?'<button id="awayAd" style="margin-top:8px;background:var(--coin);color:var(--coin-ink)">📺 Reklam izle, 2 katını al</button>':''}</div>`; document.body.appendChild(card);
+  if(canAd){ $('awayAd').addEventListener('click',()=>{ audio(); $('awayAd').disabled=true; $('awayAd').textContent='Reklam yükleniyor…'; cgAd('rewarded',()=>{ rep.wood*=2; rep.gold*=2; rep.stone=(rep.stone||0)*2; toast('İki katı alındı!','good'); $('awayTake').click(); },()=>{ $('awayAd').textContent='Reklam yok, normal topla'; $('awayAd').disabled=true; }); }); }
   $('awayTake').addEventListener('click',()=>{ audio(); card.remove(); setTimeout(showPerkCard,150); S.wood+=rep.wood; setPile(Math.min(24,S.wood)); S.stone+=(rep.stone||0); setStonePile(Math.min(18,S.stone)); const g=rep.gold+rep.daily; if(g>0){ dropCoins(player.g.position.clone().setY(3),Math.min(80,Math.round(g/3)+6),g/Math.min(80,Math.round(g/3)+6),5,1.4); } if(rep.wood>0) burst(DEPOT.clone().setY(1.5),20,M.log,1); SFX.build(); save(); }); }
 function renderPerkChip(){ const el=$('perkChip'); if(S.perk&&S.perkLevel===S.level){ el.style.display='flex'; $('perkTxt').textContent=PERKS[S.perk].n; } else el.style.display='none'; }
 function showPerkCard(){ if($('perkCard')||$('awayCard')) return; if(S.perkLevel===S.level&&S.perk) return; if(!S.perkOffer||S.perkOfferLevel!==S.level){ const keys=Object.keys(PERKS); const pick=[]; while(pick.length<3){ const k=keys[Math.floor(Math.random()*keys.length)]; if(!pick.includes(k)) pick.push(k); } S.perkOffer=pick; S.perkOfferLevel=S.level; save(); }
   const card=document.createElement('div'); card.className='intro'; card.id='perkCard'; card.innerHTML=`<div class="card"><h1>Bölüm ${S.level} · Yetenek seç</h1><p>Bu bölüm boyunca geçerli. Bir tane seç.</p><div class="perks">${S.perkOffer.map(k=>`<button data-k="${k}"><b>${PERKS[k].n}</b><small>${PERKS[k].d}</small></button>`).join('')}</div></div>`; document.body.appendChild(card);
   card.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ audio(); S.perk=b.dataset.k; S.perkLevel=S.level; S.perkOffer=null; card.remove(); renderPerkChip(); S.gateHp=Math.min(S.gateHp,D.gateMax()); toast('Yetenek: '+PERKS[S.perk].n,'good'); SFX.build(); save(); })); }
+function cgAd(type,onDone,onFail){ if(!CG.sdk){ onFail&&onFail(); return; } if(type==='midgame'&&Date.now()-CG.lastMid<180000){ onFail&&onFail(); return; } let ended=false; const end=(ok)=>{ if(ended) return; ended=true; adMute=false; if(ok){ if(type==='midgame') CG.lastMid=Date.now(); onDone&&onDone(); } else onFail&&onFail(); }; try{ CG.sdk.ad.requestAd(type,{adStarted:()=>{ adMute=true; },adFinished:()=>end(true),adError:()=>end(false)}); setTimeout(()=>{ if(!ended&&!adMute) end(false); },4000); }catch(e){ end(false); } }
 function markSeen(){ S.lastSeen=Date.now(); save(); }
 addEventListener('pagehide',markSeen); document.addEventListener('visibilitychange',()=>{ if(document.hidden) markSeen(); });
 // ---------- Mini harita ----------
@@ -1025,7 +1034,8 @@ function tick(dt){ updateGateMarks(dt); updatePlayer(dt); updateTrees(dt); updat
 function frame(now){
   requestAnimationFrame(frame);
   let dt=Math.min(0.05,(now-last)/1000); last=now;
-  if(started&&!document.hidden&&!$('awayCard')&&!$('perkCard')){ tick(dt); updateFloats(dt); updateLabels(); updateBubble(); autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; S.lastSeen=Date.now(); save(); } }
+  const playing=started&&!document.hidden&&!$('awayCard')&&!$('perkCard')&&!$('levelCard')&&!adMute; if(playing!==CG.playing){ CG.playing=playing; cgCall(k=>playing?k.game.gameplayStart():k.game.gameplayStop()); }
+  if(playing){ tick(dt); updateFloats(dt); updateLabels(); updateBubble(); autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; S.lastSeen=Date.now(); save(); } }
   const p=player.g.position;
   if(follow){ camPan.multiplyScalar(Math.pow(0.001,dt)); } camTarget.set(p.x+camPan.x,0,p.z+camPan.z);
   zoom=lerp(zoom,zoomTarget,1-Math.pow(0.002,dt)); camPos.copy(camTarget).addScaledVector(camOff,zoom); camera.position.lerp(camPos,1-Math.pow(0.0005,dt));
@@ -1038,7 +1048,7 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 window.__dbg={rocks,hitRock,get night(){return night;},set night(v){night=v;},damageEnemy,addWorker,questEvent,awayReport,showAway,ensureQuests,camPan,panBy,recenter,get follow(){return follow;},drawMiniBase,get plan(){return plan;},S,player,trees,enemies,workers,soldiers,towers,pads,D,coins,dropCoins,tick,loot,customers,setBack,STALL,TREASURY,DEPOT,orbit,collectors,get H(){return H;},get zoom(){return zoom;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},bubbleEl,get bubblePad(){return bubblePad;},get placing(){return placing;},placeGhostAt,confirmPlace,instantBuy,cancelPad,get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},gates,routeGoal,startWave,spawnOne,makeEnemy,sidePos};
-})();
+}
 
 </script>
 </body></html>
