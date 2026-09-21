@@ -57,6 +57,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .toast{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--danger);color:#fff;padding:10px 18px;border-radius:14px;font-family:var(--font-display);font-weight:800;font-size:18px;z-index:7;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
 .toast.show{opacity:1}
 .toast.good{background:var(--green)}
+.mini{position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:132px;height:132px;border-radius:14px;box-shadow:var(--shadow);border:2px solid rgba(255,255,255,.7);z-index:5;touch-action:none;background:#d7b989}
+.recenter{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;background:var(--panel);color:var(--ink);border:0;border-radius:14px;padding:9px 14px;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:var(--shadow);cursor:pointer;display:none}
+.recenter.show{display:block}
+.wave .next{font-family:var(--font-body);font-weight:800;font-size:12px;color:var(--danger);min-height:14px}
 .intro{position:fixed;inset:0;z-index:30;background:rgba(43,58,46,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .intro .card{background:var(--panel);border-radius:24px;padding:22px 22px 18px;max-width:380px;width:100%;box-shadow:var(--shadow);text-align:center}
 .intro h1{font-family:var(--font-display);font-size:34px;margin:0 0 6px;color:var(--green);line-height:1.05;text-wrap:balance}
@@ -88,7 +92,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .hpbar i{display:block;height:100%;background:#ff5f5f;width:100%}
 .hpbar.boss{width:70px;height:9px}
 .vig{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(20,40,25,.28) 100%)}
-@media (max-width:600px){.wl{font-size:12px;padding:3px 8px}.wl.pad{background:rgba(43,58,46,.88);color:#fff;font-size:11px;padding:3px 7px;border-radius:9px;transform:translate(-50%,-100%);line-height:1.1}
+@media (max-width:600px){.mini{width:96px;height:96px}.wl{font-size:12px;padding:3px 8px}.wl.pad{background:rgba(43,58,46,.88);color:#fff;font-size:11px;padding:3px 7px;border-radius:9px;transform:translate(-50%,-100%);line-height:1.1}
 .wl.pad em{font-style:normal;color:#ffd23f;font-size:12px}
 .wl.pad small{color:#dfe8dd;font-size:12px}
 .wl.pad small b{color:#ffd23f}
@@ -106,6 +110,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
     <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div>
     <div class="chip wave">
       <div class="row"><span id="waveLbl">Dalga 1</span><small id="waveT">20 sn</small></div>
+      <div class="next" id="waveNext"></div>
       <div class="bar" id="gateBar"><i></i></div>
       <small id="gateLbl">Kapı 100/100</small>
     </div>
@@ -116,6 +121,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="tip" id="tip">Ağaçların yanına git, baltan kendiliğinden çalışır</div>
 <div class="toast" id="toast"></div>
 <div class="joy" id="joy"><i></i></div>
+<canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita"></canvas>
+<button class="recenter" id="recenter" aria-label="Karaktere dön">📍 Karaktere dön</button>
 
 </div>
 
