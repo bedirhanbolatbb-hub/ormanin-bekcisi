@@ -20,6 +20,19 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .left{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .chip.enemy{background:#d63a3a;color:#fff}
 .chip.loot{background:#fff}
+.chip.quest{border:0;cursor:pointer;background:#fff3cf;color:var(--coin-ink)}
+.chip.quest.done{background:var(--coin);color:#fff;animation:pulse 1.4s ease-in-out infinite}
+.q{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--line);border-radius:14px;margin-bottom:8px;background:#fff}
+.q b{font-family:var(--font-display);font-size:16px;display:block}
+.q small{color:var(--ink-soft);font-weight:700}
+.q .qb{flex:1}
+.q .qbar{height:8px;border-radius:4px;background:#eee4cf;overflow:hidden;margin-top:4px}
+.q .qbar i{display:block;height:100%;background:linear-gradient(90deg,#8fd17a,#3d9a55)}
+.q.ok{border-color:#8fd17a;background:#f1fae9}
+.q .rw{font-family:var(--font-display);font-weight:800;color:var(--coin-ink);white-space:nowrap}
+.away{font-size:15px;text-align:left;margin:8px 0 14px}
+.away div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-weight:700}
+.away b{font-family:var(--font-display);font-size:18px;color:var(--green)}
 .helm{width:18px;height:12px;border-radius:9px 9px 3px 3px;background:#d63a3a;box-shadow:0 3px 0 -1px #9c2323}
 .shield{width:16px;height:18px;background:#fff;border-radius:3px 3px 8px 8px;box-shadow:inset 0 0 0 3px #d63a3a,inset 0 0 0 5px #fff}
 .wave{min-width:150px;flex-direction:column;align-items:stretch;gap:4px;padding:8px 12px}
@@ -105,7 +118,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="vig"></div>
 
 <div class="hud">
-  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div></div>
+  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><button class="chip quest" id="questBtn">📜 <span id="questTxt">0/3</span></button></div>
   <div class="right">
     <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div>
     <div class="chip wave">
@@ -120,6 +133,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <button class="mute" id="muteBtn" aria-label="Sesi aç/kapat">🔊</button>
 <div class="tip" id="tip">Ağaçların yanına git, baltan kendiliğinden çalışır</div>
 <div class="toast" id="toast"></div>
+<div class="sheet" id="questSheet"><h2>Günlük görevler <button id="questClose" aria-label="Kapat">✕</button></h2><div id="questList"></div><small id="questFoot" style="color:var(--ink-soft);font-weight:700">Görevler her gün yenilenir. Tamamlanınca altın anında gelir.</small></div>
 <div class="joy" id="joy"><i></i></div>
 <canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita"></canvas>
 <button class="recenter" id="recenter" aria-label="Karaktere dön">📍 Karaktere dön</button>
