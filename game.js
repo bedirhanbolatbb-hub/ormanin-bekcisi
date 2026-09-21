@@ -827,7 +827,9 @@ $('muteBtn').addEventListener('click',()=>{ audio(); S.muted=!S.muted; $('muteBt
 $('muteBtn').textContent=S.muted?'🔇':'🔊';
 let started=false;
 cgCall(k=>k.game.loadingStop());
-$('startBtn').addEventListener('click',()=>{ audio(); $('intro').remove(); started=true; ensureQuests(); renderQuests(); renderPerkChip(); const rep=awayReport(); S.lastSeen=Date.now(); showAway(rep); save(); });
+function startPlay(){ if(started) return; const it=$('intro'); if(it) it.remove(); started=true; ensureQuests(); renderQuests(); renderPerkChip(); const rep=awayReport(); S.lastSeen=Date.now(); showAway(rep); save(); }
+$('startBtn').addEventListener('click',()=>{ audio(); startPlay(); });
+if(CG.sdk&&CG.env!=='disabled'){ setTimeout(startPlay,150); }
 if(S.coins>0||S.wave>1||S.level>1){ $('startBtn').textContent='Devam et'; $('intro').querySelector('p').textContent=`Kaldığın yerden: Bölüm ${S.level}, ${S.wave}. dalga, ${Math.floor(S.coins)} altın.`; }
 
 // ---------- Günlük görevler, günlük ödül, sen yokken kazanç ----------
