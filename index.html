@@ -119,15 +119,74 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .wl.pad.can{background:var(--green);box-shadow:0 0 0 3px rgba(255,210,63,.6),var(--shadow)}
 .wl small{font-size:10px}.guide{font-size:13px;padding:4px 10px}.chip{font-size:16px;padding:5px 10px}.wave{min-width:130px}}
 @media (prefers-reduced-motion:reduce){.btn.has{animation:none}.sheet{transition:none}}
+
+.chip.perk{font-size:15px;letter-spacing:1px}
+.nightBtn{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;border:0;border-radius:18px;padding:12px 20px;background:linear-gradient(#34427a,#1e2850);color:#fff;font-family:var(--font-display);font-weight:800;font-size:19px;box-shadow:0 5px 0 #121a38,var(--shadow);cursor:pointer;display:flex;align-items:center;gap:10px;animation:pulse 1.6s ease-in-out infinite;touch-action:manipulation}
+.nightBtn span{background:var(--coin);color:var(--coin-ink);border-radius:10px;padding:1px 9px;font-size:15px}
+.nightBtn:active{transform:translate(-50%,3px);box-shadow:0 2px 0 #121a38}
+.nightBtn{white-space:nowrap}
+@media (max-width:600px){.nightBtn{font-size:16px;padding:10px 14px;bottom:calc(122px + env(safe-area-inset-bottom,0px))}.nightBtn span{font-size:13px}}
+.banner{position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;animation:bannerIn .45s cubic-bezier(.2,1.6,.4,1) forwards}
+.banner b{display:block;font-family:var(--font-display);font-weight:800;font-size:clamp(40px,9vw,76px);line-height:1;color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 24px rgba(0,0,0,.35);letter-spacing:2px}
+.banner small{display:inline-block;margin-top:8px;font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;background:rgba(20,24,34,.75);padding:4px 14px;border-radius:12px}
+.banner.night b{color:#cfd8ff}.banner.boss b{color:#ff6b5f;font-size:clamp(38px,8vw,70px)}.banner.day b{color:#ffe27a}
+.banner.out{animation:bannerOut .5s ease forwards}
+@keyframes bannerIn{from{transform:translate(-50%,-50%) scale(.6)}to{transform:translate(-50%,-50%) scale(1)}}
+@keyframes bannerOut{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-70%) scale(1.05)}}
+.intro .cards{display:flex;flex-direction:column;gap:10px;margin:8px 0 2px}
+.intro .cards button{display:grid;grid-template-columns:48px 1fr;grid-template-rows:auto auto;align-items:center;text-align:left;border:3px solid #e8d9a8;background:linear-gradient(#fffdf4,#fff4d6);color:var(--ink);border-radius:18px;padding:10px 12px;cursor:pointer;animation:cardIn .35s cubic-bezier(.2,1.5,.4,1) forwards;box-shadow:0 4px 0 #d8c690}
+.intro .cards button i{grid-row:1/3;font-style:normal;font-size:32px;text-align:center}
+.intro .cards button b{font-family:var(--font-display);font-size:19px;color:var(--green)}
+.intro .cards button b em{font-style:normal;color:var(--coin-ink);background:var(--coin);border-radius:8px;padding:0 6px;font-size:14px}
+.intro .cards button small{font-weight:700;color:var(--ink-soft);font-size:14px}
+.intro .cards button:hover,.intro .cards button:active{border-color:var(--coin);transform:translateY(-2px)}
+@keyframes cardIn{from{transform:translateY(24px) scale(.94)}to{transform:none}}
+.intro .cards button{opacity:1}
+.intro button.ghost{background:transparent;color:var(--ink-soft);font-size:16px;padding:10px;margin-top:4px}
+.intro button.gold{background:var(--coin);color:var(--coin-ink);margin-bottom:8px}
+.intro button+button{margin-top:8px}
+.result .bigstars{font-size:58px;line-height:1;margin:-4px 0 6px;letter-spacing:4px}
+.result .bigstars span{display:inline-block;color:#d8cfb8;animation:starPop .45s cubic-bezier(.2,1.8,.4,1) forwards}
+.result .bigstars span.on{color:var(--coin);text-shadow:0 3px 0 #b8860b,0 0 18px rgba(255,210,63,.7)}
+@keyframes starPop{from{transform:scale(.4)}to{transform:scale(1)}}
+.result p b{color:var(--ink)}
+.result .crowns{font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--coin-ink);background:#fff3cf;border-radius:12px;padding:6px 10px;margin:0 0 12px}
+.result.fail h1{color:var(--danger)}
+.result .near{font-size:20px;color:var(--ink)}
+.result .near b{color:var(--danger);font-size:26px}
+.result .prog{position:relative;height:24px;border-radius:12px;background:#eee4cf;overflow:hidden;margin:4px 0 12px}
+.result .prog i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f7c75a,#e8961a);transition:width 1.1s cubic-bezier(.2,.8,.3,1)}
+.result .prog span{position:relative;font-family:var(--font-display);font-weight:800;font-size:14px;line-height:24px;color:var(--ink)}
+.result .hint{background:#f1fae9;border-radius:12px;padding:8px 10px;color:var(--green);font-size:14px}
+.card.map{max-width:440px;text-align:left}
+.maphead{display:flex;justify-content:space-between;align-items:center}
+.card.map h1{margin:0}.card.map h2{font-family:var(--font-display);font-size:20px;margin:14px 0 6px}
+.crowns.big{font-family:var(--font-display);font-weight:800;font-size:24px;color:var(--coin-ink);background:#fff3cf;border-radius:14px;padding:4px 12px}
+.gift{background:var(--green-soft);color:var(--green);font-weight:800;border-radius:12px;padding:8px 10px;margin:8px 0}
+.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.intro .levels .lv{padding:8px 0 6px;border-radius:14px;background:var(--green);display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 4px 0 #1d4a26;margin:0}
+.intro .levels .lv b{font-size:22px;line-height:1}.intro .levels .lv small{font-size:12px;color:#ffd23f;letter-spacing:1px;min-height:14px}
+.intro .levels .lv.lock{background:#c9c0ac;box-shadow:0 4px 0 #a39a86;cursor:default}
+.intro .levels .lv.next{animation:pulse 1.2s ease-in-out infinite;background:#e8961a;box-shadow:0 4px 0 #a86a0e}
+.ups{display:flex;flex-direction:column;gap:8px}
+.upr{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;border:2px solid var(--line);border-radius:14px;padding:8px 10px;background:#fff}
+.upr i{font-style:normal;font-size:26px;text-align:center}.upr b{font-family:var(--font-display);font-size:17px}.upr b span{color:var(--ink-soft);font-size:13px}.upr small{display:block;color:var(--ink-soft);font-weight:700;font-size:13px}
+.intro .upr button{width:auto;padding:8px 12px;font-size:16px;background:var(--coin);color:var(--coin-ink);margin:0}
+.intro .upr button:disabled{background:#eee4cf;color:#9a9282}
+.intro #cont{background:#e8961a;margin:6px 0 2px}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:29;overflow:hidden}
+.confetti i{position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{top:110%;transform:rotate(720deg) translateX(40px)}}
+@media (prefers-reduced-motion:reduce){.nightBtn,.intro .levels .lv.next{animation:none}}
 </style>
 
 <canvas id="c"></canvas>
 <div class="vig"></div>
 
 <div class="hud">
-  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><button class="chip quest" id="questBtn">📜 <span id="questTxt">0/3</span></button><div class="chip perk" id="perkChip" style="display:none">⚡ <span id="perkTxt"></span></div></div>
+  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div></div>
   <div class="right">
-    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div>
+    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div>
     <div class="chip wave">
       <div class="row"><span id="waveLbl">Dalga 1</span><small id="waveT">20 sn</small></div>
       <div class="next" id="waveNext"></div>
@@ -140,7 +199,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <button class="mute" id="muteBtn" aria-label="Sesi aç/kapat">🔊</button>
 <div class="tip" id="tip">Ağaçların yanına git, baltan kendiliğinden çalışır</div>
 <div class="toast" id="toast"></div>
-<div class="sheet" id="questSheet"><h2>Günlük görevler <button id="questClose" aria-label="Kapat">✕</button></h2><div id="questList"></div><small id="questFoot" style="color:var(--ink-soft);font-weight:700">Görevler her gün yenilenir. Tamamlanınca altın anında gelir.</small></div>
+<button class="nightBtn" id="nightBtn" style="display:none">🌙 Geceyi başlat</button>
 <div class="joy" id="joy"><i></i></div>
 <canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita"></canvas>
 <button class="recenter" id="recenter" aria-label="Karaktere dön">📍 Karaktere dön</button>
@@ -150,7 +209,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="intro" id="intro">
   <div class="card">
     <h1>Ormanın Bekçisi</h1>
-    <p>Ormanın ortasındaki kaleyi dört kapısından koru. Ağaç kes, odunla sur ve kule kur; kırmızı orduyu kılıçla biç, miğferlerini tezgâhta sat, altınla büyü.</p>
+    <p>Her bölüm 5 gece. Gündüz ağaç kes, kule ve sur kur; gece kırmızı ordu gelir. Sur yıkılırsa bölüm biter. 5. gecenin patronunu yen, yıldızları topla.</p>
     <button id="startBtn">Oyna</button>
     <div class="sub">Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
   </div>

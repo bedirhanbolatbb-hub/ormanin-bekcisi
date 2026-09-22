@@ -14,26 +14,40 @@ const isTouch=matchMedia('(pointer:coarse)').matches;
 const isMobile=isTouch||innerWidth<700;
 
 // ---------- Kalıcı durum ----------
-const SAVE_KEY='ormanin-bekcisi-v6';
-const WAVES=8; const MAXL=10;
+const SAVE_KEY='ormanin-bekcisi-v7'; const OLD_KEY='ormanin-bekcisi-v6';
+const WAVES=5; const MAXL=10; const LEVELS=10;
 const LV0={axe:0,bag:0,feet:0,worker:0,stoneWorker:0,sword:0,wall:0,soldier:0,expand:0,trader:0,towerTrain:0,magnet:0,collector:0,gateLv:0,range:0,depotLv:0,workerSpd:0,price:0,soldierTrain:0,cannonTrain:0};
 const SIDES=['N','E','S','W']; const SIDE_TR={N:'Kuzey',E:'Doğu',S:'Güney',W:'Batı'};
 function defaultTowers(){ const t=[{k:'a',side:'C',a:0,lvl:0,fixed:true}]; for(const s of SIDES) for(const a of [-5.2,5.2]) t.push({k:'a',side:s,a,lvl:0,fixed:true}); return t; }
-const S = { coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:1, gateHp:150, muted:false, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{} };
+// Kalıcı (meta): açılan bölüm, yıldızlar, taç, kalıcı güçlendirmeler. Bölümlük (run): her bölüm başında sıfırlanır.
+const META0={unlocked:1,stars:{},crowns:0,up:{gold:0,wall:0,arrow:0},dailyDate:'',streak:0,fails:{}};
+function runState(level){ return { coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
+const S = Object.assign(runState(1), { muted:false, meta:JSON.parse(JSON.stringify(META0)) });
 const store={ get:k=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem(k); }catch(e){} if(v==null){ try{ v=localStorage.getItem(k); }catch(e){} } return v; }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem(k,v); }catch(e){} } };
-function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); for(const t of S.towers){ if(t.fixed&&Math.abs(t.a)===4.8) t.a=Math.sign(t.a)*5.2; } S.paid=j.paid||{}; } }catch(e){} }
+function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); return; } }catch(e){}
+  // eski kayıttan geçiş: ulaşılan bölüm açık kalır, ilerleme taça çevrilir
+  try{ const o=JSON.parse(store.get(OLD_KEY)); if(o&&o.level){ S.meta.unlocked=Math.min(LEVELS,Math.max(1,o.level)); S.meta.crowns=Math.min(20,2*(o.level-1)); S.muted=!!o.muted; } }catch(e){} }
 function save(){ store.set(SAVE_KEY, JSON.stringify(S)); }
 load();
 const gw=()=>(S.level-1)*WAVES+S.wave;
-const PERKS={ trample:{n:'Midilli Ezme',d:'Midilli koşarken çarptığı düşmanı ezer'}, arrows:{n:'Ok Yağmuru',d:'Okçu kuleleri %35 daha hızlı atar'}, mason:{n:'Duvarcı',d:'Sur canı +%50, saldırıda kendini onarır'}, gold:{n:'Tüccar Dostu',d:'Miğferler %40 daha pahalı satılır'}, lumber:{n:'Odun Bereketi',d:'Ağaç 6 odun verir, pervane %25 hızlı'}, magnet:{n:'Büyük Mıknatıs',d:'Altın ve ganimet iki kat uzaktan gelir'}, cannon:{n:'Barut',d:'Topçu kuleleri %50 daha sert vurur'} };
-const hasPerk=k=>S.perk===k&&S.perkLevel===S.level;
-const D = {
-  chopRate:()=>4.0*(1+0.2*S.lv.axe)*(hasPerk('lumber')?1.25:1), treeHits:()=>1, logsPerTree:()=>hasPerk('lumber')?6:4,
-  cap:()=>40+15*S.lv.bag, speed:()=>8.4+0.55*S.lv.feet, magnet:()=>(3.8+0.8*S.lv.magnet)*(hasPerk('magnet')?2:1), lootPrice:()=>(8+gw()*1.5+3*S.lv.trader+4*S.lv.price)*(hasPerk('gold')?1.4:1), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
-  swordDmg:()=>9+4*S.lv.sword, swordRange:()=>2.9+0.1*S.lv.sword,
-  gateMax:()=>Math.round((150+120*S.lv.wall+60*S.lv.gateLv)*(hasPerk('mason')?1.5:1)), towerDmg:l=>5+3*(l-1)+2*S.lv.towerTrain, towerRange:()=>17+2*S.lv.range, towerRate:()=>hasPerk('arrows')?1.35:1, cannonDmg:l=>(14+7*(l-1)+4*S.lv.cannonTrain)*(hasPerk('cannon')?1.5:1), soldierDmg:()=>6+2*S.lv.sword+3*S.lv.soldierTrain,
+// Gece arası güç kartları (bölüm boyunca geçerli, üst üste eklenir)
+const CARDS={
+  arrow:{n:'Keskin Oklar',d:'Okçu kulelerinin hasarı +%25',i:'🏹'}, rate:{n:'Hızlı Yay',d:'Okçular %20 daha hızlı atar',i:'💨'}, range:{n:'Uzun Menzil',d:'Tüm kulelerin menzili +3',i:'🎯'},
+  powder:{n:'Barut',d:'Topçu hasarı +%40',i:'💣'}, wall:{n:'Sağlam Sur',d:'Sur canı +%25 ve tamamen onarılır',i:'🧱'}, mend:{n:'Duvarcı',d:'Saldırı sırasında sur kendini onarır',i:'🔧'},
+  sword:{n:'Keskin Kılıç',d:'Kılıç hasarı +%40, menzili biraz artar',i:'⚔️'}, drill:{n:'Talimli Asker',d:'Askerler %40 daha sert vurur',i:'🛡️'}, trample:{n:'Midilli Ezme',d:'Koşarken çarptığın düşmanı ezersin',i:'🐴'},
+  pony:{n:'Çevik Midilli',d:'Midilli %15 daha hızlı',i:'🥕'}, axe:{n:'Güçlü Balta',d:'Ağaçları %30 daha hızlı kesersin',i:'🪓'}, lumber:{n:'Odun Bereketi',d:'Her ağaç +2 odun verir',i:'🌲'},
+  magnet:{n:'Mıknatıs',d:'Altın ve ganimet %60 daha uzaktan gelir',i:'🧲'}, trade:{n:'Pazarlık',d:'Miğferler %30 daha pahalı satılır',i:'🤝'}, gold:{n:'Hazine Sandığı',d:'Hemen altın kazan',i:'💰'},
 };
-const sidesActive=()=>Math.min(4,1+Math.floor((gw()-1)/2));
+const cc=k=>(S.cards&&S.cards[k])||0; const mu=k=>(S.meta&&S.meta.up&&S.meta.up[k])||0;
+const hasPerk=k=>cc({arrows:'rate',mason:'mend',gold:'trade',lumber:'lumber',magnet:'magnet',cannon:'powder',trample:'trample'}[k]||k)>0;
+const D = {
+  chopRate:()=>4.0*(1+0.3*cc('axe')), treeHits:()=>1, logsPerTree:()=>4+2*cc('lumber'),
+  cap:()=>40+15*S.lv.feet, speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>3.8*(1+0.6*cc('magnet')), lootPrice:()=>(8+gw()*1.5+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
+  swordDmg:()=>9*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'),
+  gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.1*mu('wall'))), towerDmg:l=>(5+3*(l-1))*(1+0.25*cc('arrow'))*(1+0.08*mu('arrow')), towerRange:()=>17+3*cc('range'), towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*(1+0.4*cc('powder')), soldierDmg:()=>8*(1+0.4*cc('drill')),
+};
+// Kapı sayısı: bölümün gecesine ve bölüm numarasına göre açılır
+const sidesActive=()=>Math.min(4,1+Math.floor((S.wave-1)/2)+Math.floor((S.level-1)/2));
 const sidesShown=()=>Math.min(4,sidesActive()+1);
 
 // ---------- Ses ----------
@@ -44,11 +58,17 @@ function tone(f0,f1,dur,type,vol){ if(S.muted||adMute||!AC) return; const o=AC.c
 function noise(dur,vol){ if(S.muted||adMute||!AC) return; const n=AC.sampleRate*dur, b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.value=vol||0.25; s.connect(f).connect(g).connect(AC.destination); s.start(); }
 const SFX = {
   chop:()=>{ noise(0.08,0.35); tone(180,90,0.08,'square',0.04); }, fall:()=>{ noise(0.3,0.4); tone(120,50,0.3,'sawtooth',0.05); },
-  coin:()=>{ tone(880,1320,0.12,'sine',0.06); }, sell:()=>{ tone(660,990,0.08,'triangle',0.05); }, pay:()=>{ tone(740,520,0.05,'triangle',0.03); },
+  coin:()=>{ tone(880,1320,0.12,'sine',0.06); }, sell:()=>{ tone(660,990,0.08,'triangle',0.05); }, pay:(k)=>{ k=Math.max(0,Math.min(1,k||0)); const f=420+k*900; tone(f,f*1.12,0.05,'triangle',0.03+0.03*k); },
   build:()=>{ tone(300,600,0.15,'triangle',0.08); setTimeout(()=>tone(600,900,0.2,'triangle',0.08),120); setTimeout(()=>tone(900,1200,0.25,'sine',0.07),260); },
   slash:()=>{ noise(0.07,0.25); tone(900,300,0.09,'sawtooth',0.04); }, hit:()=>{ tone(300,120,0.1,'square',0.05); }, die:()=>{ tone(400,80,0.2,'sawtooth',0.05); },
   gate:()=>{ noise(0.12,0.3); tone(90,40,0.15,'square',0.06); }, wave:()=>{ tone(220,330,0.25,'triangle',0.08); setTimeout(()=>tone(330,440,0.3,'triangle',0.08),200); },
   boom:()=>{ noise(0.35,0.5); tone(90,30,0.35,'sawtooth',0.08); },
+  // büyük satın alma: gümbürtü + yükselen üç nota + parıltı
+  fanfare:()=>{ noise(0.25,0.35); tone(110,55,0.3,'sine',0.12); [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,f*1.01,0.22+i*0.05,'triangle',0.09),80+i*95)); setTimeout(()=>tone(2093,2637,0.3,'sine',0.04),480); },
+  win:()=>{ [523,659,784,1047,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,f,0.28,'triangle',0.1),i*140)); setTimeout(()=>noise(0.4,0.2),900); },
+  lose:()=>{ [392,349,311,262].forEach((f,i)=>setTimeout(()=>tone(f,f*0.97,0.35,'sawtooth',0.06),i*220)); },
+  night:()=>{ tone(110,98,0.9,'sawtooth',0.06); setTimeout(()=>tone(147,131,0.9,'sawtooth',0.05),250); noise(0.6,0.12); },
+  card:()=>{ tone(880,1760,0.15,'sine',0.07); setTimeout(()=>tone(1320,1760,0.2,'sine',0.06),110); },
 };
 // ---------- Müzik: gündüz sakin, gece gergin (tamamen kod ile üretilir, dosya yok) ----------
 const MUS={next:0,step:0,mel:4,vol:null,lp:null,mode:'day'};
