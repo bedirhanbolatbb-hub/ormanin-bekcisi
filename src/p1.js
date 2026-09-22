@@ -14,20 +14,20 @@ const isTouch=matchMedia('(pointer:coarse)').matches;
 const isMobile=isTouch||innerWidth<700;
 
 // ---------- Kalıcı durum ----------
-const SAVE_KEY='ormanin-bekcisi-v7'; const OLD_KEY='ormanin-bekcisi-v6';
+const SAVE_KEY='ormanin-bekcisi-v8'; const OLD_KEY='ormanin-bekcisi-v7';
 const WAVES=5; const MAXL=10; const LEVELS=10;
 const LV0={axe:0,bag:0,feet:0,worker:0,stoneWorker:0,sword:0,wall:0,soldier:0,expand:0,trader:0,towerTrain:0,magnet:0,collector:0,gateLv:0,range:0,depotLv:0,workerSpd:0,price:0,soldierTrain:0,cannonTrain:0};
 const SIDES=['N','E','S','W']; const SIDE_TR={N:'Kuzey',E:'Doğu',S:'Güney',W:'Batı'};
 function defaultTowers(){ const t=[{k:'a',side:'C',a:0,lvl:0,fixed:true}]; for(const s of SIDES) for(const a of [-5.2,5.2]) t.push({k:'a',side:s,a,lvl:0,fixed:true}); return t; }
 // Kalıcı (meta): açılan bölüm, yıldızlar, taç, kalıcı güçlendirmeler. Bölümlük (run): her bölüm başında sıfırlanır.
 const META0={unlocked:1,stars:{},crowns:0,up:{gold:0,wall:0,arrow:0},dailyDate:'',streak:0,fails:{}};
-function runState(level){ return { coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
+function runState(level){ return { fish:0, meat:0, planks:0, iron:0, ore:0, rg:{}, revealed:{forest:true}, book:{fish:{},hunt:{},boss:{}}, lastSeen:0, coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
 const S = Object.assign(runState(1), { muted:false, meta:JSON.parse(JSON.stringify(META0)) });
 const store={ get:k=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem(k); }catch(e){} if(v==null){ try{ v=localStorage.getItem(k); }catch(e){} } return v; }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem(k,v); }catch(e){} } };
 function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); return; } }catch(e){}
-  // eski kayıttan geçiş: ulaşılan bölüm açık kalır, ilerleme taça çevrilir
-  try{ const o=JSON.parse(store.get(OLD_KEY)); if(o&&o.level){ S.meta.unlocked=Math.min(LEVELS,Math.max(1,o.level)); S.meta.crowns=Math.min(20,2*(o.level-1)); S.muted=!!o.muted; } }catch(e){} }
-function save(){ store.set(SAVE_KEY, JSON.stringify(S)); }
+  // eski kayıttan geçiş: taç ve kalıcı güçlendirmeler korunur, krallık 1. seferden kurulur
+  try{ const o=JSON.parse(store.get(OLD_KEY)); if(o&&o.meta){ S.meta.crowns=o.meta.crowns||0; S.meta.up=Object.assign({gold:0,wall:0,arrow:0},o.meta.up||{}); S.muted=!!o.muted; S.meta.dailyDate=o.meta.dailyDate||''; S.meta.streak=o.meta.streak||0; } }catch(e){} }
+function save(){ if(S.started) S.lastSeen=Date.now(); store.set(SAVE_KEY, JSON.stringify(S)); }
 load();
 const gw=()=>(S.level-1)*WAVES+S.wave;
 // Gece arası güç kartları (bölüm boyunca geçerli, üst üste eklenir)
@@ -119,7 +119,7 @@ const M={
   enemy:mat(0xd63a3a), enemyDark:mat(0x9c2323), enemyHelm:mat(0xc02f2f), eye:mat(0xffffff), pupil:mat(0x1d1d22),
   gate:mat(0xb5803f), banner:mat(0xd9534f), flag:mat(0xf2b43c), arrow:mat(0xffffff,{emissive:0x8a8a8a}), chest:mat(0x8c4b25), chestGold:mat(0xffd36b,{emissive:0x6a4a00}),
   ghostOk:new THREE.MeshLambertMaterial({color:0x6fe08a,transparent:true,opacity:0.55,depthWrite:false}), ghostBad:new THREE.MeshLambertMaterial({color:0xe05a5a,transparent:true,opacity:0.55,depthWrite:false}),
-  ball:mat(0x2a2d33), smoke:mat(0x777777), rock:mat(0xaeb6c6), rockLight:mat(0xe3e7ee), roof:mat(0x6e4a3a), roofDark:mat(0x553628), canvas:mat(0xf1e6cf), canvasDark:mat(0x5b8f6a), rope:mat(0xc9a86a),
+  ball:mat(0x2a2d33), smoke:mat(0x777777), rock:mat(0xaeb6c6), rockLight:mat(0xe3e7ee), fish:mat(0x9fc3d8), fishGold:mat(0xffc93a,{emissive:0x6a4a00}), meat:mat(0xc9594a), water:new THREE.MeshLambertMaterial({color:0x3d9ccc,transparent:true,opacity:0.93}), waterLight:new THREE.MeshBasicMaterial({color:0x8fd6f0,transparent:true,opacity:0.35,depthWrite:false}), sand:mat(0xe8d3a2), reed:mat(0x5c9a4a), lily:mat(0x4f9a52), cloud:new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:0.96}), net:mat(0xd9c49a), buoy:mat(0xe8503a), rope2:mat(0x8a6a3a), roof:mat(0x6e4a3a), roofDark:mat(0x553628), canvas:mat(0xf1e6cf), canvasDark:mat(0x5b8f6a), rope:mat(0xc9a86a),
 };
 const G={
   box:new THREE.BoxGeometry(1,1,1), cyl:new THREE.CylinderGeometry(1,1,1,12), cone:new THREE.ConeGeometry(1,1,8), cone4:new THREE.ConeGeometry(1,1,4), sph:new THREE.SphereGeometry(1,14,12),
@@ -151,9 +151,22 @@ const ROADS={ N:[[0,-98],[-4,-84],[3,-68],[-3,-52],[2,-40],[0,-34]], E:[[98,0],[
 function roadPath(s){ return ROADS[s].concat([sidePos(s,0,0),[0,0]]); }
 function roadDist(x,z){ let best=1e9; for(const s of SIDES){ const P=roadPath(s); for(let i=0;i<P.length-1;i++){ const [ax,az]=P[i],[bx,bz]=P[i+1]; const dx=bx-ax,dz=bz-az; const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1); const d=Math.hypot(ax+dx*t-x,az+dz*t-z); if(d<best) best=d; } } return best; }
 function nearBase(x,z,m){ return Math.abs(x)<H+m&&Math.abs(z)<H+m; }
-const QUARRIES=[[22,22],[-22,-22],[44,-44],[-44,44],[44,44]];
+// Bölgeler: her sefer kalenin çevresinde yeni bir bölge açar (merkez, yarıçap, ağaçsız alan)
+const REG={
+  lake:{sefer:2,name:'Gümüş Göl',job:'Balık tutma',c:[40,-40],r:11,clear:23},
+  meadow:{sefer:3,name:'Geyik Çayırı',job:'Av',c:[-42,42],r:14,clear:17},
+  quarry:{sefer:4,name:'Taş Ocağı',job:'Taş ve taş kesme',c:[40,40],r:12,clear:15},
+  river:{sefer:5,name:'Nehir',job:'Su değirmeni',c:[-42,-42],r:12,clear:15},
+  swamp:{sefer:6,name:'Sisli Bataklık',job:'Fener',c:[-70,-22],r:12,clear:14},
+  iron:{sefer:7,name:'Demir Dağı',job:'Demir ve demirci',c:[24,-70],r:12,clear:14},
+  coast:{sefer:8,name:'Kıyı',job:'Tekne ve adalar',c:[72,70],r:14,clear:16},
+  snow:{sefer:9,name:'Karlı Geçit',job:'Kış',c:[-72,72],r:12,clear:12},
+  dark:{sefer:10,name:'Kara Kale',job:'Son kuşatma',c:[0,-86],r:9,clear:10},
+};
+const QUARRIES=[[35,35],[46,45]];
 function nearQuarry(x,z,m){ return QUARRIES.some(qq=>Math.hypot(x-qq[0],z-qq[1])<m); }
-function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5); }
+function inRegClear(x,z){ for(const k in REG){ const R=REG[k]; if(Math.hypot(x-R.c[0],z-R.c[1])<R.clear) return true; } return false; }
+function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5) && !inRegClear(x,z); }
 
 let groundTex=null;
 function paintGround(){

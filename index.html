@@ -181,6 +181,28 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .placeBar{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:7;background:rgba(20,24,34,.92);color:#fff;border-radius:16px;padding:8px 8px 8px 14px;display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:var(--shadow);white-space:nowrap}
 .placeBar button{border:0;border-radius:12px;padding:8px 12px;background:var(--danger);color:#fff;font-family:var(--font-display);font-weight:800;font-size:15px;cursor:pointer}
 @media (max-width:600px){.placeBar{bottom:calc(122px + env(safe-area-inset-bottom,0px));font-size:13px}}
+
+.kingBtn{position:fixed;left:14px;bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--panel);border:0;border-radius:14px;width:44px;height:44px;box-shadow:var(--shadow);font-size:20px;cursor:pointer}
+.wl.machLbl{background:rgba(20,24,34,.88);color:#fff;font-size:13px}.wl.machLbl i{font-style:normal;color:#ffd23f;font-size:12px}.wl.machLbl small{color:#cfe8ff}
+.wl .full{color:#ff6b5f;font-weight:800}
+.wl.pileLbl{background:#fff3cf;color:var(--coin-ink);font-size:15px;padding:3px 9px}
+.wl.lockLbl{background:rgba(43,58,46,.9);color:#fff;font-size:15px}.wl.lockLbl small{color:#ffd23f}
+.fishUI{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:8;display:flex;flex-direction:column;align-items:center;gap:8px;background:rgba(20,24,34,.9);padding:12px 14px;border-radius:18px;box-shadow:var(--shadow);width:min(340px,86vw)}
+.fishUI .fbar{position:relative;width:100%;height:22px;border-radius:11px;background:linear-gradient(90deg,#3a4a66,#2a3450);overflow:hidden;border:2px solid rgba(255,255,255,.25)}
+.fishUI .zone{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#5fd67a,#39b55a);box-shadow:0 0 12px #5fd67a}
+.fishUI .needle{position:absolute;top:-2px;bottom:-2px;width:5px;margin-left:-2px;background:#fff;border-radius:3px;box-shadow:0 0 8px #fff}
+.fishUI button{border:0;border-radius:14px;padding:12px 30px;background:linear-gradient(#ffd23f,#e8961a);color:#3a2600;font-family:var(--font-display);font-weight:800;font-size:22px;box-shadow:0 4px 0 #a86a0e;cursor:pointer;touch-action:manipulation}
+.fishUI button:active{transform:translateY(3px);box-shadow:0 1px 0 #a86a0e}
+.fishUI small{color:#cfe8ff;font-weight:700;font-size:13px}
+.result p.boss{font-family:var(--font-display);font-weight:800;color:var(--ink);margin:-2px 0 8px}
+.nextreg{background:#e8f4ff;border-radius:12px;padding:8px 10px;margin:0 0 10px;font-weight:700;color:#2b4a6a}
+.sefers{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.sn{border-radius:12px;background:#eee4cf;padding:6px 4px;text-align:center;display:flex;flex-direction:column;gap:1px;color:#8a8170}
+.sn b{font-family:var(--font-display);font-size:18px;line-height:1}.sn span{font-size:10px;font-weight:800;line-height:1.1}.sn small{font-size:11px;color:var(--coin);letter-spacing:1px}
+.sn.done{background:var(--green);color:#fff}.sn.cur{background:#e8961a;color:#fff;animation:pulse 1.4s ease-in-out infinite}.sn.cur small{color:#fff}
+.book{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.bk{background:#fff;border:2px solid var(--line);border-radius:12px;padding:6px 2px;text-align:center}.bk i{display:block;width:28px;height:14px;border-radius:50% 40% 40% 50%;margin:2px auto 4px}.bk b{display:block;font-size:11px}.bk small{font-size:11px;color:var(--ink-soft)}.bk.no{opacity:.5}.bk.no i{background:#bbb!important}
+.card.map{max-height:88vh;overflow-y:auto}
+@media (max-width:600px){.fishUI{bottom:calc(122px + env(safe-area-inset-bottom,0px))}}
 </style>
 
 <canvas id="c"></canvas>
@@ -200,6 +222,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 </div>
 
 <button class="mute" id="muteBtn" aria-label="Sesi aç/kapat">🔊</button>
+<button class="kingBtn" id="kingBtn" aria-label="Krallık">👑</button>
 <div class="tip" id="tip">Ağaçların yanına git, baltan kendiliğinden çalışır</div>
 <div class="toast" id="toast"></div>
 <button class="nightBtn" id="nightBtn" style="display:none">🌙 Geceyi başlat</button>
