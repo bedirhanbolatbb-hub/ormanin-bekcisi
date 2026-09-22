@@ -154,19 +154,23 @@ function nearBase(x,z,m){ return Math.abs(x)<H+m&&Math.abs(z)<H+m; }
 // Bölgeler: her sefer kalenin çevresinde yeni bir bölge açar (merkez, yarıçap, ağaçsız alan)
 const REG={
   lake:{sefer:2,name:'Gümüş Göl',job:'Balık tutma',c:[40,-40],r:11,clear:23},
-  meadow:{sefer:3,name:'Geyik Çayırı',job:'Av',c:[-42,42],r:14,clear:17},
-  quarry:{sefer:4,name:'Taş Ocağı',job:'Taş ve taş kesme',c:[40,40],r:12,clear:15},
-  river:{sefer:5,name:'Nehir',job:'Su değirmeni',c:[-42,-42],r:12,clear:15},
+  meadow:{sefer:3,name:'Geyik Çayırı',job:'Av ve tütsühane',c:[-42,42],r:14,clear:25},
+  quarry:{sefer:4,name:'Taş Ocağı',job:'Taş kesme tezgâhı',c:[40,40],r:12,clear:22},
+  river:{sefer:5,name:'Nehir',job:'Su değirmeni ve kereste',c:[-42,-42],r:12,clear:22},
   swamp:{sefer:6,name:'Sisli Bataklık',job:'Fener',c:[-70,-22],r:12,clear:14},
   iron:{sefer:7,name:'Demir Dağı',job:'Demir ve demirci',c:[24,-70],r:12,clear:14},
   coast:{sefer:8,name:'Kıyı',job:'Tekne ve adalar',c:[72,70],r:14,clear:16},
   snow:{sefer:9,name:'Karlı Geçit',job:'Kış',c:[-72,72],r:12,clear:12},
   dark:{sefer:10,name:'Kara Kale',job:'Son kuşatma',c:[0,-86],r:9,clear:10},
 };
-const QUARRIES=[[35,35],[46,45]];
+const QUARRIES=[[41,39],[49,47]];
+// Yük arabası yolları (ağaçsız, toprak) ve nehir
+const CART_PATHS=[[[34,29],[32,14],[31,4]],[[-37,-35],[-33,-18],[-31,-4]]];
+const RIVER=[[-100,-30],[-70,-36],[-52,-40],[-42,-42],[-38,-52],[-34,-70],[-30,-100]];
+function polyDist(P,x,z){ let best=1e9; for(let i=0;i<P.length-1;i++){ const [ax,az]=P[i],[bx,bz]=P[i+1]; const dx=bx-ax,dz=bz-az; const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1); const d=Math.hypot(ax+dx*t-x,az+dz*t-z); if(d<best) best=d; } return best; }
 function nearQuarry(x,z,m){ return QUARRIES.some(qq=>Math.hypot(x-qq[0],z-qq[1])<m); }
 function inRegClear(x,z){ for(const k in REG){ const R=REG[k]; if(Math.hypot(x-R.c[0],z-R.c[1])<R.clear) return true; } return false; }
-function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5) && !inRegClear(x,z); }
+function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5) && !inRegClear(x,z) && polyDist(RIVER,x,z)>4.5+pad && !CART_PATHS.some(P=>polyDist(P,x,z)<3+pad); }
 
 let groundTex=null;
 function paintGround(){
@@ -177,6 +181,8 @@ function paintGround(){
   for(let i=0;i<500;i++){ const r=rand(30,110); x.fillStyle=`hsla(${rand(95,115)},${rand(40,55)}%,${rand(48,60)}%,${rand(.35,.7)})`; x.beginPath(); x.ellipse(rand(0,N),rand(0,N),r,r*rand(.5,1),rand(0,3),0,7); x.fill(); }
   x.lineCap='round'; x.lineJoin='round';
   for(const s of SIDES){ const P=roadPath(s); for(const [col,w] of [['#c9a26d',6],['#e3c898',3.6]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
+  x.lineCap='round'; x.lineJoin='round'; for(const P of CART_PATHS){ for(const [col,w] of [['#c9a26d',3.2],['#dcc093',1.8]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
+  for(const [col,w] of [['#d8c28f',7.5],['#3d8fc0',5],['#5fb0dc',3],['#8fd0ee',0.9]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); RIVER.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); }
   for(const [qx,qz] of QUARRIES){ x.fillStyle='#b9b3a6'; x.beginPath(); x.ellipse(px(qx),px(qz),pw(7),pw(6),0.6,0,7); x.fill(); x.fillStyle='#a19b8f'; for(let i=0;i<14;i++){ x.beginPath(); x.ellipse(px(qx+rand(-5,5)),px(qz+rand(-4,4)),pw(rand(.8,2)),pw(rand(.6,1.4)),rand(0,3),0,7); x.fill(); } }
   x.fillStyle='#63b85a'; x.fillRect(px(-H),px(-H),pw(2*H),pw(2*H));
   for(let i=0;i<Math.round(H*H*2);i++){ x.fillStyle=`hsla(${rand(100,120)},${rand(40,55)}%,${rand(42,58)}%,${rand(.15,.35)})`; x.beginPath(); x.ellipse(rand(px(-H),px(H)),rand(px(-H),px(H)),rand(6,22),rand(4,14),rand(0,3),0,7); x.fill(); }

@@ -203,6 +203,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .book{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.bk{background:#fff;border:2px solid var(--line);border-radius:12px;padding:6px 2px;text-align:center}.bk i{display:block;width:28px;height:14px;border-radius:50% 40% 40% 50%;margin:2px auto 4px}.bk b{display:block;font-size:11px}.bk small{font-size:11px;color:var(--ink-soft)}.bk.no{opacity:.5}.bk.no i{background:#bbb!important}
 .card.map{max-height:88vh;overflow-y:auto}
 @media (max-width:600px){.fishUI{bottom:calc(122px + env(safe-area-inset-bottom,0px))}}
+.plank-dot{width:18px;height:12px;border-radius:2px;background:repeating-linear-gradient(180deg,#e8b86a 0 3px,#a8742e 3px 4px);box-shadow:inset 0 0 0 2px rgba(90,55,20,.35)}
 </style>
 
 <canvas id="c"></canvas>
@@ -211,7 +212,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="hud">
   <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div></div>
   <div class="right">
-    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div>
+    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div><div class="chip" id="plankChip" style="display:none"><span class="plank-dot"></span><small>kereste</small><span id="plankStock">0</span></div>
     <div class="chip wave">
       <div class="row"><span id="waveLbl">Dalga 1</span><small id="waveT">20 sn</small></div>
       <div class="next" id="waveNext"></div>
