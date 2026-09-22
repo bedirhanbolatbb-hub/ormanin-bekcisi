@@ -114,7 +114,7 @@ function pushOutOfCenter(p,r){ if(S.towers[0].lvl<1) return; const d=Math.hypot(
 // ---------- Taş ocakları ----------
 const rocks=[]; let rockMesh;
 (function(){ for(const [qx,qz] of QUARRIES){ for(let i=0;i<8;i++){ const a=i/8*6.283+rand(-.3,.3); const r=i===0?0:rand(2.2,4.6); rocks.push({x:qx+Math.cos(a)*r,z:qz+Math.sin(a)*r,s:rand(1.1,1.8),ry:rand(0,6),hp:3,alive:true,gone:false,shake:0,regrow:0,claimed:null,dirty:true}); } }
-  rockMesh=new THREE.InstancedMesh(G.dod,M.rock,rocks.length); rockMesh.castShadow=true; rockMesh.receiveShadow=true; rockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); rocks.forEach((r,i)=>rockMesh.setColorAt(i,new THREE.Color(Math.random()<.5?0xa8a29a:0xbdb7ab))); scene.add(rockMesh); })();
+  rockMesh=new THREE.InstancedMesh(G.dod,mat(0xffffff),rocks.length); rockMesh.castShadow=true; rockMesh.receiveShadow=true; rockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); rocks.forEach((r,i)=>rockMesh.setColorAt(i,new THREE.Color(Math.random()<.5?0x98a2b6:0xb5bdcc))); scene.add(rockMesh); })();
 function writeRock(i){ const r=rocks[i]; let sc=r.gone||(!r.alive&&r.regrow<25)?0.0001:1; if(r.regrow>25){ sc=Math.min(1,(r.regrow-25)/1.5); } const sh=r.shake>0?Math.sin(r.shake*40)*0.06:0; vp.set(r.x,r.s*0.55*sc,r.z); e3.set(sh,r.ry,0); q.setFromEuler(e3); vs.set(r.s*sc,r.s*0.8*sc,r.s*sc); m4.compose(vp,q,vs); rockMesh.setMatrixAt(i,m4); }
 function cullRocks(){ let any=false; rocks.forEach((r,i)=>{ if(!r.gone&&nearBase(r.x,r.z,5.5)){ r.gone=true; r.culled=true; r.alive=false; r.claimed=null; writeRock(i); any=true; } }); if(any) rockMesh.instanceMatrix.needsUpdate=true; }
 cullRocks(); rocks.forEach((r,i)=>writeRock(i)); rockMesh.instanceMatrix.needsUpdate=true;
@@ -225,7 +225,7 @@ function floatText(pos,txt,cls){ const el=document.createElement('div'); el.clas
 function updateFloats(dt){ for(let i=floats.length-1;i>=0;i--){ const f=floats[i]; f.t+=dt; if(f.t>1.1){ f.el.remove(); floats.splice(i,1); continue;} v3.copy(f.p); v3.y+=2.4+f.t*1.6; v3.project(camera); f.el.style.left=((v3.x+1)/2*innerWidth)+'px'; f.el.style.top=((1-v3.y)/2*innerHeight)+'px'; f.el.style.opacity=String(1-Math.max(0,f.t-0.6)/0.5); } }
 const labels=[];
 function addLabel(pos,text,h){ const el=document.createElement('div'); el.className='wl'; el.innerHTML=text; document.body.appendChild(el); const L={el,pos:pos.clone(),src:pos,h:h||3.2,hide:false,near:6}; labels.push(L); return L; }
-addLabel(DEPOT,'Depo<small>odun · taş</small>',3.9); addLabel(STALL,'Ganimet Tezgâhı<small>miğfer → altın</small>',3.6);
+const quarryLabels=QUARRIES.map(([qx,qz])=>{ const L=addLabel(new THREE.Vector3(qx,0,qz),'Taş Ocağı<small>kırmak için yanına git</small>',4.2); L.near=5; return L; }); addLabel(DEPOT,'Depo<small>odun · taş</small>',3.9); addLabel(STALL,'Ganimet Tezgâhı<small>miğfer → altın</small>',3.6);
 function updateLabels(){ const pp=player.g.position; for(const L of labels){ v3.set(L.pos.x,L.h,L.pos.z).project(camera); const on=!L.hide&&L.pos.distanceTo(pp)>L.near&&v3.z<1&&Math.abs(v3.x)<1.2&&Math.abs(v3.y)<1.2; L.el.style.display=on?'block':'none'; if(on){ L.el.style.left=((v3.x+1)/2*innerWidth)+'px'; L.el.style.top=((1-v3.y)/2*innerHeight)+'px'; } } }
 
 // ---------- Uçan nesneler / parçacıklar ----------

@@ -178,6 +178,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .confetti i{position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;animation:fall linear forwards}
 @keyframes fall{to{top:110%;transform:rotate(720deg) translateX(40px)}}
 @media (prefers-reduced-motion:reduce){.nightBtn,.intro .levels .lv.next{animation:none}}
+.placeBar{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:7;background:rgba(20,24,34,.92);color:#fff;border-radius:16px;padding:8px 8px 8px 14px;display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:var(--shadow);white-space:nowrap}
+.placeBar button{border:0;border-radius:12px;padding:8px 12px;background:var(--danger);color:#fff;font-family:var(--font-display);font-weight:800;font-size:15px;cursor:pointer}
+@media (max-width:600px){.placeBar{bottom:calc(122px + env(safe-area-inset-bottom,0px));font-size:13px}}
 </style>
 
 <canvas id="c"></canvas>
@@ -200,6 +203,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="tip" id="tip">Ağaçların yanına git, baltan kendiliğinden çalışır</div>
 <div class="toast" id="toast"></div>
 <button class="nightBtn" id="nightBtn" style="display:none">🌙 Geceyi başlat</button>
+<div class="placeBar" id="placeBar" style="display:none"><span>Kuleyi koymak için boş yere dokun</span><button id="placeCancel">✕ Vazgeç</button></div>
 <div class="joy" id="joy"><i></i></div>
 <canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita"></canvas>
 <button class="recenter" id="recenter" aria-label="Karaktere dön">📍 Karaktere dön</button>
