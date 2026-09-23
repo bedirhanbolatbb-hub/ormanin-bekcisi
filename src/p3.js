@@ -5,20 +5,20 @@ const P=(x,z)=>()=>[x,z];
 const nFree=k=>S.towers.filter(t=>!t.fixed&&t.k===k).length;
 // 8 alan: Sur, Okçu kuleleri (kapı yanlarında), Topçu, Asker, Oduncu, Midilli, Genişlet, Tezgâh (+ 3. bölümden sonra Taşçı)
 const PADS=[
-  {id:'wall', ord:2, lock:'Bir okçu kulesi', name:'Sur', desc:'Sur ve kapıların canı artar', res:l=>l>=3?'stone':'wood', pos:P(-2.9,-2.9), kind:'wall', key:'wall', cost:l=>l>=3?Math.round(24*Math.pow(1.45,l-3)):Math.round(30*Math.pow(1.6,l)), max:5, show:()=>S.towers.some(t=>t.lvl>=1)},
-  {id:'soldier', ord:3, lock:'Bir okçu kulesi', name:'Asker', desc:'Düşmanın geldiği kapıya koşar', res:'gold', pos:P(2.9,-2.9), kind:'soldier', key:'soldier', cost:l=>Math.round(35*Math.pow(1.45,l)), max:5, show:()=>S.towers.some(t=>t.lvl>=1)},
-  {id:'worker', ord:4, lock:'Sur 1', name:'Oduncu', desc:'Senin yerine ağaç kesip depoya taşır', res:'gold', pos:P(-2.9,2.9), kind:'worker', key:'worker', cost:l=>Math.round(45*Math.pow(1.5,l)), max:4, show:()=>S.lv.wall>=1},
-  {id:'feet', ord:5, lock:'Bir asker', name:'Midilli', desc:'Daha hızlı koşar, sırtında daha çok taşırsın', res:'gold', pos:P(-5.4,2.9), kind:'up', key:'feet', cost:l=>Math.round(30*Math.pow(1.4,l)), max:5, show:()=>S.lv.soldier>=1},
-  {id:'trader', ord:6, lock:'İlk ganimet satışı', name:'Tezgâh', desc:'Miğferler daha pahalı ve daha hızlı satılır', res:'gold', pos:P(-5.4,-2.9), kind:'up', key:'trader', cost:l=>Math.round(40*Math.pow(1.4,l)), max:5, show:()=>(S.sold||0)>=1},
-  {id:'newCannon', ord:7, lock:'Gece 2', name:'Topçu Kulesi', desc:'Gülle atar, toplu hasar verir; yerini sen seçersin', res:'gold', pos:P(5.4,-2.9), kind:'newTower', tk:'c', cost:l=>Math.round(90*Math.pow(1.6,l)), max:3, show:()=>S.wave>=2, lvl:()=>nFree('c')},
+  {id:'wall', ord:2, lock:'Bir okçu kulesi', name:'Sur', desc:'Sur ve kapılar güçlenir', res:l=>l>=3?'stone':'wood', pos:P(-2.9,-2.9), kind:'wall', key:'wall', cost:l=>l>=3?Math.round(24*Math.pow(1.45,l-3)):Math.round(30*Math.pow(1.6,l)), max:5, show:()=>S.towers.some(t=>t.lvl>=1)},
+  {id:'soldier', ord:3, lock:'Bir okçu kulesi', name:'Asker', desc:'Saldırılan kapıya koşar', res:'gold', pos:P(2.9,-2.9), kind:'soldier', key:'soldier', cost:l=>Math.round(35*Math.pow(1.45,l)), max:5, show:()=>S.towers.some(t=>t.lvl>=1)},
+  {id:'worker', ord:4, lock:'Sur 1', name:'Oduncu', desc:'Senin yerine odun keser', res:'gold', pos:P(-2.9,2.9), kind:'worker', key:'worker', cost:l=>Math.round(45*Math.pow(1.5,l)), max:4, show:()=>S.lv.wall>=1},
+  {id:'feet', ord:5, lock:'Bir asker', name:'Midilli', desc:'Hızlı koş, çok taşı', res:'gold', pos:P(-5.4,2.9), kind:'up', key:'feet', cost:l=>Math.round(30*Math.pow(1.4,l)), max:5, show:()=>S.lv.soldier>=1},
+  {id:'trader', ord:6, lock:'İlk ganimet satışı', name:'Tezgâh', desc:'Miğferler pahalı ve hızlı satılır', res:'gold', pos:P(-5.4,-2.9), kind:'up', key:'trader', cost:l=>Math.round(40*Math.pow(1.4,l)), max:5, show:()=>(S.sold||0)>=1},
+  {id:'newCannon', ord:7, lock:'Gece 2', name:'Topçu Kulesi', desc:'Gülle atar; yerini sen seç', res:'gold', pos:P(5.4,-2.9), kind:'newTower', tk:'c', cost:l=>Math.round(90*Math.pow(1.6,l)), max:3, show:()=>S.wave>=2, lvl:()=>nFree('c')},
   {id:'expand', ord:8, lock:'Sur 2', name:'Genişlet', desc:'Sur büyür, merkez kule açılır', res:'wood', pos:P(-2.9,-5.4), kind:'expand', key:'expand', cost:l=>Math.round(60*Math.pow(1.7,l)), max:2, show:()=>S.lv.wall>=2},
-  {id:'stoneWorker', ord:9, lock:'Taş Ocağı açılınca', name:'Taşçı', desc:'Taş ocağından taş çıkarıp depoya taşır', res:'gold', pos:P(-2.9,5.4), kind:'stoneWorker', key:'stoneWorker', cost:l=>Math.round(60*Math.pow(1.5,l)), max:3, show:()=>revealed('quarry')},
+  {id:'stoneWorker', ord:9, lock:'Taş Ocağı açılınca', name:'Taşçı', desc:'Senin yerine taş çıkarır', res:'gold', pos:P(-2.9,5.4), kind:'stoneWorker', key:'stoneWorker', cost:l=>Math.round(60*Math.pow(1.5,l)), max:3, show:()=>revealed('quarry')},
 ];
 function towerPos(i){ const t=S.towers[i]; if(t.side==='C') return [0,0]; if(t.x!==undefined) return [t.x,t.z]; return sidePos(t.side,t.a,-1.5); }
 // Kule alanı: sabit kuleler için kapının yanında, yeni kuleler için kulenin önünde, merkez için kule kurulunca güneyinde
 function towerPadPos(i){ const t=S.towers[i]; if(t.side==='C') return t.lvl<1?[0,0]:[0,-2.9]; if(t.fixed) return sidePos(t.side,Math.sign(t.a)*2.4,-2.4); if(t.px!==undefined) return [t.px,t.pz]; return sidePos(t.side,t.a,-3.9); }
 const FLANK_BASE={N:12,E:20,S:28,W:36};
-function towerDef(i){ const t=S.towers[i]; const isC=t.side==='C'; const name=t.k==='c'?'Topçu Kulesi':isC?'Merkez Kule':'Okçu Kulesi'; const desc=t.k==='c'?'Gülle atar; seviye = hasar + hız':isC?'Uzun menzilli, iki okçu; seviye = hasar + hız':'Ok atar; seviye = hasar + hız';
+function towerDef(i){ const t=S.towers[i]; const isC=t.side==='C'; const name=t.k==='c'?'Topçu Kulesi':isC?'Merkez Kule':'Okçu Kulesi'; const desc=t.k==='c'?'Gülle atar, kalabalığı dağıtır':isC?'Uzun menzil, iki okçu':'Ok atar';
   return {id:'t'+i, ti:i, ord:isC?8.5:1, name, desc, kind:'tower', max:5, sc:isC?1.5:1.0, r:isC?2.4:1.9, pos:()=>towerPadPos(i), res:l=>l===0?'wood':l>=6?'plank':'gold', cost:l=>l===0?(isC?60:FLANK_BASE[t.side]):l>=6?Math.round((t.k==='c'?40:26)*Math.pow(1.35,l-6)):Math.round((t.k==='c'?70:35)*Math.pow(1.45,l-1)),
     lock: isC? 'Genişlet 1' : '', show:()=> isC? S.lv.expand>=1 : t.fixed? SIDES.indexOf(t.side)<sidesActive() : true }; }
 function padLevel(d){ return d.kind==='tower'? S.towers[d.ti].lvl : d.kind==='newTower'? d.lvl() : (S.lv[d.key]||0); }
@@ -27,27 +27,31 @@ function rr(x,X,Y,W,Hh,r){ x.beginPath(); x.moveTo(X+r,Y); x.lineTo(X+W-r,Y); x.
 const PF='"Baloo 2","Nunito",sans-serif';
 function fitFont(x,txt,w,fs,min,weight){ x.font=`${weight||'bold'} ${fs}px ${PF}`; while(x.measureText(txt).width>w&&fs>min){ fs-=2; x.font=`${weight||'bold'} ${fs}px ${PF}`; } return fs; }
 function outlined(x,txt,cx,cy,fill,stroke,lw){ x.lineJoin='round'; x.strokeStyle=stroke; x.lineWidth=lw; x.strokeText(txt,cx,cy); x.fillStyle=fill; x.fillText(txt,cx,cy); }
-// Kilitli alan: küçük koyu kare, kilit ve ad; ayrıntı baloncukta
-function drawLocked(pd,name,hint){ const x=pd.tex.c.getContext('2d'); x.clearRect(0,0,320,320); x.fillStyle='rgba(30,36,40,0.62)'; rr(x,16,16,288,288,34); x.fill(); x.strokeStyle='rgba(255,255,255,0.35)'; x.lineWidth=6; rr(x,16,16,288,288,34); x.stroke();
-  x.fillStyle='#e6e0d4'; rr(x,124,150,72,58,10); x.fill(); x.strokeStyle='#e6e0d4'; x.lineWidth=12; x.beginPath(); x.arc(160,150,26,Math.PI,0); x.stroke(); x.fillStyle='#2b3138'; x.beginPath(); x.arc(160,176,9,0,7); x.fill();
-  x.textAlign='center'; x.textBaseline='middle'; fitFont(x,name,262,40,22,'800'); outlined(x,name,160,84,'#ffffff','rgba(0,0,0,0.55)',7);
-  x.fillStyle='rgba(255,255,255,0.75)'; fitFont(x,hint,262,26,16,'700'); x.fillText(hint,160,258); pd.tex.tex.needsUpdate=true; }
-function drawPad(pd,name,lvlTxt,cur,cost,can){ const x=pd.tex.c.getContext('2d'); x.clearRect(0,0,320,320); const res=padRes(pd); const wood=res==='wood', stone=res==='stone', plank=res==='plank', iron=res==='iron';
+// Alan kareleri yazısız: ne olduğu simgeyle, seviyesi noktalarla, fiyatı sayı + malzeme simgesiyle. Ad ve açıklama üstüne gelince baloncukta
+const PAD_IC={wall:'🧱',soldier:'⚔️',worker:'🪓',feet:'🐴',trader:'🪖',newCannon:'💣',expand:'🏗️',stoneWorker:'⛏️',rod:'🎣',fisher:'🚣',net:'🕸️',fishhut:'🐟',bow:'🔪',hunter:'🦌',trap:'🪤',smoke:'🍖',cutter:'🪚',qcart:'🛒',mill:'💧',mcart:'🛒',lamp:'🏮',herbalist:'🌿',farm:'🍄',cauldron:'🧪',ironArrow:'🎯',ironWall:'🚪',miner:'⚒️',drill:'🔩',forge:'🔥',lighthouse:'🔦',boat:'⛵',harbor:'⚓',jeweler:'💍',cminer:'💎',cdrill:'💠'};
+function padIcon(d){ if(d.kind==='tower'){ const t=S.towers[d.ti]; return t&&t.k==='c'?'💣':t&&t.side==='C'?'🏰':'🏹'; } return PAD_IC[d.id]||d.ic||'⭐'; }
+const EMO='"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif';
+function drawIcon(x,ic,cx,cy,size,alpha){ x.save(); x.globalAlpha=alpha==null?1:alpha; x.fillStyle='#000'; x.font=`${size}px ${EMO}`; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor='rgba(0,0,0,0.35)'; x.shadowBlur=10; x.shadowOffsetY=5; x.fillText(ic,cx,cy); x.restore(); }
+function drawPips(x,lvl,max,cy,can){ const n=Math.max(1,Math.min(max,10)); const r=n>6?8:10, gap=n>6?23:29; const w=(n-1)*gap; for(let i=0;i<n;i++){ const cx=160-w/2+i*gap; x.beginPath(); x.arc(cx,cy,r,0,7); if(i<lvl){ x.fillStyle=can?'#ffd75e':'#d9cfae'; x.fill(); x.lineWidth=3; x.strokeStyle='rgba(90,60,0,0.45)'; x.stroke(); } else { x.fillStyle='rgba(0,0,0,0.28)'; x.fill(); x.lineWidth=3; x.strokeStyle='rgba(255,255,255,0.55)'; x.stroke(); } } }
+function drawLocked(pd){ const x=pd.tex.c.getContext('2d'); x.clearRect(0,0,320,320); x.fillStyle='rgba(30,36,40,0.62)'; rr(x,16,16,288,288,34); x.fill(); x.strokeStyle='rgba(255,255,255,0.35)'; x.lineWidth=6; rr(x,16,16,288,288,34); x.stroke();
+  drawIcon(x,padIcon(pd.def),160,128,118,0.42);
+  x.fillStyle='#e6e0d4'; rr(x,130,214,60,46,9); x.fill(); x.strokeStyle='#e6e0d4'; x.lineWidth=10; x.beginPath(); x.arc(160,214,20,Math.PI,0); x.stroke(); x.fillStyle='#2b3138'; x.beginPath(); x.arc(160,236,8,0,7); x.fill();
+  pd.tex.tex.needsUpdate=true; }
+function drawPad(pd,lvl,cur,cost,can){ const x=pd.tex.c.getContext('2d'); x.clearRect(0,0,320,320); const res=padRes(pd); const wood=res==='wood', stone=res==='stone', plank=res==='plank', iron=res==='iron';
   const col= !can? '#3d4a43' : iron? '#4a5566' : plank? '#a8742e' : stone? '#5a6068' : wood? '#8a5a2a' : '#1f7a3f'; const col2= !can? '#2c3631' : iron? '#323a46' : plank? '#7c521c' : stone? '#3f444b' : wood? '#6a4320' : '#155a2c';
   const gr=x.createLinearGradient(0,0,0,320); gr.addColorStop(0,col); gr.addColorStop(1,col2); x.fillStyle=gr; rr(x,14,14,292,292,36); x.fill();
   x.strokeStyle=can?'#fff6d6':'rgba(255,255,255,0.45)'; x.lineWidth=8; rr(x,14,14,292,292,36); x.stroke();
   x.strokeStyle='rgba(0,0,0,0.18)'; x.lineWidth=4; rr(x,26,26,268,268,28); x.stroke();
+  if(pd.def.max>1) drawPips(x,lvl,pd.def.max,50,can);
+  drawIcon(x,padIcon(pd.def),160,pd.def.max>1?132:122,106,can?1:0.7);
   x.textAlign='center'; x.textBaseline='middle';
-  x.fillStyle=can?'#ffd75e':'#cfc7a8'; x.font=`800 30px ${PF}`; x.fillText(lvlTxt,160,50);
-  fitFont(x,name,262,42,22,'800'); outlined(x,name,160,100,'#ffffff','rgba(0,0,0,0.5)',7);
-  const num=String(Math.max(0,Math.ceil(cost-cur))); x.font=`800 104px ${PF}`; const nw=x.measureText(num).width; const iw=50; const total=nw+iw+14; const nx=160-total/2+nw/2; outlined(x,num,nx,206,can?'#ffffff':'#d8d2c0','rgba(0,0,0,0.5)',10);
-  const ix=nx+nw/2+14+iw/2, iy=206;
+  const num=String(Math.max(0,Math.ceil(cost-cur))); x.font=`800 86px ${PF}`; const nw=x.measureText(num).width; const iw=50; const total=nw+iw+14; const nx=160-total/2+nw/2; outlined(x,num,nx,240,can?'#ffffff':'#d8d2c0','rgba(0,0,0,0.5)',10);
+  const ix=nx+nw/2+14+iw/2, iy=240;
   if(iron){ x.fillStyle='#9aa6b8'; rr(x,ix-24,iy-8,48,18,4); x.fill(); x.fillStyle='#c8d2e0'; rr(x,ix-18,iy-14,36,8,3); x.fill(); }
   else if(plank){ x.fillStyle='#e8b86a'; for(let k=0;k<3;k++){ rr(x,ix-26,iy-14+k*10,52,8,2); x.fill(); } x.strokeStyle='#8a5a20'; x.lineWidth=2; for(let k=0;k<3;k++){ rr(x,ix-26,iy-14+k*10,52,8,2); x.stroke(); } }
   else if(stone){ x.fillStyle='#c9c3b6'; rr(x,ix-24,iy-14,48,30,8); x.fill(); x.strokeStyle='#6f6a60'; x.lineWidth=3; x.stroke(); x.fillStyle='#e6e0d4'; rr(x,ix-16,iy-9,20,10,3); x.fill(); }
   else if(wood){ x.fillStyle='#c98d4e'; rr(x,ix-26,iy-12,52,24,11); x.fill(); x.fillStyle='#f0cd9c'; x.beginPath(); x.arc(ix+24,iy,12,0,7); x.fill(); x.strokeStyle='#8a5a30'; x.lineWidth=3; x.stroke(); }
   else { x.fillStyle='#ffc93a'; x.beginPath(); x.arc(ix,iy,20,0,7); x.fill(); x.strokeStyle='#8a5a00'; x.lineWidth=4; x.stroke(); x.fillStyle='#8a5a00'; x.font=`800 22px ${PF}`; x.fillText('$',ix,iy+1); }
-  if(!can){ x.fillStyle='rgba(255,255,255,0.8)'; x.font=`700 24px ${PF}`; x.fillText(iron?'demir lazım':plank?'kereste lazım':stone?'taş lazım':wood?'odun lazım':'altın lazım',160,272); }
   pd.tex.tex.needsUpdate=true; }
 function makePad(def){
   const g=new THREE.Group(); const pp=def.pos(); g.position.set(pp[0],0,pp[1]);
@@ -64,13 +68,13 @@ function padAvail(pd){ const need=padCost(pd)-(S.paid[pd.def.id]||0); const r=pa
 function layoutPads(){ for(const pd of pads){ const pp=pd.def.pos(); pd.g.position.set(pp[0],0,pp[1]); } }
 function expandBase(){ S.lv.expand++; applyBase(); placeBuildings(); paintGround(); cullTrees(); cullRocks(); cullDecor(); buildWalls(S.lv.wall); buildGates(S.lv.wall); placeGates(); placeTorches(); rebuildTowers(); layoutPads(); if(typeof drawMiniBase==='function') drawMiniBase(); burst(new THREE.Vector3(0,1,H-4),30,M.plank,1.2); toast('Sur büyüdü!','good'); }
 function instantBuy(pd){ const cost=padCost(pd); const cur=S.paid[pd.def.id]||0; const need=Math.max(0,cost-cur); const res=padRes(pd); const wood=res==='wood';
-  if(res==='iron'){ if((S.iron||0)<need-0.01){ toast('Yeterli demir yok — demirci üretir'); return; } S.iron-=Math.ceil(need); }
-  else if(res==='plank'){ if((S.planks||0)<need-0.01){ toast('Yeterli kereste yok — değirmen üretir'); return; } S.planks-=Math.ceil(need); for(let i=0;i<Math.min(12,Math.ceil(need));i++) fly(DEPOT.clone().setY(1.2),pd.g.position.clone().setY(0.3),null,'plank',rand(3,5)); }
-  else if(res==='stone'){ if(S.stones+S.stone<need-0.01){ toast('Yeterli taş yok — taş ocağına git'); return; } let n=Math.ceil(need); const fromBack=Math.min(n,S.stones); S.stones-=fromBack; n-=fromBack; S.stone-=n; setBack(player); setStonePile(Math.min(18,S.stone)); for(let i=0;i<Math.min(12,Math.ceil(need));i++) fly(player.g.position.clone().setY(1.6),pd.g.position.clone().setY(0.3),null,'stone',rand(4,7)); }
-  else if(wood){ if(S.logs+S.wood<need-0.01){ toast('Yeterli odun yok'); return; } let n=Math.ceil(need); const fromBack=Math.min(n,S.logs); S.logs-=fromBack; n-=fromBack; S.wood-=n; setBack(player); setPile(Math.min(24,S.wood)); for(let i=0;i<Math.min(14,Math.ceil(need));i++) fly(player.g.position.clone().setY(1.6),pd.g.position.clone().setY(0.3),null,true,rand(4,7)); }
-  else { if(S.coins<need-0.01){ toast('Yeterli altın yok'); return; } S.coins-=need; for(let i=0;i<Math.min(14,Math.ceil(need/5)+3);i++) fly(player.g.position.clone().setY(2.4),pd.g.position.clone().setY(0.3),null,false,rand(4,7)); }
+  if(res==='iron'){ if((S.iron||0)<need-0.01){ toast('⛓ Demir yetmiyor'); return; } S.iron-=Math.ceil(need); }
+  else if(res==='plank'){ if((S.planks||0)<need-0.01){ toast('🪵 Kereste yetmiyor'); return; } S.planks-=Math.ceil(need); for(let i=0;i<Math.min(12,Math.ceil(need));i++) fly(DEPOT.clone().setY(1.2),pd.g.position.clone().setY(0.3),null,'plank',rand(3,5)); }
+  else if(res==='stone'){ if(S.stones+S.stone<need-0.01){ toast('🪨 Taş yetmiyor'); return; } let n=Math.ceil(need); const fromBack=Math.min(n,S.stones); S.stones-=fromBack; n-=fromBack; S.stone-=n; setBack(player); setStonePile(Math.min(18,S.stone)); for(let i=0;i<Math.min(12,Math.ceil(need));i++) fly(player.g.position.clone().setY(1.6),pd.g.position.clone().setY(0.3),null,'stone',rand(4,7)); }
+  else if(wood){ if(S.logs+S.wood<need-0.01){ toast('🪵 Odun yetmiyor'); return; } let n=Math.ceil(need); const fromBack=Math.min(n,S.logs); S.logs-=fromBack; n-=fromBack; S.wood-=n; setBack(player); setPile(Math.min(24,S.wood)); for(let i=0;i<Math.min(14,Math.ceil(need));i++) fly(player.g.position.clone().setY(1.6),pd.g.position.clone().setY(0.3),null,true,rand(4,7)); }
+  else { if(S.coins<need-0.01){ toast('💰 Altın yetmiyor'); return; } S.coins-=need; for(let i=0;i<Math.min(14,Math.ceil(need/5)+3);i++) fly(player.g.position.clone().setY(2.4),pd.g.position.clone().setY(0.3),null,false,rand(4,7)); }
   S.paid[pd.def.id]=cost; SFX.pay(1); completePad(pd); }
-function cancelPad(pd){ const cur=S.paid[pd.def.id]||0; if(cur<=0) return; const r=padRes(pd); if(r==='iron') S.iron=(S.iron||0)+Math.round(cur); else if(r==='plank') S.planks=(S.planks||0)+Math.round(cur); else if(r==='wood') S.wood+=Math.round(cur); else if(r==='stone'){ S.stone+=Math.round(cur); setStonePile(Math.min(18,S.stone)); } else S.coins+=cur; S.paid[pd.def.id]=0; pd.cool=2.5; setPile(Math.min(24,S.wood)); toast('Vazgeçildi, kaynak geri alındı','good'); }
+function cancelPad(pd){ const cur=S.paid[pd.def.id]||0; if(cur<=0) return; const r=padRes(pd); if(r==='iron') S.iron=(S.iron||0)+Math.round(cur); else if(r==='plank') S.planks=(S.planks||0)+Math.round(cur); else if(r==='wood') S.wood+=Math.round(cur); else if(r==='stone'){ S.stone+=Math.round(cur); setStonePile(Math.min(18,S.stone)); } else S.coins+=cur; S.paid[pd.def.id]=0; pd.cool=2.5; setPile(Math.min(24,S.wood)); toast('↩ Geri verildi','good'); }
 function completePad(pd){ const d=pd.def; S.paid[d.id]=0; pd.pop=1; pd.cool=1.2; questEvent('buy',1);
   if(d.kind==='tower'){ S.towers[d.ti].lvl++; buildTower(d.ti); layoutPads(); }
   else if(d.kind==='newTower'){ startPlacing(d.tk,d.cost(padLevel(d)),pd); }
@@ -88,9 +92,9 @@ let bubblePad=null;
 function nextLockedPad(){ const best={}; for(const pd of pads){ if(!pd.def.lock||pd.def.show()||padLevel(pd.def)>=pd.def.max) continue; const g=pd.def.grp||'base'; if(g!=='base'&&!revealed(g)) continue; if(!best[g]||(pd.def.ord||9)<(best[g].def.ord||9)) best[g]=pd; } return new Set(Object.values(best)); }
 function updatePads(dt){ const p=player.g.position; bubblePad=null; const nextL=nextLockedPad();
   for(const pd of pads){ const unlocked=pd.def.show(); const vis=padLevel(pd.def)<pd.def.max&&!placing&&(unlocked||nextL.has(pd)); if(!vis){ pd.shown=0; } pd.g.visible=vis; pd.locked=!unlocked; if(!vis) continue;
-    if(pd.locked){ pd.wasLocked=true; pd.shown=Math.min(1,pd.shown+dt*2.5); pd.g.scale.set(0.6*pd.shown*pd.sc,1,0.6*pd.shown*pd.sc); pd.plane.position.y=0.05; pd.fill.scale.set(1,0.001,1); const key='L|'+pd.def.name+'|'+pd.def.lock; if(key!==pd.last){ pd.last=key; drawLocked(pd,pd.def.name,pd.def.lock); } if(Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z)<pd.r*0.8) bubblePad=pd; continue; }
+    if(pd.locked){ pd.wasLocked=true; pd.shown=Math.min(1,pd.shown+dt*2.5); pd.g.scale.set(0.6*pd.shown*pd.sc,1,0.6*pd.shown*pd.sc); pd.plane.position.y=0.05; pd.fill.scale.set(1,0.001,1); const key='L|'+padIcon(pd.def); if(key!==pd.last){ pd.last=key; drawLocked(pd); } if(Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z)<pd.r*0.8) bubblePad=pd; continue; }
     const cost=padCost(pd); const paid=S.paid[pd.def.id]||0; const lvl=padLevel(pd.def);
-    if(pd.wasLocked&&introT>3){ toast('Yeni alan açıldı: '+pd.def.name,'good'); SFX.build(); } pd.wasLocked=false;
+    if(pd.wasLocked&&introT>3){ toast('✨ Yeni: '+pd.def.name,'good'); SFX.build(); } pd.wasLocked=false;
     pd.shown=Math.min(1,pd.shown+dt*2.5); const ease=1-Math.pow(1-pd.shown,3); const over=pd.shown<1? ease*(1+0.18*Math.sin(pd.shown*Math.PI)) : 1;
     const pulse=(S.paid[pd.def.id]||0)<cost&&padAvail(pd)? 1+0.05*Math.sin(performance.now()/180) : 1;
     if(pd.pop>0){ pd.pop-=dt*2; const s2=1+Math.sin((1-pd.pop)*Math.PI)*0.25; pd.g.scale.set(s2*over*pd.sc,1,s2*over*pd.sc); } else pd.g.scale.set(over*pulse*pd.sc,1,over*pulse*pd.sc);
@@ -103,8 +107,8 @@ function updatePads(dt){ const p=player.g.position; bubblePad=null; const nextL=
       else if(padRes(pd)==='stone'){ pd.acc=(pd.acc||0)+Math.max(20,cost/0.8)*dt; let n=Math.floor(pd.acc); pd.acc-=n; let cur=paid; while(n>0&&(S.stones>0||S.stone>0)&&cur<cost){ n--; const fromBack=S.stones>0; if(fromBack){ S.stones--; } else { S.stone--; } cur++; S.paid[pd.def.id]=cur; pd.payT-=0.05; if(pd.payT<=0){ pd.payT=0.06; fly((fromBack?p.clone().setY(1.6):DEPOT.clone().setY(1.2)),pd.g.position.clone().setY(0.3),null,'stone',fromBack?6:4); SFX.pay(cur/cost); } } setBack(player); setStonePile(Math.min(18,S.stone)); }
       else { pd.acc=(pd.acc||0)+Math.max(20,cost/0.8)*dt; let n=Math.floor(pd.acc); pd.acc-=n; let cur=paid; while(n>0&&(S.logs>0||S.wood>0)&&cur<cost){ n--; const fromBack=S.logs>0; if(fromBack){ S.logs--; } else { S.wood--; } cur++; S.paid[pd.def.id]=cur; pd.payT-=0.05; if(pd.payT<=0){ pd.payT=0.06; fly((fromBack?p.clone().setY(1.6):DEPOT.clone().setY(1.2)),pd.g.position.clone().setY(0.3),null,true,fromBack?6:4); SFX.pay(cur/cost); } } setBack(player); setPile(Math.min(24,S.wood)); } }
     const cur=S.paid[pd.def.id]||0; const k=clamp(cur/cost,0,1); pd.fill.scale.set(1,Math.max(0.001,k),1); pd.fill.position.z=(1-k)*1.0;
-    const can=padAvail(pd); const cnt=pd.def.kind==='worker'||pd.def.kind==='stoneWorker'||pd.def.kind==='soldier'||pd.def.kind==='collector'||pd.def.kind==='newTower'; const lvlTxt=cnt? `${lvl}/${pd.def.max}` : `Sv ${lvl}/${pd.def.max}`;
-    const key=pd.def.name+'|'+lvlTxt+'|'+Math.ceil(cost-cur)+'|'+can+'|'+padRes(pd); if(key!==pd.last){ pd.last=key; drawPad(pd,pd.def.name,lvlTxt,cur,cost,can); }
+    const can=padAvail(pd);
+    const key=padIcon(pd.def)+'|'+lvl+'|'+Math.ceil(cost-cur)+'|'+can+'|'+padRes(pd); if(key!==pd.last){ pd.last=key; drawPad(pd,lvl,cur,cost,can); }
     if(cur>=cost-0.01) completePad(pd);
   } }
 
@@ -145,13 +149,13 @@ function placeSpot(x,z){ const res=reservedPads(); const lim=H-1.8; const tryAt=
   for(let rad=0.6;rad<=2*H;rad+=0.6){ const n=Math.max(8,Math.round(rad*5)); let best=null,bd=1e9; for(let k=0;k<n;k++){ const a=k/n*6.2832; const cx=x+Math.cos(a)*rad, cz=z+Math.sin(a)*rad; const t=tryAt(cx,cz); if(t){ const d=Math.hypot(cx-x,cz-z); if(d<bd){bd=d;best=t;} } } if(best) return best; }
   return {x,z,s:nearestSide(x,z),ok:false}; }
 function startPlacing(k,refund,pd){ if(placing){ scene.remove(placing.ghost.g); } const sp=placeSpot(player.g.position.x,player.g.position.z);
-  if(!sp.ok){ S.coins+=refund||0; toast('Kaleye yeni kule sığmıyor — önce Genişlet'); return false; }
+  if(!sp.ok){ S.coins+=refund||0; toast('Yer yok — önce 🏗️ genişlet'); return false; }
   const ghost=towerMesh(k,1,false,M.ghostOk); scene.add(ghost.g); placing={k,ghost,ok:false,spot:null,refund:refund||0,pd}; moveTarget=null; $('placeBar').style.display='flex';
-  toast(isTouch?'Boş bir yere dokun, kule oraya kurulsun':'Boş bir yere tıkla, kule oraya kurulsun','good'); placeGhostAt(sp.x,sp.z); return true; }
-function cancelPlacing(){ if(!placing) return; scene.remove(placing.ghost.g); S.coins+=placing.refund; if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; toast('Vazgeçildi, altın geri verildi','good'); }
+  toast(isTouch?'👆 Boş yere dokun':'🖱️ Boş yere tıkla','good'); placeGhostAt(sp.x,sp.z); return true; }
+function cancelPlacing(){ if(!placing) return; scene.remove(placing.ghost.g); S.coins+=placing.refund; if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; toast('↩ Geri verildi','good'); }
 function pushOutOfTowers(p,r){ for(let i=9;i<S.towers.length;i++){ const t=S.towers[i]; if(t.x===undefined||t.lvl<1) continue; const dx=p.x-t.x, dz=p.z-t.z, d=Math.hypot(dx,dz); if(d<r&&d>0.001){ p.x=t.x+dx/d*r; p.z=t.z+dz/d*r; } } }
 function placeGhostAt(x,z){ if(!placing) return; const sp=placeSpot(x,z); placing.spot=sp; placing.ok=sp.ok; placing.ghost.g.position.set(sp.x,0,sp.z); const d=SD[sp.s]; placing.ghost.g.rotation.y=Math.atan2(d.o[0],d.o[1]); const m=sp.ok?M.ghostOk:M.ghostBad; placing.ghost.g.traverse(o=>{ if(o.isMesh) o.material=m; }); }
-function confirmPlace(){ if(!placing) return; const sp=placing.spot; if(!sp||!sp.ok){ toast('Buraya olmaz — boş bir yer seç'); return; } scene.remove(placing.ghost.g); S.towers.push({k:placing.k,side:sp.s,a:0,x:sp.x,z:sp.z,px:sp.px,pz:sp.pz,lvl:1,fixed:false}); const i=S.towers.length-1; buildTower(i); ensureTowerPads(); layoutPads(); if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; celebrate(new THREE.Vector3(sp.x,0,sp.z),1); floatText(new THREE.Vector3(sp.x,0,sp.z),'Kule kuruldu!','green'); save(); }
+function confirmPlace(){ if(!placing) return; const sp=placing.spot; if(!sp||!sp.ok){ toast('Buraya olmaz'); return; } scene.remove(placing.ghost.g); S.towers.push({k:placing.k,side:sp.s,a:0,x:sp.x,z:sp.z,px:sp.px,pz:sp.pz,lvl:1,fixed:false}); const i=S.towers.length-1; buildTower(i); ensureTowerPads(); layoutPads(); if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; celebrate(new THREE.Vector3(sp.x,0,sp.z),1); floatText(new THREE.Vector3(sp.x,0,sp.z),'Kule kuruldu!','green'); save(); }
 
 // ---------- Askerler: düşmana göre kapılar arasında yer değiştirir ----------
 const soldiers=[]; let assignT=0, lastAssignKey='';
@@ -295,7 +299,7 @@ function updateEnemies(dt){
     else if(!pre&&!last&&d<0.6){ e.wp++; }
     else if(e.shooter&&!last&&shooterTick(e,dt)){ animEnemy(e,dt,false); }
     else if((!last||d>0.5)&&!nearGate){ const ox0=e.g.position.x, oz0=e.g.position.z; if(!blocked){ e.g.position.x+=dx/d*e.speed*dt; e.g.position.z+=dz/d*e.speed*dt; } else { const bx=blocked.g.position.x-e.g.position.x, bz=blocked.g.position.z-e.g.position.z, bd=Math.hypot(bx,bz)||1; e.g.position.x+=(dx/d*0.5-bx/bd*0.4)*e.speed*dt; e.g.position.z+=(dz/d*0.5-bz/bd*0.4)*e.speed*dt; } const adv=Math.hypot(e.g.position.x-ox0,e.g.position.z-oz0); e.stuckT=adv<e.speed*dt*0.5? (e.stuckT||0)+dt : (e.stuckT>2.5&&e.stuckT<3.5? e.stuckT+dt : 0); e.g.rotation.y=Math.atan2(dx,dz); animEnemy(e,dt,!blocked); }
-    else { e.atkCd-=dt; animEnemy(e,dt,false); if(nearGate&&d>0.5){ e.g.rotation.y=Math.atan2(dx,dz); } if(e.atkCd<=0){ e.atkCd=e.atkT*(nearGate&&d>0.5?1.6:1); if(e.guy) e.guy.swing=0.3; else e.ramT=0.5; S.gateHp-=e.atk; SFX.gate(); gateShake=0.25; S.minGate=Math.min(S.minGate,Math.max(0,S.gateHp)/D.gateMax()); if(!gateWarned&&S.gateHp<D.gateMax()*0.35){ gateWarned=true; toast('Sur zorlanıyor — '+SIDE_TR[e.side]+' kapısına koş!'); } const [bx,bz]=sidePos(e.side,rand(-1.5,1.5),0); burst(new THREE.Vector3(bx,1.4,bz),4,M.wood,0.6); if(S.gateHp<=0) gateBroken(); } }
+    else { e.atkCd-=dt; animEnemy(e,dt,false); if(nearGate&&d>0.5){ e.g.rotation.y=Math.atan2(dx,dz); } if(e.atkCd<=0){ e.atkCd=e.atkT*(nearGate&&d>0.5?1.6:1); if(e.guy) e.guy.swing=0.3; else e.ramT=0.5; S.gateHp-=e.atk; SFX.gate(); gateShake=0.25; S.minGate=Math.min(S.minGate,Math.max(0,S.gateHp)/D.gateMax()); if(!gateWarned&&S.gateHp<D.gateMax()*0.35){ gateWarned=true; toast('⚠ '+SIDE_TR[e.side]+' kapısı!'); } const [bx,bz]=sidePos(e.side,rand(-1.5,1.5),0); burst(new THREE.Vector3(bx,1.4,bz),4,M.wood,0.6); if(S.gateHp<=0) gateBroken(); } }
     if(e.hitT>0){ e.hitT-=dt; const k=1+e.hitT*0.8; e.g.scale.set(e.sc*k,e.sc/k,e.sc*k); } else e.g.scale.setScalar(e.sc);
     v3.set(e.g.position.x,e.kind==='ram'?2.8:2.4*e.sc,e.g.position.z).project(camera); e.bar.style.left=((v3.x+1)/2*innerWidth)+'px'; e.bar.style.top=((1-v3.y)/2*innerHeight)+'px'; e.bar.firstElementChild.style.width=(clamp(e.hp/e.maxHp,0,1)*100)+'%';
   }

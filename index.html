@@ -42,8 +42,6 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .away b{font-family:var(--font-display);font-size:18px;color:var(--green);white-space:nowrap;margin-left:10px;text-align:right}
 .helm{width:18px;height:12px;border-radius:9px 9px 3px 3px;background:#d63a3a;box-shadow:0 3px 0 -1px #9c2323}
 .shield{width:16px;height:18px;background:#fff;border-radius:3px 3px 8px 8px;box-shadow:inset 0 0 0 3px #d63a3a,inset 0 0 0 5px #fff}
-.wave{min-width:150px;flex-direction:column;align-items:stretch;gap:4px;padding:8px 12px}
-.wave .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .bar{height:8px;border-radius:4px;background:#eee4cf;overflow:hidden}
 .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#8fd17a,#3d9a55);transition:width .15s}
 .bar.danger i{background:linear-gradient(90deg,#f39c94,var(--danger))}
@@ -80,7 +78,6 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .mini{position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:132px;height:132px;border-radius:14px;box-shadow:var(--shadow);border:2px solid rgba(255,255,255,.7);z-index:5;touch-action:none;background:#d7b989}
 .recenter{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;background:var(--panel);color:var(--ink);border:0;border-radius:14px;padding:9px 14px;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:var(--shadow);cursor:pointer;display:none}
 .recenter.show{display:block}
-.wave .next{font-family:var(--font-body);font-weight:800;font-size:12px;color:var(--danger);min-height:14px}
 .intro{position:fixed;inset:0;z-index:30;background:rgba(43,58,46,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .intro .card{background:var(--panel);border-radius:24px;padding:22px 22px 18px;max-width:424px;width:100%;box-shadow:var(--shadow);text-align:center}
 .intro h1{font-family:var(--font-display);font-size:34px;margin:0 0 6px;color:var(--green);line-height:1.05;text-wrap:balance}
@@ -117,7 +114,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .wl.pad small{color:#dfe8dd;font-size:12px}
 .wl.pad small b{color:#ffd23f}
 .wl.pad.can{background:var(--green);box-shadow:0 0 0 3px rgba(255,210,63,.6),var(--shadow)}
-.wl small{font-size:10px}.guide{font-size:13px;padding:4px 10px}.chip{font-size:16px;padding:5px 10px}.wave{min-width:130px}}
+.wl small{font-size:10px}.guide{font-size:13px;padding:4px 10px}.chip{font-size:16px;padding:5px 10px}}
 @media (prefers-reduced-motion:reduce){.btn.has{animation:none}.sheet{transition:none}}
 
 .chip.perk{font-size:15px;letter-spacing:1px}
@@ -219,7 +216,37 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .wres{min-height:44px;margin:4px 0 8px}.wres b{display:block;font-family:var(--font-display);font-size:22px;color:var(--green)}.wres small{display:block;color:var(--danger);font-weight:800}
 
 /* ---- telefon dik de yan da: ekran yönüne göre yerleşim ---- */
-.res{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.res{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;gap:5px;max-width:178px}
+.chip.sm{font-size:15px;padding:4px 9px;gap:6px;border-radius:12px}
+/* gece + sur göstergesi: yazı yok, bir bakışta okunur */
+.wv{pointer-events:auto;background:var(--panel);border-radius:14px;box-shadow:var(--shadow);padding:7px 10px 8px;display:flex;flex-direction:column;gap:6px;width:156px;box-sizing:border-box;transition:background .4s,color .4s}
+.wv .top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.nights{display:flex;align-items:center;gap:5px}
+.nights i{display:block;width:11px;height:11px;border-radius:50%;background:#efe6d0;box-shadow:inset 0 0 0 2px #d6c9a8;font-style:normal}
+.nights i.done{background:#3d9a55;box-shadow:inset 0 0 0 2px #2f7d45}
+.nights i.now{background:#ffd23f;box-shadow:0 0 0 2px #fff,0 0 0 4px #e8961a}
+.nights i.boss{width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;background:#f6e3df;box-shadow:inset 0 0 0 2px #e0a39b}
+.nights i.boss.now{background:#ffd9d4;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--danger)}
+.nights i.boss.done{background:#3d9a55;box-shadow:inset 0 0 0 2px #2f7d45}
+.wv .wt{font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wv .hp{display:flex;align-items:center;gap:6px}
+.wv .hp .bar{flex:1;height:7px}
+.wall-ic{position:relative;flex:none;width:14px;height:10px;margin-top:3px;border-radius:2px;background:linear-gradient(#d6cbb2,#a8997a);box-shadow:inset 0 0 0 1.5px rgba(80,65,40,.45)}
+.wall-ic::before{content:"";position:absolute;left:1px;right:1px;top:-3px;height:3px;background:repeating-linear-gradient(90deg,#a8997a 0 3px,transparent 3px 5px)}
+.wv.night{background:#1f2a55;color:#fff}
+.wv.night .nights i{background:#34406e;box-shadow:inset 0 0 0 2px #4a5689}
+.wv.night .nights i.done{background:#3d9a55;box-shadow:inset 0 0 0 2px #2f7d45}
+.wv.night .nights i.now{background:#ff6b5f;box-shadow:0 0 0 2px #1f2a55,0 0 0 4px #ff6b5f;animation:pulse 1s ease-in-out infinite}
+.wv.night .bar{background:#34406e}
+.wv.danger{box-shadow:0 0 0 3px rgba(217,83,79,.85),var(--shadow);animation:pulse .8s ease-in-out infinite}
+.wl .ics{display:flex;align-items:center;gap:5px;font-size:15px;line-height:1}
+.wl .ics span{display:inline-block}
+.intro .steps{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0 16px;flex-wrap:wrap}
+.intro .steps span{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--ink-soft);min-width:52px}
+.intro .steps i{font-style:normal;font-size:30px;line-height:1.1}
+.intro .steps b{color:#c9bb98;font-size:22px;margin-top:-18px}
+.guide{transition:opacity .35s}
+.guide.off{opacity:0}
 @keyframes pulseC{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
 .nightBtn{animation-name:pulseC}
 .hud{padding-left:calc(12px + env(safe-area-inset-left,0px));padding-right:calc(12px + env(safe-area-inset-right,0px))}
@@ -230,13 +257,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 @media (orientation:landscape) and (max-height:520px){
   .hud{padding-top:calc(6px + env(safe-area-inset-top,0px))}
   .right{gap:5px}
-  .res{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:min(440px,54vw);gap:5px}
-  .right .wave{order:-1}
+  .res{max-width:min(420px,50vw)}
   .left{gap:5px}
   .chip{font-size:15px;padding:4px 9px;gap:6px;border-radius:12px}
   .chip small{font-size:11px}
-  .wave{min-width:0;width:min(300px,40vw);padding:6px 10px;gap:3px}
-  .wave .next{font-size:11px;min-height:0}
   .mini{width:92px;height:92px;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
   .mute{bottom:calc(10px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
   .kingBtn{bottom:calc(56px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
@@ -282,11 +306,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 }
 @media (orientation:portrait) and (max-height:760px){
   .left,.right{gap:5px}
-  .res{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:66vw;gap:5px}
   .chip{font-size:15px;padding:4px 9px;gap:6px;border-radius:12px}
   .chip small{font-size:11px}
-  .wave{padding:6px 10px;gap:3px}
-  .wave .next{font-size:11px;min-height:0}
   .toast{font-size:16px;padding:8px 14px}
 }
 .plank-dot{width:18px;height:12px;border-radius:2px;background:repeating-linear-gradient(180deg,#e8b86a 0 3px,#a8742e 3px 4px);box-shadow:inset 0 0 0 2px rgba(90,55,20,.35)}
@@ -296,24 +317,19 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="vig"></div>
 
 <div class="hud">
-  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div><div class="chip quest" id="questChip" style="display:none"><span id="questTxt">📜 0/3</span></div></div>
+  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy" id="enemyChip" style="display:none"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot" id="lootChip" style="display:none"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div><div class="chip quest" id="questChip" style="display:none"><span id="questTxt">📜 0/3</span></div></div>
   <div class="right">
-    <div class="res"><div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div><div class="chip" id="plankChip" style="display:none"><span class="plank-dot"></span><small>kereste</small><span id="plankStock">0</span></div><div class="chip" id="ironChip" style="display:none"><span class="iron-dot"></span><small>demir</small><span id="ironStock">0</span></div><div class="chip" id="potionChip" style="display:none"><span class="potion-dot"></span><small>iksir</small><span id="potionStock">0</span></div></div>
-    <div class="chip wave">
-      <div class="row"><span id="waveLbl">Dalga 1</span><small id="waveT">20 sn</small></div>
-      <div class="next" id="waveNext"></div>
-      <div class="bar" id="gateBar"><i></i></div>
-      <small id="gateLbl">Kapı 100/100</small>
-    </div>
+    <div class="wv" id="waveBox"><div class="top"><span class="nights" id="nights"></span><span class="wt" id="waveT"></span></div><div class="hp"><span class="wall-ic"></span><div class="bar" id="gateBar"><i></i></div></div></div>
+    <div class="res"><div class="chip sm" id="woodChip"><span class="log-dot"></span><span id="woodStock">0</span></div><div class="chip sm" id="stoneChip" style="display:none"><span class="stone-dot"></span><span id="stoneStock">0</span></div><div class="chip sm" id="plankChip" style="display:none"><span class="plank-dot"></span><span id="plankStock">0</span></div><div class="chip sm" id="ironChip" style="display:none"><span class="iron-dot"></span><span id="ironStock">0</span></div><div class="chip sm" id="potionChip" style="display:none"><span class="potion-dot"></span><span id="potionStock">0</span></div></div>
   </div>
 </div>
 
 <button class="mute" id="muteBtn" aria-label="Sesi aç/kapat">🔊</button>
 <button class="kingBtn" id="kingBtn" aria-label="Krallık">👑</button>
-<div class="tip" id="tip">Ağaçların yanına git, baltan kendiliğinden çalışır</div>
+<div class="tip" id="tip">👆 Sürükle, yürü</div>
 <div class="toast" id="toast"></div>
 <button class="nightBtn" id="nightBtn" style="display:none">🌙 Geceyi başlat</button>
-<div class="placeBar" id="placeBar" style="display:none"><span>Kuleyi koymak için boş yere dokun</span><button id="placeCancel">✕ Vazgeç</button></div>
+<div class="placeBar" id="placeBar" style="display:none"><span>👆 Boş yere dokun</span><button id="placeCancel">✕</button></div>
 <div class="joy" id="joy"><i></i></div>
 <canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita"></canvas>
 <button class="recenter" id="recenter" aria-label="Karaktere dön">📍 Karaktere dön</button>
@@ -323,9 +339,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="intro" id="intro">
   <div class="card">
     <h1>Ormanın Bekçisi</h1>
-    <p>Her bölüm 5 gece. Gündüz ağaç kes, kule ve sur kur; gece kırmızı ordu gelir. Sur yıkılırsa bölüm biter. 5. gecenin patronunu yen, yıldızları topla.</p>
+    <div class="steps"><span><i>🪓</i>Kes</span><b>›</b><span><i>🏹</i>Kur</span><b>›</b><span><i>🌙</i>Savun</span><b>›</b><span><i>💀</i>Patron</span></div>
+    <p class="ret" id="introRet" style="display:none"></p>
     <button id="startBtn">Oyna</button>
-    <div class="sub">Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
+    <div class="sub"><span id="ctlHint">Sürükle: yürü · İki parmak: yakınlaştır</span></div>
   </div>
 </div>
 
