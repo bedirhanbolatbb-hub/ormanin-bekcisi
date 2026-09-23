@@ -30,7 +30,7 @@ function playerHarvest(nodes,o){ const p=player.g.position; let best=null,bd=2.6
   if((S[o.key]||0)>=carryCap()){ if(fullWarnT<=0){ fullWarnT=2.5; floatText(p,'Sırtın dolu — '+o.dest,'red'); } return true; }
   if(mineCd>0) return true; mineCd=o.cd||0.42; player.swing=0.3; const ang=Math.atan2(best.pos.x-p.x,best.pos.z-p.z); player.g.rotation.y=ang; slash.position.set(p.x,1.4,p.z); slash.rotation.z=-ang+Math.PI/2; slashT=0.22; if(o.soft) tone(700,900,0.06,'sine',0.04); else SFX.chop();
   best.hp=(best.hp||o.hits)-1; best.hit=0.2; burst(best.pos.clone().setY(0.6),5,o.chip,0.8);
-  if(best.hp<=0){ const at=best.pos.clone().setY(0.6); best.alive=false; best.regrow=o.regrow; const n=o.yield(); for(let j=0;j<n;j++) setTimeout(()=>fly(at.clone(),player.g,()=>{ if((S[o.key]||0)<carryCap()){ S[o.key]=(S[o.key]||0)+1; setBack(player); } },itemMesh(o.geo,o.mat),3.2),j*70); floatText(at,'+'+n+' '+o.name,''); if(o.onGet) o.onGet(best); }
+  if(best.hp<=0){ const at=best.pos.clone().setY(0.6); best.alive=false; best.regrow=o.regrow; const n=o.yield(); questEvent(o.key==='herb'?'herb':'mine',n); for(let j=0;j<n;j++) setTimeout(()=>fly(at.clone(),player.g,()=>{ if((S[o.key]||0)<carryCap()){ S[o.key]=(S[o.key]||0)+1; setBack(player); } },itemMesh(o.geo,o.mat),3.2),j*70); floatText(at,'+'+n+' '+o.name,''); if(o.onGet) o.onGet(best); }
   return true; }
 // teslim noktası: sırttakini binaya boşalt
 let dropT6=0;
@@ -184,7 +184,7 @@ function cargoIron(C,n){ while(C.cargo.children.length) C.cargo.remove(C.cargo.c
 // =====================================================================
 const CO=regF('coast'); const SC=new THREE.Vector3(SEA.x,0,SEA.z); const CU=CO.C.clone().sub(SC).normalize();
 const rotU=(u,a)=>new THREE.Vector3(u.x*Math.cos(a)-u.z*Math.sin(a),0,u.x*Math.sin(a)+u.z*Math.cos(a));
-const PIER_A=SC.clone().addScaledVector(CU,SEA.r+1.6), PIER_B=SC.clone().addScaledVector(CU,SEA.r-6.5); const WH=CO.at(-3,6.8), LIGHT=CO.at(-8.5,-6.5);
+const PIER_A=SC.clone().addScaledVector(CU,SEA.r+1.6), PIER_B=SC.clone().addScaledVector(CU,SEA.r-6.5), PIER_END=SC.clone().addScaledVector(CU,SEA.r-5.8); const WH=CO.at(-3,6.8), WH_FRONT=CO.at(-0.4,6.8), LIGHT=CO.at(-8.5,-6.5);
 const ISLES=[SC.clone().addScaledVector(rotU(CU,0.6),SEA.r-15), SC.clone().addScaledVector(rotU(CU,-0.55),SEA.r-16), SC.clone().addScaledVector(rotU(CU,0.05),SEA.r-22)];
 const coast=new THREE.Group(); scene.add(coast); const seaFx={rings:[],foam:null}; let lightBeam=null, lightTop=null, lighthouse=null;
 function palm(g,x,z,s){ const pg=new THREE.Group(); pg.position.set(x,0,z); pg.rotation.y=rand(0,6.28); let y=0, lx=0; for(let i=0;i<6;i++){ const seg=mesh(G.cyl,M.palmTrunk,0.2*s,0.8*s,0.2*s); lx+=0.12*s*i*0.3; seg.position.set(lx,y+0.4*s,0); seg.rotation.z=-0.08*i; pg.add(seg); y+=0.72*s; } for(let i=0;i<7;i++){ const lf=mesh(G.box,M.palm,0.5*s,0.06*s,2.2*s); const a=i/7*6.283; lf.position.set(lx+Math.sin(a)*0.9*s,y+0.05*s,Math.cos(a)*0.9*s); lf.rotation.y=a; lf.rotation.x=0.35; pg.add(lf); } const nut=mesh(G.sph,M.woodDark,0.18*s,0.18*s,0.18*s); nut.position.set(lx,y-0.2*s,0.15*s); pg.add(nut); g.add(pg); }
@@ -210,6 +210,7 @@ function makeBoat(){ const g=new THREE.Group(); const hull=mesh(G.box,M.woodDark
   const mast=mesh(G.cyl,M.woodDark,0.08,3.6,0.08); mast.position.set(0,2.4,0.2); const sail=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.4,4,4),M.sail); sail.position.set(0,2.6,0.28); sail.castShadow=true; const stripe=new THREE.Mesh(new THREE.PlaneGeometry(2.2,0.45),M.sailRed); stripe.position.set(0,2.6,0.3); const flag=mesh(G.box,M.flag,0.04,0.3,0.55,false); flag.position.set(0,4.3,-0.1);
   const cargo=new THREE.Group(); for(let j=0;j<4;j++){ const cr=mesh(G.box,M.chest,0.5,0.45,0.5); cr.position.set(j%2?0.35:-0.35,0.95,-0.6-Math.floor(j/2)*0.6); cargo.add(cr); } cargo.visible=false;
   g.add(hull,bow,rim,mast,sail,stripe,flag,cargo); g.position.copy(PIER_B); scene.add(g); const b={g,sail,cargo,state:'load',t:1.5,isle:boats.length%ISLES.length,k:0,from:PIER_B.clone(),to:PIER_B.clone()}; boats.push(b); return b; }
+let whSellT=0; const seaFishPrice=()=>(4+0.8*gw())*(1+0.1*rg('harbor'));
 const boatSpd=()=>3.2+0.7*rg('boat'); const tripValue=()=>(24+5*gw())*(1+0.2*rg('harbor'))*(1+0.15*Math.max(0,rg('boat')-1));
 const boatWantN=()=>rg('boat')<=0?0:(rg('harbor')>=3?2:1);
 function isleDock(i){ const I=ISLES[i]; return I.clone().add(PIER_B.clone().sub(I).normalize().multiplyScalar(i===2?5:4)); }
@@ -229,7 +230,7 @@ function spawnChest(instant){ const a=(Math.random()<0.5?-1:1)*rand(0.12,0.5); c
   const g=new THREE.Group(); const trim=mat(R.c,rar==='common'?{}:{emissive:new THREE.Color(R.c).multiplyScalar(0.35)}); const body=mesh(G.box,M.chest,1.0,0.6,0.7); body.position.y=0.3; const lidG=new THREE.Group(); lidG.position.set(0,0.6,-0.35); const lid=mesh(G.box,M.chest,1.02,0.26,0.72); lid.position.set(0,0.13,0.35); lidG.add(lid); for(const x of [-0.35,0.35]){ const bd=mesh(G.box,trim,0.1,0.64,0.74,false); bd.position.set(x,0.31,0); g.add(bd); const bl=mesh(G.box,trim,0.1,0.28,0.76,false); bl.position.set(x,0.13,0.35); lidG.add(bl); } const lock=mesh(G.box,M.chestGold,0.18,0.22,0.08,false); lock.position.set(0,0.5,0.37); g.add(body,lidG,lock);
   let gl=null, beam=null; if(rar!=='common'){ gl=glow(R.c,rar==='legend'?4:2.8,0.7); gl.position.y=0.9; g.add(gl); beam=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.6,9,12,1,true),new THREE.MeshBasicMaterial({color:R.c,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide})); beam.position.y=4.5; g.add(beam); }
   g.rotation.y=Math.atan2(-u.x,-u.z)+rand(-.4,.4); g.position.copy(instant?land:sea); scene.add(g); chests.push({g,lidG,gl,beam,rar,land,sea,k:instant?1:0,open:0,gone:0}); }
-function openChest(c){ c.open=0.001; const pos=c.g.position.clone(); const R=RAR[c.rar]; const w=gw(); const book=S.book.chest||(S.book.chest={}); book[c.rar]=(book[c.rar]||0)+1; let txt='';
+function openChest(c){ c.open=0.001; questEvent('chest',1); const pos=c.g.position.clone(); const R=RAR[c.rar]; const w=gw(); const book=S.book.chest||(S.book.chest={}); book[c.rar]=(book[c.rar]||0)+1; let txt='';
   const gold=Math.round((20+6*w)*({common:1,rare:1.6,epic:2.6,legend:5}[c.rar])); const n=Math.min(24,8+Math.round(gold/25)); dropCoins(pos.clone().setY(1),n,gold/n,2.2,1.4); txt='💰 '+gold;
   if(c.rar==='rare'){ if(Math.random()<0.5&&revealed('river')){ const p=6+Math.floor(Math.random()*7); S.planks=(S.planks||0)+p; txt+=` · +${p} kereste`; } else { const s=10+Math.floor(Math.random()*11); S.stone+=s; setStonePile(Math.min(18,S.stone)); txt+=` · +${s} taş`; } }
   if(c.rar==='epic'){ const fe=4+Math.floor(Math.random()*5); S.iron=(S.iron||0)+fe; txt+=` · +${fe} demir`; }
@@ -243,6 +244,8 @@ function updateChests(dt){ const t=performance.now()/1000; if(!revealed('coast')
     else { c.open+=dt; c.lidG.rotation.x=-Math.min(1.9,c.open*6); if(c.beam) c.beam.material.opacity=Math.max(0,0.5-c.open*0.2); if(c.open>2.2){ const s=Math.max(0.001,1-(c.open-2.2)*2); g.scale.setScalar(s); if(s<=0.01){ scene.remove(g); chests.splice(i,1); } } } } }
 function updateCoast(dt){ const t=performance.now()/1000; updateBoats(dt); updateChests(dt);
   const lh=rg('lighthouse'); lighthouse.visible=lh>0; if(lh>0){ lighthouse.scale.setScalar(0.85+0.06*lh); lightBeam.rotation.y=t*0.9; lightBeam.material.opacity=0.03+0.25*night; lightTop.material.emissive.setHex(0xffb020); }
+  // limanda balık satışı: sırttaki balık anında ticarete gider
+  { const p=player.g.position; if((S.fish||0)>0&&Math.hypot(p.x-WH_FRONT.x,p.z-WH_FRONT.z)<3){ whSellT-=dt; if(whSellT<=0&&pileVal(coastPile)<coastPile.capFn()-0.5){ whSellT=0.07; S.fish--; setBack(player); pileAdd(coastPile,seaFishPrice()); fly(p.clone().setY(1.6),WH.clone().setY(1.2),null,'fish',5); SFX.sell(); } } }
   whLbl.hide=false; const k=boats.length+'|'+rg('boat')+'|'+rg('harbor')+'|'+lh; if(whLbl._k!==k){ whLbl._k=k; whLbl.el.innerHTML=boats.length?`Liman <i>${boats.length} tekne</i><small>her seferde ~💰 ${Math.round(tripValue())} · sandık ${Math.round(60/chestEvery()*10)/10}/dk</small>`:`Liman<small>Tekne al: adalarla ticaret başlasın</small>`; } }
 function updateSea(dt){ const t=performance.now()/1000; seaFx.foam.scale.setScalar(1+0.006*Math.sin(t*1.3)); seaFx.foam.material.opacity=0.4+0.2*Math.sin(t*1.3);
   for(const r of seaFx.rings){ r.t-=dt; if(r.t<=0){ r.t=rand(1.5,3.5); const a=rand(0,6.28), rr=rand(4,SEA.r-3); r.m.position.set(SC.x+Math.cos(a)*rr,0.09,SC.z+Math.sin(a)*rr); r.age=0; } r.age=(r.age||0)+dt; const k=Math.min(1,r.age/1.6); r.m.scale.setScalar(0.6+2.4*k); r.m.material.opacity=0.45*(1-k); } }
@@ -368,6 +371,7 @@ function vis6(){ swamp.visible=revealed('swamp'); ironArea.visible=revealed('iro
 let vis6T=0;
 function updateRegions6(dt){ mineCd-=dt; fullWarnT-=dt; vis6T-=dt; if(vis6T<=0){ vis6T=1; vis6(); placeLamps(); if(revealed('iron')&&!carts.some(c=>c.kind==='iron')) addCart('iron'); }
   updateFog(dt); updateSea(dt); updateCastle(dt); updateSnowfall(dt);
+  updateP7(dt);
   if(revealed('swamp')){ updateSwamp(dt); updateFlies(); } if(revealed('iron')) updateIron(dt); if(revealed('coast')) updateCoast(dt); if(revealed('snow')) updateSnow(dt); }
 function initRegions6(){ vis6(); placeLamps(); for(let i=herbalists.length;i<rg('herbalist');i++) addGatherer(herbalists,SHUT_FRONT.clone(),M.moss); for(let i=miners.length;i<rg('miner');i++) addGatherer(miners,FORGE_FRONT.clone(),M.iron); for(let i=cminers.length;i<rg('cminer');i++) addGatherer(cminers,JEW_FRONT.clone(),mat(0x3d63c9)); if(revealed('iron')&&!carts.some(c=>c.kind==='iron')) addCart('iron'); }
-function resetRegions6(){ clearGatherers(herbalists); clearGatherers(miners); clearGatherers(cminers); for(const b of boats) scene.remove(b.g); boats.length=0; for(const c of chests) scene.remove(c.g); chests.length=0; for(const n of [...mushNodes,...oreNodes,...crysNodes]){ n.alive=true; n.pop=1; n.claimed=null; n.hp=0; } castleFreed=null; }
+function resetRegions6(){ clearGatherers(herbalists); clearGatherers(miners); clearGatherers(cminers); for(const b of boats) scene.remove(b.g); boats.length=0; for(const c of chests) scene.remove(c.g); chests.length=0; for(const n of [...mushNodes,...oreNodes,...crysNodes]){ n.alive=true; n.pop=1; n.claimed=null; n.hp=0; } castleFreed=null; resetP7(); }

@@ -27,7 +27,7 @@ function pileVal(P){ return (S.rg[P.id]||0); }
 function pileAdd(P,v){ const cap=P.capFn(); S.rg[P.id]=Math.min(cap,(S.rg[P.id]||0)+v); }
 function updatePiles(dt){ const p=player.g.position; for(const P of piles){ if(!P.g.visible) continue; const v=pileVal(P), cap=P.capFn(); const n=v<=0?0:Math.min(64,Math.max(1,Math.ceil(v/cap*64))); if(P.im.count!==n){ P.im.count=n; }
     P.full=v>=cap-0.5; const key=Math.floor(v)+'|'+P.full; if(key!==P.key){ P.key=key; P.L.el.innerHTML=v<1?'':(P.full?'<b class="full">Dolu!</b> ':'')+'💰 '+Math.floor(v); P.L.el.style.display=v<1?'none':''; } P.L.hide=v<1;
-    if(v>=1&&Math.hypot(p.x-P.pos.x,p.z-P.pos.z)<2.6){ P.t-=dt; if(P.t<=0){ P.t=0.05; const take=Math.max(1,Math.min(v,Math.max(4,v/10))); S.rg[P.id]=v-take; fly(P.pos.clone().setY(0.8+n*0.02),player.g,()=>{ S.coins+=take; coinPop(); },false,5); if(coinSfxT<=0){ coinSfxT=0.06; SFX.coin(); } } } } }
+    if(v>=1&&Math.hypot(p.x-P.pos.x,p.z-P.pos.z)<2.6){ P.t-=dt; if(P.t<=0){ P.t=0.05; const take=Math.max(1,Math.min(v,Math.max(4,v/10))); S.rg[P.id]=v-take; questEvent('pile',take); fly(P.pos.clone().setY(0.8+n*0.02),player.g,()=>{ S.coins+=take; coinPop(); },false,5); if(coinSfxT<=0){ coinSfxT=0.06; SFX.coin(); } } } } }
 
 // ----- kilitli bölgeler: bulut örtüsü + tabela; sefer kazanınca törenle açılır -----
 const regionFx={};
@@ -90,7 +90,7 @@ const hut=new THREE.Group(); const hutFish=new THREE.InstancedMesh(FISH_GEO,M.fi
 const hutLbl=addLabel(HUT,'',4.1); hutLbl.near=-1; hutLbl.el.classList.add('machLbl');
 const fishPile=makePile(lat(LK.r+6.6,7.2),()=>Math.round((220+160*rg('fishhut'))*(1+0.12*S.level))); fishPile.id='fishPile';
 // Balık türleri (koleksiyon defteri)
-const FISH=[{k:'sazan',n:'Sazan',v:1,w:52,c:0x9fb7a0},{k:'alabalik',n:'Alabalık',v:1.4,w:28,c:0xd79a9a},{k:'turna',n:'Turna',v:2,w:13,c:0x7fa37a},{k:'yayin',n:'Yayın',v:3.4,w:6,c:0x5c6470},{k:'altin',n:'Altın Balık',v:8,w:1.4,c:0xffc93a}];
+const FISH=[{k:'sazan',n:'Sazan',v:1,w:52,c:0x9fb7a0},{k:'alabalik',n:'Alabalık',v:1.4,w:28,c:0xd79a9a},{k:'turna',n:'Turna',v:2,w:13,c:0x7fa37a},{k:'yayin',n:'Yayın',v:3.4,w:6,c:0x5c6470},{k:'altin',n:'Altın Balık',v:8,w:1.4,c:0xffc93a},{k:'levrek',n:'Levrek',v:2.2,w:45,c:0x9ab0c8,sea:1},{k:'orkinos',n:'Orkinos',v:4,w:25,c:0x3a5a8a,sea:1},{k:'kilic',n:'Kılıç Balığı',v:7,w:8,c:0x5a86b0,sea:1},{k:'ejder',n:'Deniz Ejderi',v:18,w:1.2,c:0x3affc8,sea:1}];
 const fishValue=k=>{ const f=FISH.find(x=>x.k===k)||FISH[0]; return (6+1.3*gw())*f.v; };
 const fishPrice=()=>(2.5+0.45*gw())*(1+0.1*rg('fishhut'));
 const hutCap=()=>30+15*rg('fishhut'); const hutSellT=()=>Math.max(0.55,2.6-0.35*rg('fishhut'));
@@ -109,17 +109,17 @@ const rodMesh=mesh(G.cyl,M.handle,0.035,1.9,0.035,false); rodMesh.rotation.x=-0.
 const fishUI=document.createElement('div'); fishUI.className='fishUI'; fishUI.innerHTML='<div class="fbar"><i class="zone"></i><i class="needle"></i></div><button id="reelBtn">ÇEK!</button><small id="fishTip">Balık bekleniyor…</small>'; fishUI.style.display='none'; document.body.appendChild(fishUI);
 fishUI.addEventListener('pointerdown',e=>e.stopPropagation()); $('reelBtn').addEventListener('click',e=>{ e.stopPropagation(); audio(); reel(); });
 addEventListener('keydown',e=>{ if(e.key===' '&&FS.state==='bite'){ e.preventDefault(); reel(); } });
-function fishSpot(){ return lat(LK.r-8.6,rand(-2,2)).setY(0.08); }
+function fishSpot(){ if(FS.loc==='sea') return SC.clone().addScaledVector(CU,SEA.r-13).addScaledVector(rotU(CU,Math.PI/2),rand(-2,2)).setY(0.1); return lat(LK.r-8.6,rand(-2,2)).setY(0.08); }
 function endFishing(){ FS.state='idle'; bob.visible=false; fishLine.visible=false; rodMesh.visible=false; fishUI.style.display='none'; }
-function rollFish(qual){ const rare=1+0.15*rg('rod')+(qual>0.75?1.5:0); let tot=0; const ws=FISH.map((f,i)=>{ const w=f.w*(i>=2?rare:1); tot+=w; return w; }); let r=Math.random()*tot; for(let i=0;i<FISH.length;i++){ r-=ws[i]; if(r<=0) return FISH[i]; } return FISH[0]; }
+function rollFish(qual){ const sea=FS.loc==='sea'; const pool=FISH.filter(f=>!!f.sea===sea); const rare=1+0.15*rg('rod')+(sea?0.15*rg('harbor'):0)+(qual>0.75?1.5:0); const half=Math.ceil(pool.length/2); let tot=0; const ws=pool.map((f,i)=>{ const w=f.w*(i>=half?rare:1); tot+=w; return w; }); let r=Math.random()*tot; for(let i=0;i<pool.length;i++){ r-=ws[i]; if(r<=0) return pool[i]; } return pool[0]; }
 function reel(){ if(FS.state!=='bite') return; const d=Math.abs(FS.needle-FS.zc); if(d<=FS.zw/2){ const qual=1-d/(FS.zw/2); const f=rollFish(qual); catchFish(f,qual); } else { floatText(player.g.position,'Kaçtı!','red'); SFX.hit(); FS.state='cool'; FS.t=0.6; fishUI.style.display='none'; bob.visible=false; fishLine.visible=false; } }
 function catchFish(f,qual){ FS.state='cool'; FS.t=0.55; fishUI.style.display='none'; const from=bob.position.clone().setY(0.5); bob.visible=false; fishLine.visible=false; burst(from,10,M.waterLight,1.2); SFX.sell();
   fly(from,player.g,()=>{ S.fish=(S.fish||0)+1; setBack(player); },'fish',3.2);
-  S.book.fish[f.k]=(S.book.fish[f.k]||0)+1; const first=S.book.fish[f.k]===1; floatText(player.g.position,(qual>0.8?'Mükemmel! ':'')+f.n,first?'green':''); if(first&&f.k!=='sazan'){ banner('Yeni tür: '+f.n,'Koleksiyon defterine eklendi','day'); SFX.fanfare(); }
+  questEvent('fish',1); S.book.fish[f.k]=(S.book.fish[f.k]||0)+1; const first=S.book.fish[f.k]===1; floatText(player.g.position,(qual>0.8?'Mükemmel! ':'')+f.n,first?'green':''); if(first&&f.k!=='sazan'&&f.k!=='levrek'){ banner('Yeni tür: '+f.n,'Koleksiyon defterine eklendi','day'); SFX.fanfare(); }
   if(f.v>=3){ camShake=0.25; celebrate(from.clone().setY(0),0.6); } }
-function updateFishing(dt){ const p=player.g.position; const onDock=revealed('lake')&&Math.hypot(p.x-DOCK_END.x,p.z-DOCK_END.z)<1.9; const can=onDock&&!playerMoving&&(S.fish||0)<fishCap()&&!nearestEnemy(p,6)&&!document.querySelector('.intro');
+function updateFishing(dt){ const p=player.g.position; const nearPier=revealed('coast')&&Math.hypot(p.x-PIER_END.x,p.z-PIER_END.z)<1.9, nearDock=revealed('lake')&&Math.hypot(p.x-DOCK_END.x,p.z-DOCK_END.z)<1.9; const loc=nearPier?'sea':nearDock?'lake':(FS.loc||'lake'); if(loc!==FS.loc){ if(FS.state!=='idle') endFishing(); FS.loc=loc; } const onDock=nearPier||nearDock; const can=onDock&&!playerMoving&&(S.fish||0)<fishCap()&&!nearestEnemy(p,6)&&!document.querySelector('.intro');
   if(!can){ if(FS.state!=='idle') endFishing(); if(onDock&&(S.fish||0)>=fishCap()&&!playerMoving){ FS.fullT=(FS.fullT||0)-dt; if(FS.fullT<=0){ FS.fullT=2.5; floatText(p,'Sırtın balıkla dolu — balıkhaneye götür','red'); } } return; }
-  rodMesh.visible=true; player.g.rotation.y=Math.atan2(-LDIR.x,-LDIR.z);
+  rodMesh.visible=true; if(FS.loc==='sea') player.g.rotation.y=Math.atan2(SC.x-p.x,SC.z-p.z); else player.g.rotation.y=Math.atan2(-LDIR.x,-LDIR.z);
   if(FS.state==='idle'){ FS.state='cast'; FS.t=0; FS.spot=fishSpot(); bob.visible=true; fishLine.visible=true; SFX.slash(); }
   const tip=new THREE.Vector3(); rodMesh.getWorldPosition(tip); tip.y+=0.9;
   if(FS.state==='cast'){ FS.t+=dt*2.2; const k=Math.min(1,FS.t); bob.position.lerpVectors(p.clone().setY(2),FS.spot,k); bob.position.y+=Math.sin(k*Math.PI)*2; if(k>=1){ FS.state='wait'; FS.t=rand(0.8,2.0); burst(FS.spot.clone(),5,M.waterLight,0.6); } }
@@ -222,7 +222,7 @@ function spawnAnimal(){ let tot=0; for(const h of HUNT) tot+=h.w; let r=Math.ran
 function killAnimal(a,byHunter){ const i=animals.indexOf(a); if(i>=0) animals.splice(i,1); scene.remove(a.m.g); const pos=a.m.g.position.clone(); burst(pos.clone().setY(0.6),10,M.meat,1.1); SFX.die();
   const n=Math.max(1,Math.round(a.H.meat*(1+0.25*rg('bow')))); S.book.hunt[a.H.k]=(S.book.hunt[a.H.k]||0)+1; const first=S.book.hunt[a.H.k]===1;
   if(byHunter){ toHHut(pos.clone().setY(0.6),n); }
-  else { for(let j=0;j<n;j++){ setTimeout(()=>fly(pos.clone().setY(0.6),player.g,()=>{ if((S.meat||0)<meatCap()){ S.meat=(S.meat||0)+1; setBack(player); } },'meat',3.2),j*70); } floatText(pos,a.H.n+' +'+n+' et',first?'green':''); if(first&&a.H.k!=='tavsan'){ banner('Yeni av: '+a.H.n,'Koleksiyon defterine eklendi','day'); SFX.fanfare(); } if(a.H.k==='ak_geyik'){ celebrate(pos,1); camShake=0.3; } } }
+  else { questEvent('hunt',1); for(let j=0;j<n;j++){ setTimeout(()=>fly(pos.clone().setY(0.6),player.g,()=>{ if((S.meat||0)<meatCap()){ S.meat=(S.meat||0)+1; setBack(player); } },'meat',3.2),j*70); } floatText(pos,a.H.n+' +'+n+' et',first?'green':''); if(first&&a.H.k!=='tavsan'){ banner('Yeni av: '+a.H.n,'Koleksiyon defterine eklendi','day'); SFX.fanfare(); } if(a.H.k==='ak_geyik'){ celebrate(pos,1); camShake=0.3; } } }
 function hurtAnimal(a,dmg,byHunter){ a.hp-=dmg; a.hit=0.2; SFX.hit(); if(a.hp<=0) killAnimal(a,byHunter); }
 let huntCd=0;
 function updateAnimals(dt){ const p=player.g.position; const target=7+2*rg('trap'); spawnAT-=dt; if(animals.length<target&&spawnAT<=0){ spawnAT=3.5; spawnAnimal(); }
@@ -374,7 +374,7 @@ function showOffline(o){ if(o.sec<60||(!o.fish&&!o.gold&&!o.wood&&!o.meat&&!o.st
 
 // ----- rehber: taşınan balığı götür, dolan yığını topla, boşken balık tut -----
 function regionGuide(mode){ const p=player.g.position; if(mode==='carry'){ const r6=regionGuide6('carry'); if(r6) return r6; } if(mode==='idle'){ const r6=regionGuide6('idle'); if(r6) return r6; }
-  if(mode==='carry'){ if((S.meat||0)>0&&revealed('meadow')) return {t:HHUT_FRONT,text:'Eti av kulübesine götür'}; if((S.fish||0)>0&&revealed('lake')) return {t:HUT_FRONT,text:'Balıkları balıkhaneye götür'}; return null; }
+  if(mode==='carry'){ if((S.meat||0)>0&&revealed('meadow')) return {t:HHUT_FRONT,text:'Eti av kulübesine götür'}; if((S.fish||0)>0&&revealed('coast')&&(!revealed('lake')||p.distanceTo(WH_FRONT)<p.distanceTo(HUT_FRONT))) return {t:WH_FRONT,text:'Balıkları limana sat'}; if((S.fish||0)>0&&revealed('lake')) return {t:HUT_FRONT,text:'Balıkları balıkhaneye götür'}; return null; }
   if(mode==='pile'){ let best=null,bv=0; for(const P of piles){ const v=pileVal(P); if(!P.g.visible||v<Math.min(P.capFn()*0.5,150)) continue; const sc=v/P.capFn()*100-Math.hypot(P.pos.x-p.x,P.pos.z-p.z)*0.3; if(!best||sc>bv){ bv=sc; best=P; } } if(best) return {t:best.pos,text:(pileVal(best)>=best.capFn()-0.5?'Yığın doldu — ':'')+'Altınları topla'}; return null; }
   if(mode==='idle'){ const lakeV=revealed('lake')?pileVal(fishPile)+(S.rg.hutFish||0)*3:1e9, mdV=revealed('meadow')?pileVal(meatPile)+(S.rg.huntMeat||0)*3:1e9; if(revealed('meadow')&&mdV<=lakeV&&animals.length&&(S.meat||0)<meatCap()){ let best=null,bd=1e9; for(const a of animals){ const d=Math.hypot(a.m.g.position.x-p.x,a.m.g.position.z-p.z); if(d<bd){ bd=d; best=a; } } return {t:best.m.g.position.clone(),text:'Çayırda avlan'}; } if(revealed('lake')&&(S.fish||0)<fishCap()) return {t:DOCK_END,text:'İskelede balık tut'}; return null; } return null; }
 

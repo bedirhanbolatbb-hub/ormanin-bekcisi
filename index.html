@@ -206,6 +206,17 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .iron-dot{width:18px;height:10px;border-radius:2px;background:linear-gradient(#e2e8ee,#8a939c);box-shadow:inset 0 0 0 2px rgba(40,46,52,.4)}
 .potion-dot{width:13px;height:15px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 40% 35%,#e8c2ff,#9a4ad6 60%,#5a1a7a);box-shadow:0 0 6px rgba(180,106,230,.8)}
 .card.end h1{font-size:34px;background:linear-gradient(90deg,#ffd23f,#fff3b0,#ffd23f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.chip.quest.pop{animation:qpop .5s ease}@keyframes qpop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.intro .q button{width:auto;padding:8px 10px;font-size:14px;background:var(--coin);color:var(--coin-ink);margin:0;white-space:nowrap}
+.hpbar.tw{width:44px;height:6px}.hpbar.tw i{background:#6fd36f}
+.wheelCard h1{color:#b8860b}
+.wheel{position:relative;width:250px;height:250px;margin:6px auto 6px}
+.wdisc{position:absolute;inset:0;border-radius:50%;border:7px solid #fff3cf;box-shadow:0 0 0 4px #b8860b,0 8px 22px rgba(0,0,0,.25)}
+.wdisc span{position:absolute;left:50%;top:50%;width:0;height:0}
+.wdisc span b{position:absolute;left:-18px;top:-104px;width:36px;text-align:center;font-size:28px;line-height:1;filter:drop-shadow(0 2px 1px rgba(0,0,0,.35))}
+.wdisc em{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;background:radial-gradient(#fff3cf,#e8961a);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.wpin{position:absolute;left:50%;top:-12px;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:28px solid #d9534f;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+.wres{min-height:44px;margin:4px 0 8px}.wres b{display:block;font-family:var(--font-display);font-size:22px;color:var(--green)}.wres small{display:block;color:var(--danger);font-weight:800}
 .plank-dot{width:18px;height:12px;border-radius:2px;background:repeating-linear-gradient(180deg,#e8b86a 0 3px,#a8742e 3px 4px);box-shadow:inset 0 0 0 2px rgba(90,55,20,.35)}
 </style>
 
@@ -213,7 +224,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="vig"></div>
 
 <div class="hud">
-  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div></div>
+  <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div><div class="chip quest" id="questChip" style="display:none"><span id="questTxt">📜 0/3</span></div></div>
   <div class="right">
     <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div><div class="chip" id="plankChip" style="display:none"><span class="plank-dot"></span><small>kereste</small><span id="plankStock">0</span></div><div class="chip" id="ironChip" style="display:none"><span class="iron-dot"></span><small>demir</small><span id="ironStock">0</span></div><div class="chip" id="potionChip" style="display:none"><span class="potion-dot"></span><small>iksir</small><span id="potionStock">0</span></div>
     <div class="chip wave">
