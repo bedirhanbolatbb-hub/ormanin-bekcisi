@@ -21,7 +21,7 @@ const SIDES=['N','E','S','W']; const SIDE_TR={N:'Kuzey',E:'Doğu',S:'Güney',W:'
 function defaultTowers(){ const t=[{k:'a',side:'C',a:0,lvl:0,fixed:true}]; for(const s of SIDES) for(const a of [-5.2,5.2]) t.push({k:'a',side:s,a,lvl:0,fixed:true}); return t; }
 // Kalıcı (meta): açılan bölüm, yıldızlar, taç, kalıcı güçlendirmeler. Bölümlük (run): her bölüm başında sıfırlanır.
 const META0={unlocked:1,stars:{},crowns:0,up:{gold:0,wall:0,arrow:0},dailyDate:'',streak:0,fails:{}};
-function runState(level){ return { fish:0, meat:0, planks:0, iron:0, ore:0, rg:{}, revealed:{forest:true}, book:{fish:{},hunt:{},boss:{}}, lastSeen:0, coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
+function runState(level){ return { fish:0, meat:0, planks:0, iron:0, ore:0, herb:0, crystal:0, rg:{}, revealed:{forest:true}, book:{fish:{},hunt:{},boss:{},chest:{}}, lastSeen:0, coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
 const S = Object.assign(runState(1), { muted:false, meta:JSON.parse(JSON.stringify(META0)) });
 const store={ get:k=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem(k); }catch(e){} if(v==null){ try{ v=localStorage.getItem(k); }catch(e){} } return v; }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem(k,v); }catch(e){} } };
 function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); return; } }catch(e){}
@@ -44,7 +44,7 @@ const D = {
   chopRate:()=>4.0*(1+0.3*cc('axe')), treeHits:()=>1, logsPerTree:()=>4+2*cc('lumber'),
   cap:()=>40+15*S.lv.feet, speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>3.8*(1+0.6*cc('magnet')), lootPrice:()=>(8+gw()*1.5+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
   swordDmg:()=>9*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'),
-  gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.1*mu('wall'))), towerDmg:l=>(5+3*(l-1))*(1+0.25*cc('arrow'))*(1+0.08*mu('arrow')), towerRange:()=>17+3*cc('range'), towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*(1+0.4*cc('powder')), soldierDmg:()=>8*(1+0.4*cc('drill')),
+  gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.1*mu('wall'))*(1+0.12*(S.lv.ironWall||0))), towerDmg:l=>(5+3*(l-1))*(1+0.25*cc('arrow'))*(1+0.08*mu('arrow'))*(1+0.1*(S.lv.ironArrow||0)), towerRange:()=>17+3*cc('range'), towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*(1+0.4*cc('powder')), soldierDmg:()=>8*(1+0.4*cc('drill')),
 };
 // Kapı sayısı: bölümün gecesine ve bölüm numarasına göre açılır
 const sidesActive=()=>Math.min(4,1+Math.floor((S.wave-1)/2)+Math.floor((S.level-1)/2));
@@ -157,20 +157,21 @@ const REG={
   meadow:{sefer:3,name:'Geyik Çayırı',job:'Av ve tütsühane',c:[-42,42],r:14,clear:25},
   quarry:{sefer:4,name:'Taş Ocağı',job:'Taş kesme tezgâhı',c:[40,40],r:12,clear:22},
   river:{sefer:5,name:'Nehir',job:'Su değirmeni ve kereste',c:[-42,-42],r:12,clear:22},
-  swamp:{sefer:6,name:'Sisli Bataklık',job:'Fener',c:[-70,-22],r:12,clear:14},
-  iron:{sefer:7,name:'Demir Dağı',job:'Demir ve demirci',c:[24,-70],r:12,clear:14},
-  coast:{sefer:8,name:'Kıyı',job:'Tekne ve adalar',c:[72,70],r:14,clear:16},
-  snow:{sefer:9,name:'Karlı Geçit',job:'Kış',c:[-72,72],r:12,clear:12},
-  dark:{sefer:10,name:'Kara Kale',job:'Son kuşatma',c:[0,-86],r:9,clear:10},
+  swamp:{sefer:6,name:'Sisli Bataklık',job:'Fener, mantar ve iksir kazanı',c:[-70,-22],r:12,clear:22},
+  iron:{sefer:7,name:'Demir Dağı',job:'Maden, demirci ocağı ve delici ok',c:[24,-70],r:12,clear:22},
+  coast:{sefer:8,name:'Kıyı',job:'Sandıklar, deniz feneri ve ticaret teknesi',c:[72,70],r:14,clear:26},
+  snow:{sefer:9,name:'Karlı Geçit',job:'Kristal madeni ve kuyumcu',c:[-72,72],r:12,clear:22},
+  dark:{sefer:10,name:'Kara Kale',job:'Son kuşatma',c:[0,-86],r:9,clear:20},
 };
 const QUARRIES=[[41,39],[49,47]];
 // Yük arabası yolları (ağaçsız, toprak) ve nehir
-const CART_PATHS=[[[34,29],[32,14],[31,4]],[[-37,-35],[-33,-18],[-31,-4]]];
+const CART_PATHS=[[[34,29],[32,14],[31,4]],[[-37,-35],[-33,-18],[-31,-4]],[[17,-54],[9,-38],[4,-28]]];
+const SEA={x:100,z:100,r:30};
 const RIVER=[[-100,-30],[-70,-36],[-52,-40],[-42,-42],[-38,-52],[-34,-70],[-30,-100]];
 function polyDist(P,x,z){ let best=1e9; for(let i=0;i<P.length-1;i++){ const [ax,az]=P[i],[bx,bz]=P[i+1]; const dx=bx-ax,dz=bz-az; const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1); const d=Math.hypot(ax+dx*t-x,az+dz*t-z); if(d<best) best=d; } return best; }
 function nearQuarry(x,z,m){ return QUARRIES.some(qq=>Math.hypot(x-qq[0],z-qq[1])<m); }
 function inRegClear(x,z){ for(const k in REG){ const R=REG[k]; if(Math.hypot(x-R.c[0],z-R.c[1])<R.clear) return true; } return false; }
-function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5) && !inRegClear(x,z) && polyDist(RIVER,x,z)>4.5+pad && !CART_PATHS.some(P=>polyDist(P,x,z)<3+pad); }
+function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5) && !inRegClear(x,z) && polyDist(RIVER,x,z)>4.5+pad && Math.hypot(x-SEA.x,z-SEA.z)>SEA.r+3+pad && !CART_PATHS.some(P=>polyDist(P,x,z)<3+pad); }
 
 let groundTex=null;
 function paintGround(){
@@ -183,6 +184,13 @@ function paintGround(){
   for(const s of SIDES){ const P=roadPath(s); for(const [col,w] of [['#c9a26d',6],['#e3c898',3.6]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
   x.lineCap='round'; x.lineJoin='round'; for(const P of CART_PATHS){ for(const [col,w] of [['#c9a26d',3.2],['#dcc093',1.8]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
   for(const [col,w] of [['#d8c28f',7.5],['#3d8fc0',5],['#5fb0dc',3],['#8fd0ee',0.9]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); RIVER.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); }
+  // son bölgelerin zemini: bataklık yosunu, dağ eteği, sahil kumu, kar, kavrulmuş toprak
+  const blob=(cx,cz,r,cols,n,sz)=>{ for(let i=0;i<n;i++){ const a=rand(0,6.283), rr=Math.sqrt(Math.random())*r; x.fillStyle=cols[i%cols.length]; x.beginPath(); x.ellipse(px(cx+Math.cos(a)*rr),px(cz+Math.sin(a)*rr),pw(rand(sz*0.5,sz)),pw(rand(sz*0.4,sz*0.8)),rand(0,3),0,7); x.fill(); } };
+  { const R=REG.swamp; blob(R.c[0],R.c[1],R.clear-3,['rgba(88,112,64,.55)','rgba(70,92,54,.5)','rgba(104,120,72,.45)'],160,5); }
+  { const R=REG.iron; blob(R.c[0],R.c[1],R.clear-3,['rgba(150,136,120,.55)','rgba(128,114,100,.5)','rgba(168,154,136,.45)'],160,5); }
+  { const R=REG.snow; blob(R.c[0],R.c[1],R.clear,['rgba(246,250,252,.9)','rgba(226,238,246,.85)','rgba(255,255,255,.9)'],260,6); blob(R.c[0],R.c[1],R.clear+10,['rgba(240,246,250,.45)'],120,5); }
+  { const R=REG.dark; blob(R.c[0]-2,R.c[1]-4,R.clear-2,['rgba(96,86,84,.55)','rgba(76,68,70,.5)'],140,5); }
+  x.fillStyle='#ecd9a8'; x.beginPath(); x.arc(px(SEA.x),px(SEA.z),pw(SEA.r+6),0,7); x.fill(); blob(SEA.x,SEA.z,SEA.r+6,['rgba(222,196,140,.4)','rgba(246,230,190,.5)'],120,3); x.fillStyle='#2f7fb4'; x.beginPath(); x.arc(px(SEA.x),px(SEA.z),pw(SEA.r),0,7); x.fill();
   for(const [qx,qz] of QUARRIES){ x.fillStyle='#b9b3a6'; x.beginPath(); x.ellipse(px(qx),px(qz),pw(7),pw(6),0.6,0,7); x.fill(); x.fillStyle='#a19b8f'; for(let i=0;i<14;i++){ x.beginPath(); x.ellipse(px(qx+rand(-5,5)),px(qz+rand(-4,4)),pw(rand(.8,2)),pw(rand(.6,1.4)),rand(0,3),0,7); x.fill(); } }
   x.fillStyle='#63b85a'; x.fillRect(px(-H),px(-H),pw(2*H),pw(2*H));
   for(let i=0;i<Math.round(H*H*2);i++){ x.fillStyle=`hsla(${rand(100,120)},${rand(40,55)}%,${rand(42,58)}%,${rand(.15,.35)})`; x.beginPath(); x.ellipse(rand(px(-H),px(H)),rand(px(-H),px(H)),rand(6,22),rand(4,14),rand(0,3),0,7); x.fill(); }
@@ -206,6 +214,6 @@ function cullDecor(){ for(const d of decor){ let any=false; d.items.forEach((it,
   decor.push({im:instanced(bushGeo,mat(0xffffff),bushes),items:bushes});
   const grass=[]; for(let i=0;i<1100;i++){ const x=rand(-WORLD,WORLD), z=rand(-WORLD,WORLD); if(!freeSpot(x,z,0)) continue; grass.push({x,y:0.18,z,ry:rand(0,6),rz:rand(-.25,.25),s:rand(.6,1.3),c:Math.random()<.5?0x9fd07a:0x86bf64}); }
   decor.push({im:instanced(new THREE.ConeGeometry(0.22,0.5,4),mat(0xffffff),grass,false),items:grass});
-  const hills=[]; for(let i=0;i<40;i++){ const a=i/40*6.283; const r=rand(104,120); hills.push({x:Math.cos(a)*r,y:-1,z:Math.sin(a)*r,sx:rand(12,22),sy:rand(7,14),sz:rand(12,22),c:Math.random()<.5?0xc9b48e:0xb7a17a}); }
+  const hills=[]; for(let i=0;i<48;i++){ const a=i/48*6.283; const deg=a*180/Math.PI; if(deg>20&&deg<70) continue; const diag=Math.abs(Math.sin(2*a)); const r=rand(104,118)+diag*26; const snowy=deg>108&&deg<162; hills.push({x:Math.cos(a)*r,y:-1,z:Math.sin(a)*r,sx:rand(12,22),sy:rand(7,14),sz:rand(12,22),c:snowy?(Math.random()<.5?0xeef3f6:0xd6e2ea):(Math.random()<.5?0xc9b48e:0xb7a17a)}); }
   instanced(G.sph,mat(0xffffff),hills,false);
 })();

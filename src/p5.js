@@ -10,9 +10,10 @@ const rg=k=>(S.lv&&S.lv[k])||0;
 // ----- oyuncunun sırtında balık ve et -----
 player.fishMesh=new THREE.InstancedMesh(FISH_GEO,M.fish,60); player.fishMesh.count=0; player.fishMesh.frustumCulled=false; player.back.add(player.fishMesh);
 player.meatMesh=new THREE.InstancedMesh(MEAT_GEO,M.meat,60); player.meatMesh.count=0; player.meatMesh.frustumCulled=false; player.back.add(player.meatMesh);
+const BACK_EXTRA=[];
 function setExtraBack(){ const g=player; if(!g||!g.fishMesh) return; let row=Math.ceil(S.logs/2)+Math.ceil((S.stones||0)/2)+Math.ceil((S.loot||0)/2);
   const put=(im,n)=>{ n=Math.max(0,Math.min(60,n)); for(let i=0;i<n;i++){ const r=row+Math.floor(i/2), s=i%2; vp.set(s?0.24:-0.24,0.14+r*0.3,-0.05); e3.set(0,Math.PI/2,0.15*(s?1:-1)); q.setFromEuler(e3); vs.set(0.85,0.85,0.85); m4.compose(vp,q,vs); im.setMatrixAt(i,m4); } im.count=n; im.instanceMatrix.needsUpdate=true; row+=Math.ceil(n/2); };
-  put(g.fishMesh,S.fish||0); put(g.meatMesh,S.meat||0); }
+  put(g.fishMesh,S.fish||0); put(g.meatMesh,S.meat||0); for(const b of BACK_EXTRA) put(b.im,S[b.key]||0); }
 const fishCap=()=>12+4*S.lv.feet;
 
 // ----- para yığını: makinenin ürettiği altın burada birikir, yanına gelince toplanır -----
@@ -46,7 +47,7 @@ function updateRegionFx(dt){ const t=performance.now()/1000; for(const id in reg
         if(!r.ban&&r.t>1.6){ r.ban=true; banner('Yeni bölge: '+R.name,R.job+' açıldı!','day'); } }
       else { F.g.visible=false; F.L.hide=true; for(const pf of F.puffs){ if(pf.s0) pf.m.scale.set(pf.s0,pf.s0*0.62,pf.s0); } F.rev=null; recenter(); if(r.cb) setTimeout(r.cb,300); } } } }
 function regionCollide(p){ for(const id in REG){ if(revealed(id)) continue; const R=REG[id]; const dx=p.x-R.c[0], dz=p.z-R.c[1], d=Math.hypot(dx,dz), rr=R.r+2.2; if(d<rr&&d>0.001){ p.x=R.c[0]+dx/d*rr; p.z=R.c[1]+dz/d*rr; } }
-  if(revealed('lake')) lakeCollide(p); }
+  if(revealed('lake')) lakeCollide(p); collide6(p); }
 
 // =====================================================================
 // ---------- Gümüş Göl: su, iskele, balıkhane, balıkçı, balık ağı ----------
@@ -161,8 +162,9 @@ for(const d of LPADS) makePad(d);
 
 // ----- düşman görünümleri: sefere göre patron -----
 const BOSSES={1:{n:'Kabile Reisi',hat:'horns'},2:{n:'Korsan Kaptan',hat:'pirate',c:0x2b3a8a},3:{n:'Dev Kurt',hat:'wolf'},4:{n:'Koçbaşı Ustası',hat:'helm'},5:{n:'Ok Ustası',hat:'hood'},6:{n:'Bataklık Cadısı',hat:'witch'},7:{n:'Demir Dev',hat:'helm'},8:{n:'Korsan Kralı',hat:'pirate'},9:{n:'Buz Devi',hat:'horns'},10:{n:'Kara Kral',hat:'crown'}};
-const bossName=()=>(BOSSES[Math.min(10,S.level)]||BOSSES[1]).n;
-function applyBossLook(guy){ const B=BOSSES[Math.min(10,S.level)]||BOSSES[1]; if(B.hat==='pirate'){ const brim=mesh(G.cyl,mat(0x1d1d22),0.8,0.08,0.5); brim.position.y=2.0; const top=mesh(G.cone,mat(0x1d1d22),0.5,0.45,0.35); top.position.y=2.25; const sk=mesh(G.sph,M.metal,0.1,0.1,0.05,false); sk.position.set(0,2.2,0.3); const patch=mesh(G.box,mat(0x111111),0.18,0.12,0.05,false); patch.position.set(0.18,1.55,0.52); guy.root.add(brim,top,sk,patch); guy.root.children.forEach(o=>{ if(o.material===M.enemyHelm) o.visible=false; }); }
+const bossOf=()=>S.level<=10?(BOSSES[S.level]||BOSSES[1]):BOSSES[((S.level-11)%10)+1];
+const bossName=()=>(S.level>10?'Öfkeli ':'')+bossOf().n;
+function applyBossLook(guy){ const B=bossOf(); if(B.hat==='pirate'){ const brim=mesh(G.cyl,mat(0x1d1d22),0.8,0.08,0.5); brim.position.y=2.0; const top=mesh(G.cone,mat(0x1d1d22),0.5,0.45,0.35); top.position.y=2.25; const sk=mesh(G.sph,M.metal,0.1,0.1,0.05,false); sk.position.set(0,2.2,0.3); const patch=mesh(G.box,mat(0x111111),0.18,0.12,0.05,false); patch.position.set(0.18,1.55,0.52); guy.root.add(brim,top,sk,patch); guy.root.children.forEach(o=>{ if(o.material===M.enemyHelm) o.visible=false; }); }
   else if(B.hat==='crown'){ const c=mesh(G.cyl,M.gold,0.42,0.3,0.42); c.position.y=2.1; guy.root.add(c); }
   else if(B.hat==='wolf'||B.hat==='hood'||B.hat==='witch'){ const h=mesh(G.cone,B.hat==='witch'?mat(0x3a2a4a):mat(0x5a4a3a),0.6,0.9,0.6); h.position.y=2.25; guy.root.add(h); } }
 
@@ -278,14 +280,15 @@ function makeCart(){ const g=new THREE.Group(); const bed=mesh(G.box,M.wood,1.5,
   const shaft=mesh(G.box,M.woodDark,0.1,0.1,1.4); shaft.position.set(-0.35,0.8,1.8); const shaft2=shaft.clone(); shaft2.position.x=0.35; g.add(shaft,shaft2);
   const pony=makePony(); pony.g.position.set(0,0,2.9); g.add(pony.g);
   const cargo=new THREE.Group(); cargo.position.y=0.95; g.add(cargo); scene.add(g); return {g,wheels,pony,cargo}; }
-function cargoShow(C,type,n){ while(C.cargo.children.length) C.cargo.remove(C.cargo.children[0]); const k=Math.min(18,n); for(let i=0;i<k;i++){ const row=Math.floor(i/6), col=i%6; const m=type==='stone'?mesh(G.box,M.rock,0.42,0.32,0.42,false):type==='plank'?mesh(G.box,M.plank,1.1,0.12,0.3,false):mesh(G.log,M.log,1,1,1,false); if(type==='log') m.rotation.x=Math.PI/2; m.position.set(-0.45+(col%3)*0.45,0.12+row*0.3,col<3?-0.45:0.45); if(type==='plank'){ m.position.set(0,0.1+row*0.14+(col%3)*0.0,-0.8+col*0.32); } C.cargo.add(m); } }
+function cargoShow(C,type,n){ while(C.cargo.children.length) C.cargo.remove(C.cargo.children[0]); const k=Math.min(18,n); for(let i=0;i<k;i++){ const row=Math.floor(i/6), col=i%6; const m=type==='iron'?itemMesh(BAR_GEO,M.bar):type==='stone'?mesh(G.box,M.rock,0.42,0.32,0.42,false):type==='plank'?mesh(G.box,M.plank,1.1,0.12,0.3,false):mesh(G.log,M.log,1,1,1,false); if(type==='log') m.rotation.x=Math.PI/2; m.position.set(-0.45+(col%3)*0.45,0.12+row*0.3,col<3?-0.45:0.45); if(type==='plank'){ m.position.set(0,0.1+row*0.14+(col%3)*0.0,-0.8+col*0.32); } C.cargo.add(m); } }
 // rota: noktalar dizisi; araba A ucunda yüklenir, B ucunda boşaltır, geri döner
 function addCart(kind){ const C=makeCart(); const c={kind,C,seg:0,t:0,dir:1,wait:1,load:null,n:0,route:null}; c.route=cartRoute(kind); const p0=c.route[0]; C.g.position.set(p0[0],0,p0[1]); carts.push(c); return c; }
 function cartRoute(kind){ const inE=sidePos('E',0,-3), outE=sidePos('E',0,5), inW=sidePos('W',0,-3), outW=sidePos('W',0,5);
+  if(kind==='iron') return ironRoute();
   if(kind==='quarry') return [[QOUT.x,QOUT.z],...CART_PATHS[0].slice(0,2),[CART_PATHS[0][2][0],CART_PATHS[0][2][1]],[outE[0],outE[1]],[inE[0],inE[1]],[DEPOT_FRONT.x,DEPOT_FRONT.z]];
   return [[DEPOT_FRONT.x,DEPOT_FRONT.z],[0,4],[inW[0],inW[1]],[outW[0],outW[1]],...CART_PATHS[1].slice().reverse(),[MILL_IN.x,MILL_IN.z]]; }
-const cartCap=kind=>10+6*rg(kind==='quarry'?'qcart':'mcart'); const cartSpd=kind=>7+1.6*rg(kind==='quarry'?'qcart':'mcart');
-function cartArrive(c,end){ const pos=c.C.g.position.clone();
+const cartKey=kind=>kind==='quarry'?'qcart':kind==='iron'?'forge':'mcart'; const cartCap=kind=>10+6*rg(cartKey(kind)); const cartSpd=kind=>7+1.6*rg(cartKey(kind));
+function cartArrive(c,end){ if(c.kind==='iron') return ironArrive(c,end); const pos=c.C.g.position.clone();
   if(c.kind==='quarry'){ if(end==='A'){ const n=Math.min(Math.floor(S.rg.cutOut||0),cartCap('quarry')); if(n<=0) return false; S.rg.cutOut-=n; c.load='stone'; c.n=n; cargoShow(c.C,'stone',n); return true; }
     if(c.n>0){ const n=c.n; for(let i=0;i<Math.min(10,n);i++) setTimeout(()=>fly(pos.clone().setY(1.2),rotPt(DEPOT,1.1,0.9,1.1),null,'stone',4),i*60); S.stone+=n; setStonePile(Math.min(18,S.stone)); floatText(pos,'+'+n+' taş',''); SFX.sell(); c.n=0; cargoShow(c.C,'',0); } return true; }
   // değirmen arabası: depodan odun götürür, keresteyi getirir
@@ -362,15 +365,17 @@ function offlineRun(sec){ const out={sec,fish:0,gold:0,wood:0}; if(sec<60) retur
   if(revealed('meadow')){ const prod=sec*(hunters.length*2/10+trapRate()*2); const sold=Math.min((S.rg.huntMeat||0)+prod,sec/hhutSellT()); const st=Math.max(0,Math.min(hhutCap(),(S.rg.huntMeat||0)+prod-sold)); const before=pileVal(meatPile); pileAdd(meatPile,sold*meatPrice()); S.rg.huntMeat=st; out.meat=Math.round(prod); out.gold+=Math.round(pileVal(meatPile)-before); }
   if(rg('cutter')>0){ const st=Math.round(sec*cutRate()*0.8); S.stone+=st; out.stone=st; }
   if(rg('mill')>0){ const pl=Math.round(Math.min(sec*millRate()*0.8,(S.wood-15)/2)); if(pl>0){ S.planks=(S.planks||0)+pl; S.wood-=pl*2; out.planks=pl; } }
+  offline6(sec,out);
   const wood=Math.round(sec/60*workers.filter(w=>w.kind!=='stone').length*9); if(wood>0){ S.wood+=wood; setPile(Math.min(24,S.wood)); out.wood=wood; }
   return out; }
-function showOffline(o){ if(o.sec<60||(!o.fish&&!o.gold&&!o.wood&&!o.meat&&!o.stone&&!o.planks)) return false; const m=Math.round(o.sec/60); const card=document.createElement('div'); card.className='intro'; card.id='awayCard';
-  card.innerHTML=`<div class="card"><h1>Sen yokken</h1><p>${m>=60?Math.floor(m/60)+' saat '+(m%60)+' dakika':m+' dakika'} boyunca krallığın çalıştı.</p><div class="away">${o.wood?`<div><span>Oduncular depoya</span><b>+${o.wood} odun</b></div>`:''}${o.fish?`<div><span>Balıkçılar ve ağlar</span><b>+${o.fish} balık</b></div>`:''}${o.meat?`<div><span>Avcılar ve tuzaklar</span><b>+${o.meat} et</b></div>`:''}${o.stone?`<div><span>Taş kesme tezgâhı</span><b>+${o.stone} taş</b></div>`:''}${o.planks?`<div><span>Su değirmeni</span><b>+${o.planks} kereste</b></div>`:''}${o.gold?`<div><span>Satışlardan biriken para</span><b>💰 ${o.gold}</b></div>`:''}</div><p class="sub">Paralar yerde seni bekliyor — yanına gidip topla.</p><button id="awayOk">Krallığa dön</button></div>`;
+function showOffline(o){ if(o.sec<60||(!o.fish&&!o.gold&&!o.wood&&!o.meat&&!o.stone&&!o.planks&&!o.iron&&!o.herb&&!o.crystal&&!o.chests)) return false; const m=Math.round(o.sec/60); const card=document.createElement('div'); card.className='intro'; card.id='awayCard';
+  card.innerHTML=`<div class="card"><h1>Sen yokken</h1><p>${m>=60?Math.floor(m/60)+' saat '+(m%60)+' dakika':m+' dakika'} boyunca krallığın çalıştı.</p><div class="away">${o.wood?`<div><span>Oduncular depoya</span><b>+${o.wood} odun</b></div>`:''}${o.fish?`<div><span>Balıkçılar ve ağlar</span><b>+${o.fish} balık</b></div>`:''}${o.meat?`<div><span>Avcılar ve tuzaklar</span><b>+${o.meat} et</b></div>`:''}${o.stone?`<div><span>Taş kesme tezgâhı</span><b>+${o.stone} taş</b></div>`:''}${o.planks?`<div><span>Su değirmeni</span><b>+${o.planks} kereste</b></div>`:''}${offlineRows6(o)}${o.gold?`<div><span>Satışlardan biriken para</span><b>💰 ${o.gold}</b></div>`:''}</div><p class="sub">Paralar yerde seni bekliyor — yanına gidip topla.</p><button id="awayOk">Krallığa dön</button></div>`;
   document.body.appendChild(card); $('awayOk').addEventListener('click',()=>{ audio(); card.remove(); }); return true; }
 
 // ----- rehber: taşınan balığı götür, dolan yığını topla, boşken balık tut -----
-function regionGuide(mode){ const p=player.g.position;
-  if(mode==='carry'){ if((S.meat||0)>0&&revealed('meadow')) return {t:HHUT_FRONT,text:'Eti av kulübesine götür'}; if((S.fish||0)>0&&revealed('lake')) return {t:HUT_FRONT,text:'Balıkları balıkhaneye götür'}; for(const P of piles){ const v=pileVal(P); if(P.g.visible&&v>=Math.min(P.capFn()*0.6,120)) return {t:P.pos,text:(pileVal(P)>=P.capFn()-0.5?'Yığın doldu — ':'')+'Altınları topla'}; } return null; }
+function regionGuide(mode){ const p=player.g.position; if(mode==='carry'){ const r6=regionGuide6('carry'); if(r6) return r6; } if(mode==='idle'){ const r6=regionGuide6('idle'); if(r6) return r6; }
+  if(mode==='carry'){ if((S.meat||0)>0&&revealed('meadow')) return {t:HHUT_FRONT,text:'Eti av kulübesine götür'}; if((S.fish||0)>0&&revealed('lake')) return {t:HUT_FRONT,text:'Balıkları balıkhaneye götür'}; return null; }
+  if(mode==='pile'){ let best=null,bv=0; for(const P of piles){ const v=pileVal(P); if(!P.g.visible||v<Math.min(P.capFn()*0.5,150)) continue; const sc=v/P.capFn()*100-Math.hypot(P.pos.x-p.x,P.pos.z-p.z)*0.3; if(!best||sc>bv){ bv=sc; best=P; } } if(best) return {t:best.pos,text:(pileVal(best)>=best.capFn()-0.5?'Yığın doldu — ':'')+'Altınları topla'}; return null; }
   if(mode==='idle'){ const lakeV=revealed('lake')?pileVal(fishPile)+(S.rg.hutFish||0)*3:1e9, mdV=revealed('meadow')?pileVal(meatPile)+(S.rg.huntMeat||0)*3:1e9; if(revealed('meadow')&&mdV<=lakeV&&animals.length&&(S.meat||0)<meatCap()){ let best=null,bd=1e9; for(const a of animals){ const d=Math.hypot(a.m.g.position.x-p.x,a.m.g.position.z-p.z); if(d<bd){ bd=d; best=a; } } return {t:best.m.g.position.clone(),text:'Çayırda avlan'}; } if(revealed('lake')&&(S.fish||0)<fishCap()) return {t:DOCK_END,text:'İskelede balık tut'}; return null; } return null; }
 
 // ----- ana güncelleme -----
@@ -378,5 +383,5 @@ let capsT=0;
 function updateRegions(dt){ updateRegionFx(dt); if(revealed('lake')){ updateFishing(dt); updateFishers(dt); updateNets(dt); updateHut(dt); const t=performance.now()/1000; for(const r of ripples){ r.t-=dt; if(r.t<=0){ r.t=rand(1.5,3.5); const a=rand(0,6.28), rr=rand(1,LK.r-1.5); r.m.position.set(LC.x+Math.cos(a)*rr,0.07,LC.z+Math.sin(a)*rr); r.age=0; } r.age=(r.age||0)+dt; const k=Math.min(1,r.age/1.4); r.m.scale.setScalar(0.6+2.2*k); r.m.material.opacity=0.55*(1-k); } if(lake.boat) lake.boat.position.y=0.08+Math.sin(t*1.1)*0.05; }
   if(revealed('meadow')){ updateAnimals(dt); updateHunters(dt); updateTraps(dt); updateHHut(dt); }
   if(revealed('quarry')) updateCutter(dt); if(revealed('river')) updateMill(dt); updateCarts(dt);
-  hutLbl.hide=!revealed('lake'); hhutLbl.hide=!revealed('meadow'); updatePiles(dt); capsT-=dt; if(capsT<=0){ capsT=1; applyCaps(); syncClouds(); layoutPads(); fishPile.g.visible=revealed('lake'); meatPile.g.visible=revealed('meadow'); } }
-function initRegions(){ applyCaps(); syncClouds(); for(let i=fishers.length;i<rg('fisher');i++) addFisher(); for(let i=hunters.length;i<rg('hunter');i++) addHunter(); buildNets(); buildTraps(); if(rg('cutter')>0&&!carts.some(c=>c.kind==='quarry')) addCart('quarry'); if(rg('mill')>0&&!carts.some(c=>c.kind==='mill')) addCart('mill'); fishPile.g.visible=revealed('lake'); meatPile.g.visible=revealed('meadow'); setExtraBack(); }
+  hutLbl.hide=!revealed('lake'); hhutLbl.hide=!revealed('meadow'); updateRegions6(dt); updatePiles(dt); capsT-=dt; if(capsT<=0){ capsT=1; applyCaps(); syncClouds(); layoutPads(); fishPile.g.visible=revealed('lake'); meatPile.g.visible=revealed('meadow'); } }
+function initRegions(){ applyCaps(); syncClouds(); for(let i=fishers.length;i<rg('fisher');i++) addFisher(); for(let i=hunters.length;i<rg('hunter');i++) addHunter(); buildNets(); buildTraps(); if(rg('cutter')>0&&!carts.some(c=>c.kind==='quarry')) addCart('quarry'); if(rg('mill')>0&&!carts.some(c=>c.kind==='mill')) addCart('mill'); fishPile.g.visible=revealed('lake'); meatPile.g.visible=revealed('meadow'); initRegions6(); setExtraBack(); }
