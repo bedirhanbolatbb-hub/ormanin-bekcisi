@@ -12,12 +12,17 @@ const rand=(a,b)=>a+Math.random()*(b-a);
 const lerp=(a,b,t)=>a+(b-a)*t;
 const isTouch=matchMedia('(pointer:coarse)').matches;
 const isMobile=isTouch||innerWidth<700;
+// ---------- Dil: cihaz Türkçe ise Türkçe, değilse İngilizce; oyuncu Krallık ekranından değiştirebilir ----------
+const LANG=(()=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem('ob-lang'); }catch(e){} if(v==null){ try{ v=localStorage.getItem('ob-lang'); }catch(e){} } if(v==='tr'||v==='en') return v; const l=((navigator.languages&&navigator.languages[0])||navigator.language||'en').toLowerCase(); return l.startsWith('tr')?'tr':'en'; })();
+const T=(tr,en)=>(LANG==='tr'||en===undefined)?tr:en;
+function setLang(l){ try{ localStorage.setItem('ob-lang',l); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem('ob-lang',l); }catch(e){} }
+document.documentElement.lang=LANG; if(LANG==='en'){ document.title='Forest Keeper'; document.querySelectorAll('[data-en]').forEach(el=>{ el.innerHTML=el.dataset.en; }); document.querySelectorAll('[data-en-aria]').forEach(el=>{ el.setAttribute('aria-label',el.dataset.enAria); }); }
 
 // ---------- Kalıcı durum ----------
 const SAVE_KEY='ormanin-bekcisi-v8'; const OLD_KEY='ormanin-bekcisi-v7';
 const WAVES=5; const MAXL=10; const LEVELS=10;
 const LV0={axe:0,bag:0,feet:0,worker:0,stoneWorker:0,sword:0,wall:0,soldier:0,expand:0,trader:0,towerTrain:0,magnet:0,collector:0,gateLv:0,range:0,depotLv:0,workerSpd:0,price:0,soldierTrain:0,cannonTrain:0};
-const SIDES=['N','E','S','W']; const SIDE_TR={N:'Kuzey',E:'Doğu',S:'Güney',W:'Batı'};
+const SIDES=['N','E','S','W']; const SIDE_TR={N:T('Kuzey','North'),E:T('Doğu','East'),S:T('Güney','South'),W:T('Batı','West')};
 function defaultTowers(){ const t=[{k:'a',side:'C',a:0,lvl:0,fixed:true}]; for(const s of SIDES) for(const a of [-5.2,5.2]) t.push({k:'a',side:s,a,lvl:0,fixed:true}); return t; }
 // Kalıcı (meta): açılan bölüm, yıldızlar, taç, kalıcı güçlendirmeler. Bölümlük (run): her bölüm başında sıfırlanır.
 const META0={unlocked:1,stars:{},crowns:0,up:{gold:0,wall:0,arrow:0},dailyDate:'',streak:0,fails:{}};
@@ -32,11 +37,11 @@ load();
 const gw=()=>(S.level-1)*WAVES+S.wave;
 // Gece arası güç kartları (bölüm boyunca geçerli, üst üste eklenir)
 const CARDS={
-  arrow:{n:'Keskin Oklar',d:'Okçu kulelerinin hasarı +%25',i:'🏹'}, rate:{n:'Hızlı Yay',d:'Okçular %20 daha hızlı atar',i:'💨'}, range:{n:'Uzun Menzil',d:'Tüm kulelerin menzili +3',i:'🎯'},
-  powder:{n:'Barut',d:'Topçu hasarı +%40',i:'💣'}, wall:{n:'Sağlam Sur',d:'Sur canı +%25 ve tamamen onarılır',i:'🧱'}, mend:{n:'Duvarcı',d:'Saldırı sırasında sur kendini onarır',i:'🔧'},
-  sword:{n:'Keskin Kılıç',d:'Kılıç hasarı +%40, menzili biraz artar',i:'⚔️'}, drill:{n:'Talimli Asker',d:'Askerler %40 daha sert vurur',i:'🛡️'}, trample:{n:'Midilli Ezme',d:'Koşarken çarptığın düşmanı ezersin',i:'🐴'},
-  pony:{n:'Çevik Midilli',d:'Midilli %15 daha hızlı',i:'🥕'}, axe:{n:'Güçlü Balta',d:'Ağaçları %30 daha hızlı kesersin',i:'🪓'}, lumber:{n:'Odun Bereketi',d:'Her ağaç +2 odun verir',i:'🌲'},
-  magnet:{n:'Mıknatıs',d:'Altın ve ganimet %60 daha uzaktan gelir',i:'🧲'}, trade:{n:'Pazarlık',d:'Miğferler %30 daha pahalı satılır',i:'🤝'}, gold:{n:'Hazine Sandığı',d:'Hemen altın kazan',i:'💰'},
+  arrow:{n:T('Keskin Oklar','Sharp Arrows'),d:T('Okçu kulelerinin hasarı +%25','Archer Tower damage +25%'),i:'🏹'}, rate:{n:T('Hızlı Yay','Quick Bow'),d:T('Okçular %20 daha hızlı atar','Archers shoot 20% faster'),i:'💨'}, range:{n:T('Uzun Menzil','Long Range'),d:T('Tüm kulelerin menzili +3','All towers get +3 range'),i:'🎯'},
+  powder:{n:T('Barut','Gunpowder'),d:T('Topçu hasarı +%40','Cannon damage +40%'),i:'💣'}, wall:{n:T('Sağlam Sur','Sturdy Walls'),d:T('Sur canı +%25 ve tamamen onarılır','Wall HP +25%, fully repaired'),i:'🧱'}, mend:{n:T('Duvarcı','Mason'),d:T('Saldırı sırasında sur kendini onarır','Walls self-repair under attack'),i:'🔧'},
+  sword:{n:T('Keskin Kılıç','Sharp Sword'),d:T('Kılıç hasarı +%40, menzili biraz artar','Sword damage +40%, a bit more reach'),i:'⚔️'}, drill:{n:T('Talimli Asker','Trained Soldiers'),d:T('Askerler %40 daha sert vurur','Soldiers hit 40% harder'),i:'🛡️'}, trample:{n:T('Midilli Ezme','Pony Trample'),d:T('Koşarken çarptığın düşmanı ezersin','Trample enemies you run into'),i:'🐴'},
+  pony:{n:T('Çevik Midilli','Nimble Pony'),d:T('Midilli %15 daha hızlı','Pony 15% faster'),i:'🥕'}, axe:{n:T('Güçlü Balta','Strong Axe'),d:T('Ağaçları %30 daha hızlı kesersin','Chop trees 30% faster'),i:'🪓'}, lumber:{n:T('Odun Bereketi','Wood Galore'),d:T('Her ağaç +2 odun verir','+2 wood per tree'),i:'🌲'},
+  magnet:{n:T('Mıknatıs','Magnet'),d:T('Altın ve ganimet %60 daha uzaktan gelir','Gold and loot pickup range +60%'),i:'🧲'}, trade:{n:T('Pazarlık','Haggling'),d:T('Miğferler %30 daha pahalı satılır','Helmets sell for 30% more'),i:'🤝'}, gold:{n:T('Hazine Sandığı','Treasure Chest'),d:T('Hemen altın kazan','Instant gold'),i:'💰'},
 };
 const cc=k=>(S.cards&&S.cards[k])||0; const mu=k=>(S.meta&&S.meta.up&&S.meta.up[k])||0;
 const hasPerk=k=>cc({arrows:'rate',mason:'mend',gold:'trade',lumber:'lumber',magnet:'magnet',cannon:'powder',trample:'trample'}[k]||k)>0;
@@ -154,15 +159,15 @@ function roadDist(x,z){ let best=1e9; for(const s of SIDES){ const P=roadPath(s)
 function nearBase(x,z,m){ return Math.abs(x)<H+m&&Math.abs(z)<H+m; }
 // Bölgeler: her sefer kalenin çevresinde yeni bir bölge açar (merkez, yarıçap, ağaçsız alan)
 const REG={
-  lake:{sefer:2,name:'Gümüş Göl',job:'Balık tutma',c:[40,-40],r:11,clear:23},
-  meadow:{sefer:3,name:'Geyik Çayırı',job:'Av ve tütsühane',c:[-42,42],r:14,clear:25},
-  quarry:{sefer:4,name:'Taş Ocağı',job:'Taş kesme tezgâhı',c:[40,40],r:12,clear:22},
-  river:{sefer:5,name:'Nehir',job:'Su değirmeni ve kereste',c:[-42,-42],r:12,clear:22},
-  swamp:{sefer:6,name:'Sisli Bataklık',job:'Fener, mantar ve iksir kazanı',c:[-70,-22],r:12,clear:22},
-  iron:{sefer:7,name:'Demir Dağı',job:'Maden, demirci ocağı ve delici ok',c:[24,-70],r:12,clear:22},
-  coast:{sefer:8,name:'Kıyı',job:'Sandıklar, deniz feneri ve ticaret teknesi',c:[72,70],r:14,clear:26},
-  snow:{sefer:9,name:'Karlı Geçit',job:'Kristal madeni ve kuyumcu',c:[-72,72],r:12,clear:22},
-  dark:{sefer:10,name:'Kara Kale',job:'Son kuşatma',c:[0,-86],r:9,clear:20},
+  lake:{sefer:2,name:T('Gümüş Göl','Silver Lake'),job:T('Balık tutma','Fishing'),c:[40,-40],r:11,clear:23},
+  meadow:{sefer:3,name:T('Geyik Çayırı','Deer Meadow'),job:T('Av ve tütsühane','Hunting and smokehouse'),c:[-42,42],r:14,clear:25},
+  quarry:{sefer:4,name:T('Taş Ocağı','Stone Quarry'),job:T('Taş kesme tezgâhı','Stone cutter'),c:[40,40],r:12,clear:22},
+  river:{sefer:5,name:T('Nehir','River'),job:T('Su değirmeni ve kereste','Water mill and planks'),c:[-42,-42],r:12,clear:22},
+  swamp:{sefer:6,name:T('Sisli Bataklık','Misty Swamp'),job:T('Fener, mantar ve iksir kazanı','Lantern, mushrooms and potions'),c:[-70,-22],r:12,clear:22},
+  iron:{sefer:7,name:T('Demir Dağı','Iron Mountain'),job:T('Maden, demirci ocağı ve delici ok','Mine, forge and piercing arrows'),c:[24,-70],r:12,clear:22},
+  coast:{sefer:8,name:T('Kıyı','Coast'),job:T('Sandıklar, deniz feneri ve ticaret teknesi','Chests, lighthouse and trade boat'),c:[72,70],r:14,clear:26},
+  snow:{sefer:9,name:T('Karlı Geçit','Snowy Pass'),job:T('Kristal madeni ve kuyumcu','Crystal mine and jeweler'),c:[-72,72],r:12,clear:22},
+  dark:{sefer:10,name:T('Kara Kale','Black Castle'),job:T('Son kuşatma','Final siege'),c:[0,-86],r:9,clear:20},
 };
 const QUARRIES=[[41,39],[49,47]];
 // Yük arabası yolları (ağaçsız, toprak) ve nehir

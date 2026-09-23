@@ -328,25 +328,25 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
   </div>
 </div>
 
-<button class="mute" id="muteBtn" aria-label="Sesi aç/kapat">🔊</button>
-<button class="kingBtn" id="kingBtn" aria-label="Krallık">👑</button>
-<div class="tip" id="tip">👆 Sürükle, yürü</div>
+<button class="mute" id="muteBtn" aria-label="Sesi aç/kapat" data-en-aria="Sound on/off">🔊</button>
+<button class="kingBtn" id="kingBtn" aria-label="Krallık" data-en-aria="Kingdom">👑</button>
+<div class="tip" id="tip" data-en="👆 Drag to walk">👆 Sürükle, yürü</div>
 <div class="toast" id="toast"></div>
 <button class="nightBtn" id="nightBtn" style="display:none">🌙 Geceyi başlat</button>
-<div class="placeBar" id="placeBar" style="display:none"><span>👆 Boş yere dokun</span><button id="placeCancel">✕</button></div>
+<div class="placeBar" id="placeBar" style="display:none"><span data-en="👆 Tap an empty spot">👆 Boş yere dokun</span><button id="placeCancel">✕</button></div>
 <div class="joy" id="joy"><i></i></div>
-<canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita"></canvas>
-<button class="recenter" id="recenter" aria-label="Karaktere dön">📍<span> Karaktere dön</span></button>
+<canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita" data-en-aria="Minimap"></canvas>
+<button class="recenter" id="recenter" aria-label="Karaktere dön" data-en-aria="Back to hero">📍<span data-en=" Back to hero"> Karaktere dön</span></button>
 
 </div>
 
 <div class="intro" id="intro">
   <div class="card">
-    <h1>Ormanın Bekçisi</h1>
-    <div class="steps"><span><i>🪓</i>Kes</span><b>›</b><span><i>🏹</i>Kur</span><b>›</b><span><i>🌙</i>Savun</span><b>›</b><span><i>💀</i>Patron</span></div>
+    <h1 data-en="Forest Keeper">Ormanın Bekçisi</h1>
+    <div class="steps"><span data-en="<i>🪓</i>Chop"><i>🪓</i>Kes</span><b>›</b><span data-en="<i>🏹</i>Build"><i>🏹</i>Kur</span><b>›</b><span data-en="<i>🌙</i>Defend"><i>🌙</i>Savun</span><b>›</b><span data-en="<i>💀</i>Boss"><i>💀</i>Patron</span></div>
     <p class="ret" id="introRet" style="display:none"></p>
-    <button id="startBtn">Oyna</button>
-    <div class="sub"><span id="ctlHint">Sürükle: yürü · İki parmak: yakınlaştır</span></div>
+    <button id="startBtn" data-en="Play">Oyna</button>
+    <div class="sub"><span id="ctlHint" data-en="Drag: walk · Two fingers: zoom">Sürükle: yürü · İki parmak: yakınlaştır</span></div>
   </div>
 </div>
 
