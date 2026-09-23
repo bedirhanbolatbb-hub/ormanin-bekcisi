@@ -19,7 +19,7 @@ function updatePlayer(dt){
   player.coinMesh.count=Math.min(COIN_STACK,Math.floor(S.coins/25));
   const canChop=S.logs<D.cap()&&!nearestEnemy(p,4); let chopping=false;
   if(canChop){ const near=[]; for(const t of trees){ if(!t.alive||t.falling>0||t.gone) continue; const d=Math.hypot(t.x-p.x,t.z-p.z); if(d<3.1) near.push(t); } if(near.length){ chopping=true; chopT+=dt*D.chopRate(); if(chopT>=1){ chopT=0; for(const t of near){ if(!t.alive) continue; hitTree(t,player,()=>{ if(S.logs<D.cap()){ S.logs++; setBack(player);} }); } } } }
-  const capS=Math.floor(D.cap()/2); const canMine=S.stones<capS&&!nearestEnemy(p,4); let mining=false;
+  const capS=Math.floor(D.cap()/2); const canMine=revealed('quarry')&&S.stones<capS&&!nearestEnemy(p,4); let mining=false;
   if(canMine&&!chopping){ const near=[]; for(const r of rocks){ if(!r.alive||r.gone) continue; if(Math.hypot(r.x-p.x,r.z-p.z)<3.4) near.push(r); } if(near.length){ mining=true; chopT+=dt*D.chopRate()*0.8; if(chopT>=1){ chopT=0; for(const r of near){ if(!r.alive) continue; hitRock(r,player,()=>{ if(S.stones<capS){ S.stones++; setBack(player);} }); } } } }
   if(!chopping&&!mining) chopT=Math.min(1,chopT+dt*2);
   fullT-=dt; if(fullT<=0){ const fullL=S.logs>=D.cap()&&nearestTree(p,3.6), fullS=S.stones>=capS&&nearestRock(p,4); if(fullL||fullS){ fullT=2.5; floatText(p,'MAX','red'); } }
@@ -93,7 +93,7 @@ function hudObstacles(){ const now=performance.now(); if(now-hudRectT<250) retur
 // ---------- Kapılar ----------
 function updateGates(dt){
   if(runOver){ }
-  else if(!waveActive&&S.gateHp<D.gateMax()) S.gateHp=Math.min(D.gateMax(),S.gateHp+D.gateMax()*0.05*dt);
+  else if(!waveActive&&!noRegen&&S.gateHp<D.gateMax()) S.gateHp=Math.min(D.gateMax(),S.gateHp+D.gateMax()*0.05*dt);
   else if(waveActive&&hasPerk('mason')&&S.gateHp<D.gateMax()) S.gateHp=Math.min(D.gateMax(),S.gateHp+3*dt);
   if(gateShake>0) gateShake-=dt;
   const p=player.g.position; const down=runOver&&S.gateHp<=0;
@@ -113,7 +113,7 @@ const coinsEl=$('coins'), waveTEl=$('waveT'), gateBar=$('gateBar'), enemyEl=$('e
 const setTxt=(el,t)=>{ t=String(t); if(el.textContent!==t) el.textContent=t; }, setShow=(el,on)=>{ const d=on?'flex':'none'; if(el.style.display!==d) el.style.display=d; };
 let lastCoins=-1, shownCoins=S.coins;
 function toast(msg,cls){ const t=$('toast'); t.textContent=msg; t.className='toast show '+(cls||''); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2400); }
-const tutHold=()=>S.level===1&&S.wave===1&&!S.towers.some(t=>t.lvl>=1);
+const tutHold=()=>S.level===1&&S.wave===1&&!S.towers.some(t=>t.lvl>=1)&&introT<120;
 function renderHud(){ for(const L of quarryLabels) L.hide=!revealed('quarry'); const dq=revealed('quarry'); if(depotLbl._k!==dq){ depotLbl._k=dq; depotLbl.el.innerHTML='<span class="ics">⬇ <span class="log-dot"></span>'+(dq?'<span class="stone-dot"></span>':'')+'</span>'; }
   shownCoins=lerp(shownCoins,S.coins,0.25); if(Math.abs(shownCoins-S.coins)<0.6) shownCoins=S.coins; const c=Math.floor(shownCoins); if(lastCoins!==c){ coinsEl.textContent=c; lastCoins=c; }
   // sayaçlar: yalnız simge + sayı; sırttaki yük de kullanılabilir stoka dahil
@@ -125,36 +125,38 @@ function renderHud(){ for(const L of quarryLabels) L.hide=!revealed('quarry'); c
   waveBoxEl.classList.toggle('night',waveActive&&!runOver);
   setTxt(waveTEl, waveActive? (S.wave===WAVES?'⚔️':'🌙') : tutHold()? '☀️' : '☀️ '+Math.ceil(Math.max(0,waveT)));
   const r=clamp(S.gateHp/D.gateMax(),0,1); gateBar.firstElementChild.style.width=(r*100)+'%'; gateBar.classList.toggle('danger',r<0.35); waveBoxEl.classList.toggle('danger',waveActive&&r<0.35);
-  const nb=$('nightBtn'); const showNb=started&&!placing&&fishUI.style.display==='none'&&!waveActive&&!runOver&&!tutHold()&&!document.querySelector('.intro')&&waveT>3; nb.style.display=showNb?'flex':'none'; if(showNb){ const b=Math.round(waveT*(0.8+0.2*S.wave)); const t=`🌙 Geceyi başlat <span>+${b}</span>`; if(nb._t!==t){ nb._t=t; nb.innerHTML=t; } }
+  const nb=$('nightBtn'); const showNb=started&&!placing&&!S.cardPending&&fishUI.style.display==='none'&&!waveActive&&!runOver&&!tutHold()&&!document.querySelector('.intro')&&waveT>3; nb.style.display=showNb?'flex':'none'; if(showNb){ const b=Math.round(waveT*(0.8+0.2*S.wave)); const t=`🌙 Geceyi başlat <span>+${b}</span>`; if(nb._t!==t){ nb._t=t; nb.innerHTML=t; } }
   renderQuestChip();
   const pc=$('perkChip'); const keys=Object.keys(S.cards||{}).filter(k=>S.cards[k]>0); pc.style.display=keys.length?'flex':'none'; if(keys.length){ const t=keys.map(k=>CARDS[k].i+(S.cards[k]>1?'×'+S.cards[k]:'')).join(' '); if(pc._t!==t){ pc._t=t; $('perkTxt').textContent=t; } }
 }
 $('placeCancel').addEventListener('click',e=>{ e.stopPropagation(); audio(); cancelPlacing(); });
 addEventListener('keydown',e=>{ if(e.key==='Escape') cancelPlacing(); });
-$('muteBtn').addEventListener('click',()=>{ audio(); S.muted=!S.muted; $('muteBtn').textContent=S.muted?'🔇':'🔊'; save(); });
-$('muteBtn').textContent=S.muted?'🔇':'🔊';
+// ses: hepsi açık → yalnız efektler (müzik kapalı) → hepsi kapalı
+function drawMute(){ const n=S.snd|0; const b=$('muteBtn'); b.innerHTML=n>=2?'🔇':n===1?'🔊<i class="nomus">♪</i>':'🔊'; b.classList.toggle('off',n>=2); }
+$('muteBtn').addEventListener('click',()=>{ audio(); S.snd=((S.snd|0)+1)%3; S.muted=S.snd>=2; drawMute(); if(S.snd<2) tone(660,990,0.08,'triangle',0.05); save(); });
+drawMute();
 $('kingBtn').addEventListener('click',e=>{ e.stopPropagation(); audio(); if(!waveActive&&!runOver) showMap(); else toast('🌙 Gece bitince'); });
 $('nightBtn').addEventListener('click',e=>{ e.stopPropagation(); audio(); if(waveActive||runOver) return; const b=Math.round(waveT*(0.8+0.2*S.wave)); if(b>0){ dropCoins(player.g.position.clone().setY(3),Math.min(16,b),b/Math.min(16,b),2,1.1); } waveT=0; startWave(); });
-let started=false;
+let started=false, noRegen=false;
 cgCall(k=>k.game.loadingStop());
 function banner(title,sub,cls){ const old=$('banner'); if(old) old.remove(); const b=document.createElement('div'); b.id='banner'; b.className='banner '+(cls||''); b.innerHTML=`<b>${title}</b>${sub?`<small>${sub}</small>`:''}`; document.body.appendChild(b); setTimeout(()=>b.classList.add('out'),2100); setTimeout(()=>b.remove(),2700); }
 function nightBanner(){ const sides=SIDES.filter(s=>plan&&plan.cnt[s]>0).map(s=>SIDE_TR[s]).join(' · '); if(S.wave===WAVES) banner('PATRON: '+bossName().toLocaleUpperCase('tr'),`⚔️ ${plan.total} · ${sides}`,'boss'); else banner(`GECE ${S.wave}`,`⚔️ ${plan.total} · ${sides}`,'night'); }
 let lastSides=sidesActive();
-function nightCleared(){ const n=S.wave; if(n>=WAVES){ levelWon(); return; }
+function nightCleared(){ S.nightOn=false; const n=S.wave; if(n>=WAVES){ levelWon(); return; }
   const bonus=12+6*n+4*S.level; const cnt=Math.min(24,bonus); dropCoins(player.g.position.clone().setY(3),cnt,bonus/cnt,3,1.3); celebrate(player.g.position.clone(),0.7);
   S.wave++; plan=null; planWave(); waveT=isWinter()?20:30; dawnRepair(); questEvent('night',1); banner(`Gece ${n} atlatıldı!`,`+${bonus} 💰`,'day');
   const ns=sidesActive(); if(ns>lastSides){ const s=SIDES[ns-1]; setTimeout(()=>toast(`🚪 ${SIDE_TR[s]} kapısı açıldı`,'good'),2600); } lastSides=ns;
-  save(); setTimeout(showCardPick,1500); }
+  S.cardPending=true; save(); setTimeout(showCardPick,1500); }
 // ---------- Gece arası güç kartı ----------
-function showCardPick(){ if(runOver||$('cardPick')) return; if(!S.cardOffer){ const keys=Object.keys(CARDS).filter(k=>!(k==='trample'&&cc('trample'))&&!(k==='mend'&&cc('mend'))); const pick=[]; while(pick.length<3){ const k=keys[Math.floor(Math.random()*keys.length)]; if(!pick.includes(k)) pick.push(k); } S.cardOffer=pick; save(); }
+function showCardPick(){ if(runOver||waveActive||$('cardPick')) return; if(!S.cardOffer){ const keys=Object.keys(CARDS).filter(k=>!(k==='trample'&&cc('trample'))&&!(k==='mend'&&cc('mend'))); const pick=[]; while(pick.length<3){ const k=keys[Math.floor(Math.random()*keys.length)]; if(!pick.includes(k)) pick.push(k); } S.cardOffer=pick; save(); }
   const goldAmt=40+25*S.wave+10*S.level;
   const card=document.createElement('div'); card.className='intro'; card.id='cardPick'; card.innerHTML=`<div class="card"><h1>Bir güç seç</h1><p>Bu sefer boyunca</p><div class="cards">${S.cardOffer.map((k,i)=>`<button data-k="${k}" style="animation-delay:${i*0.08}s"><i>${CARDS[k].i}</i><b>${CARDS[k].n}${cc(k)?` <em>×${cc(k)+1}</em>`:''}</b><small>${k==='gold'?`Hemen +${goldAmt} altın`:CARDS[k].d}</small></button>`).join('')}</div></div>`; document.body.appendChild(card); SFX.card();
-  card.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ audio(); const k=b.dataset.k; S.cards[k]=(S.cards[k]||0)+1; S.cardOffer=null; card.remove(); SFX.build();
+  card.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ audio(); const k=b.dataset.k; S.cards[k]=(S.cards[k]||0)+1; S.cardOffer=null; S.cardPending=false; card.remove(); SFX.build();
     if(k==='gold'){ const cnt=24; dropCoins(player.g.position.clone().setY(3.5),cnt,goldAmt/cnt,3,1.3); } if(k==='wall'){ S.gateHp=D.gateMax(); } if(k==='axe') rebuildOrbit();
     toast(CARDS[k].i+' '+CARDS[k].n,'good'); save(); })); }
 // ---------- Bölüm sonu: kazanma ----------
 function starsFor(minGate){ return minGate>=0.6?3:minGate>=0.25?2:1; }
-function levelWon(){ runOver=true; const L=S.level; const st=starsFor(S.minGate); const prev=S.meta.stars[L]||0; const first=!prev; const gain=(first?3:0)+Math.max(0,st-prev)*2+1; S.meta.stars[L]=Math.max(prev,st); S.meta.unlocked=Math.max(S.meta.unlocked,L+1); S.book.boss[L]=bossName(); S.meta.crowns+=gain; S.meta.fails[L]=0; S.won=true; questEvent('night',1); dawnRepair(); save();
+function levelWon(){ runOver=true; S.nightOn=false; const L=S.level; const st=starsFor(S.minGate); const prev=S.meta.stars[L]||0; const first=!prev; const gain=(first?3:0)+Math.max(0,st-prev)*2+1; S.meta.stars[L]=Math.max(prev,st); S.meta.unlocked=Math.max(S.meta.unlocked,L+1); S.book.boss[L]=bossName(); S.meta.crowns+=gain; S.meta.fails[L]=0; S.won=true; questEvent('night',1); dawnRepair(); save();
   cgCall(k=>k.game.happytime()); SFX.win(); celebrate(player.g.position.clone(),1.4); setTimeout(()=>celebrate(new THREE.Vector3(0,0,0),1.2),350); confetti();
   setTimeout(()=>showBossWheel(()=>showWinCard(st,gain,first)),1900); }
 function showWinCard(st,gain,first){ const L=S.level; const last=L>=LEVELS; if(L===LEVELS){ showEndCard(st,gain,first); return; } const card=document.createElement('div'); card.className='intro'; card.id='winCard';
@@ -167,11 +169,12 @@ function confetti(){ const box=document.createElement('div'); box.className='con
 function failTip(){ const cnt={N:0,E:0,S:0,W:0}; for(const e of enemies) if(!e.dead) cnt[e.side]++; const worst=SIDES.slice().sort((a,b)=>cnt[b]-cnt[a])[0]; const tw=S.towers.filter(t=>t.side===worst&&t.lvl>=1); const lv=tw.reduce((a,t)=>a+t.lvl,0);
   if(tw.length<2) return `${SIDE_TR[worst]} kapısında ${tw.length?'sadece 1':'hiç'} kule yoktu. Oraya kule kur.`; if(soldiers.length===0) return 'Asker al: düşmanın geldiği kapıya koşar.'; if(S.lv.wall<2) return 'Suru güçlendir: daha uzun dayanır.'; if(lv<6) return `${SIDE_TR[worst]} kulelerini yükselt.`; return 'Gündüzleri daha çok odun topla, her şeyi yükselt.'; }
 function showFailCard(){ const L=S.level, n=S.wave; const left=failLeft; const tot=(plan&&plan.total)||1; const pct=Math.round(((n-1)+Math.max(0,Math.min(0.99,(tot-left)/tot)))/WAVES*100); const gain=Math.max(0,n-1);
-  S.meta.fails[L]=(S.meta.fails[L]||0)+1; S.meta.crowns+=gain; S.failed=true; save();
-  const canRevive=!!CG.sdk&&!S.revived; const card=document.createElement('div'); card.className='intro'; card.id='failCard';
+  if(!S.failPaid){ S.meta.fails[L]=(S.meta.fails[L]||0)+1; S.meta.crowns+=gain; S.failPaid=true; } S.failed=true; save();
+  // platform kuralı: reklamla devam her kayıpta sunulmaz (seferde bir kez) ve aynı molada ara reklamla birlikte olmaz
+  const canRevive=!!CG.sdk&&!S.revived&&S.reviveLv!==L; if(canRevive){ S.reviveLv=L; save(); } const card=document.createElement('div'); card.className='intro'; card.id='failCard';
   card.innerHTML=`<div class="card result fail"><h1>Sur yıkıldı!</h1><p class="boss">Kalen yerinde duruyor — sefer baştan başlayacak</p><p class="near">${left<=5?`Sadece <b>${left}</b> düşman kalmıştı!`:`Gece ${n}'de <b>${left}</b> düşman kalmıştı.`}</p><div class="prog"><i style="width:0%"></i><span>Bölümün %${pct}'i</span></div><p class="hint">💡 ${failTip()}</p>${gain?`<div class="crowns">👑 +${gain} taç kazandın</div>`:''}${canRevive?'<button id="revive" class="gold">📺 Reklam izle, sur onarılsın, devam et</button>':''}<button id="retry">Tekrar dene</button><button id="failMap" class="ghost">Krallık</button></div>`;
   document.body.appendChild(card); setTimeout(()=>{ const i=card.querySelector('.prog i'); if(i) i.style.width=pct+'%'; },80);
-  $('retry').addEventListener('click',()=>{ audio(); card.remove(); const go=()=>restartSefer(); cgAd('midgame',go,go); });
+  $('retry').addEventListener('click',()=>{ audio(); card.remove(); const go=()=>restartSefer(); if(canRevive) go(); else cgAd('midgame',go,go); });
   $('failMap').addEventListener('click',()=>{ audio(); card.remove(); restartSefer(true); showMap(); });
   if(canRevive) $('revive').addEventListener('click',()=>{ audio(); const b=$('revive'); b.disabled=true; b.textContent='Reklam yükleniyor…'; cgAd('rewarded',()=>{ card.remove(); revive(); },()=>{ b.textContent='Reklam yok, şimdilik olmadı'; }); }); }
 function revive(){ S.revived=true; S.failed=false; S.meta.fails[S.level]=Math.max(0,(S.meta.fails[S.level]||1)-1); S.gateHp=D.gateMax()*0.6; S.minGate=Math.min(S.minGate,0.01); for(const e of enemies){ if(e.dead) continue; const [x,z]=sidePos(e.side,e.off*2,10+Math.random()*6); e.g.position.set(x,0,z); e.wp=ROADS[e.side].length; } runOver=false; celebrate(player.g.position.clone(),1); toast('Sur onarıldı, devam!','good'); save(); }
@@ -190,31 +193,33 @@ function nextRegText(L){ const k=Object.keys(REG).find(k=>REG[k].sefer===L); ret
 let pendingReveal=null;
 function clearBattle(){ clearP7Battle(); for(const e of enemies){ e.bar.remove(); scene.remove(e.g); } enemies.length=0; for(const pr of projectiles) scene.remove(pr.m); projectiles.length=0; for(const b of balls) scene.remove(b.m); balls.length=0; spawnQueue=0; waveActive=false; }
 // Sefer bitti: kale yerinde, yeni bölge açılır, yeni sefer başlar
-function nextSefer(silent){ clearBattle(); S.level++; S.coins+=40*mu('gold'); S.wave=1; S.cards={}; S.cardOffer=null; applyNextCard(); S.minGate=1; S.failed=false; S.won=false; S.revived=false; runOver=false; plan=null; planWave(); waveT=isWinter()?28:40; lastSides=sidesActive(); applyCaps(); S.gateHp=D.gateMax(); save();
+function nextSefer(silent){ clearBattle(); S.nightOn=false; noRegen=false; S.failPaid=false; S.cardPending=false; S.level++; S.coins+=40*mu('gold'); S.wave=1; S.cards={}; S.cardOffer=null; applyNextCard(); S.minGate=1; S.failed=false; S.won=false; S.revived=false; runOver=false; plan=null; planWave(); waveT=isWinter()?28:40; lastSides=sidesActive(); applyCaps(); S.gateHp=D.gateMax(); save();
   const rid=Object.keys(REG).find(k=>REG[k].sefer===S.level); if(rid&&!revealed(rid)){ if(silent){ pendingReveal=rid; } else revealRegion(rid,()=>startBanner()); } else if(!silent) startBanner(); }
 // Kaybedildi: kale kalır; bu seferin geceleri baştan, elde tutulanların yarısı gider
-function restartSefer(silent){ clearBattle(); S.wave=1; S.cards={}; S.cardOffer=null; S.minGate=1; S.failed=false; S.revived=false; runOver=false; S.loot=Math.floor(S.loot/2); S.fish=Math.floor((S.fish||0)/2); S.meat=Math.floor((S.meat||0)/2); S.herb=Math.floor((S.herb||0)/2); S.ore=Math.floor((S.ore||0)/2); S.crystal=Math.floor((S.crystal||0)/2); S.stall=Math.floor(S.stall/2); setBack(player); plan=null; planWave(); waveT=30; lastSides=sidesActive(); S.gateHp=D.gateMax(); save(); if(!silent) startBanner(); }
+function restartSefer(silent){ clearBattle(); dawnRepair(); S.nightOn=false; noRegen=false; S.failPaid=false; S.cardPending=false; S.wave=1; S.cards=Object.assign({},S.wheelCards||{}); S.cardOffer=null; S.minGate=1; S.failed=false; S.revived=false; runOver=false; S.loot=Math.floor(S.loot/2); S.fish=Math.floor((S.fish||0)/2); S.meat=Math.floor((S.meat||0)/2); S.herb=Math.floor((S.herb||0)/2); S.ore=Math.floor((S.ore||0)/2); S.crystal=Math.floor((S.crystal||0)/2); S.stall=Math.floor(S.stall/2); setBack(player); plan=null; planWave(); waveT=30; lastSides=sidesActive(); S.gateHp=D.gateMax(); save(); if(!silent) startBanner(); }
 function startBanner(){ banner(`${S.level}. Sefer`, S.wave>1?`Gece ${S.wave}/${WAVES}`:(S.level===1?'🪓 Ağaç kes · 🏹 Kule kur':isWinter()?`❄️ Kış · 💀 ${bossName()}`:`${WAVES} gece · 💀 ${bossName()}`),'day'); }
 // ---------- Bölümü sıfırla (her bölüm yeni bir kaleyle başlar) ----------
 function restoreNature(){ let a=false; trees.forEach((t,i)=>{ t.claimed=null; if(t.culled&&!nearBase(t.x,t.z,5.5)){ t.culled=false; t.gone=false; t.alive=true; t.falling=0; t.regrow=0; t.hp=D.treeHits(); writeTree(i); a=true; } }); if(a){ treeTrunk.instanceMatrix.needsUpdate=true; treeCrown.instanceMatrix.needsUpdate=true; } rocks.forEach((r,i)=>{ r.claimed=null; if(r.culled&&!nearBase(r.x,r.z,5.5)){ r.culled=false; r.gone=false; r.alive=true; r.hp=3; r.regrow=0; writeRock(i); } }); rockMesh.instanceMatrix.needsUpdate=true; }
-function resetRun(level){ const meta=S.meta, muted=S.muted;
+function resetRun(level){ const meta=S.meta, muted=S.muted, snd=S.snd;
   for(const e of enemies){ e.bar.remove(); scene.remove(e.g); } enemies.length=0; for(const pr of projectiles) scene.remove(pr.m); projectiles.length=0; for(const b of balls) scene.remove(b.m); balls.length=0; for(const f of fliers) scene.remove(f.m); fliers.length=0;
   coins.length=0; stackH.clear(); loot.length=0; for(const w of workers) scene.remove(w.guy.g); workers.length=0; for(const so of soldiers) scene.remove(so.guy.g); soldiers.length=0; for(const c of collectors) scene.remove(c.guy.g); collectors.length=0;
   for(const t of towers){ if(t) scene.remove(t.g); } towers.length=0; for(let i=pads.length-1;i>=0;i--){ const pd=pads[i]; if(pd.def.kind==='tower'&&pd.def.ti>8){ scene.remove(pd.g); delete padById[pd.def.id]; pads.splice(i,1); } } if(placing){ scene.remove(placing.ghost.g); placing=null; $('placeBar').style.display='none'; }
-  for(const k of Object.keys(S)) delete S[k]; Object.assign(S,runState(level)); for(const f of fishers){ scene.remove(f.g.g); scene.remove(f.b); scene.remove(f.ln); } fishers.length=0; for(const h of hunters) scene.remove(h.guy.g); hunters.length=0; for(const c of carts) scene.remove(c.C.g); carts.length=0; for(const a of animals) scene.remove(a.m.g); animals.length=0; resetRegions6(); S.meta=meta; S.muted=muted; S.coins=20+25*mu('gold'); S.started=true;
+  for(const k of Object.keys(S)) delete S[k]; Object.assign(S,runState(level)); for(const f of fishers){ scene.remove(f.g.g); scene.remove(f.b); scene.remove(f.ln); } fishers.length=0; for(const h of hunters) scene.remove(h.guy.g); hunters.length=0; for(const c of carts) scene.remove(c.C.g); carts.length=0; for(const a of animals) scene.remove(a.m.g); animals.length=0; resetRegions6(); S.meta=meta; S.muted=muted; S.snd=snd; S.coins=20+25*mu('gold'); S.started=true;
   applyBase(); placeBuildings(); paintGround(); restoreNature(); cullTrees(); cullRocks(); cullDecor(); buildWalls(0); buildGates(0); placeGates(); placeTorches(); rebuildTowers(); layoutPads(); rebuildOrbit(); drawMiniBase();
   S.gateHp=D.gateMax(); setPile(0); setStonePile(0); stallPile.count=0; player.g.position.set(0,0,5.5); moveTarget=null; moveMark.visible=false; setBack(player); recenter();
   for(const pd of pads){ pd.last=''; pd.shown=0; pd.wasLocked=false; S.paid[pd.def.id]=0; }
   for(const id in REG) if(REG[id].sefer<=level) S.revealed[id]=true; waveActive=false; spawnQueue=0; runOver=false; plan=null; planWave(); waveT=S.level===1?30:25; buildNets(); buildTraps(); applyCaps(); syncClouds(); nightKills=0; lastSides=sidesActive(); introT=0; save(); }
 function startPlay(){ if(started) return; const it=$('intro'); if(it) it.remove(); started=true; renderHud();
   if(!S.started){ resetRun(1); initRegions(); startBanner(); return; }
-  initRegions(); if(S.failed) restartSefer(true); runOver=false; const off=offlineRun(S.lastSeen?(Date.now()-S.lastSeen)/1000:0); S.lastSeen=Date.now(); save(); showOffline(off); startBanner(); }
+  if(S.won&&!S.failed) nextSefer(true); S.revealed=S.revealed||{}; for(const id in REG) if(REG[id].sefer<=S.level) S.revealed[id]=true; pendingReveal=null;
+  if(S.pendingRefund>0){ S.coins+=S.pendingRefund; S.pendingRefund=0; } cartsRestore(); if(S.groundGold>0){ const g=S.groundGold; S.groundGold=0; const n=Math.min(20,Math.max(3,Math.round(g/15))); dropCoins(STALL_FRONT.clone().setY(1),n,g/n,2.2,1); }
+  initRegions(); if(S.failed) restartSefer(true); runOver=false; if((S.cardPending||S.cardOffer)&&!S.failed) setTimeout(showCardPick,1200); if(S.nightOn&&!S.failed){ noRegen=true; waveT=4; } const off=offlineRun(S.lastSeen?(Date.now()-S.lastSeen)/1000:0); S.lastSeen=Date.now(); save(); showOffline(off); startBanner(); }
 $('startBtn').addEventListener('click',()=>{ audio(); startPlay(); });
 if(CG.sdk&&CG.env!=='disabled'){ setTimeout(startPlay,150); }
 if(S.started){ $('startBtn').textContent='Devam et'; const ir=$('introRet'); ir.textContent=`👑 ${S.level}. sefer · 🌙 ${S.wave}/${WAVES}`; ir.style.display='block'; document.querySelector('#intro .steps').style.display='none'; }
 if(!isTouch) $('ctlHint').textContent='WASD: yürü · Tekerlek: yakınlaştır';
 
-function cgAd(type,onDone,onFail){ if(!CG.sdk){ onFail&&onFail(); return; } if(type==='midgame'&&Date.now()-CG.lastMid<180000){ onFail&&onFail(); return; } let ended=false; const end=(ok)=>{ if(ended) return; ended=true; adMute=false; if(ok){ if(type==='midgame') CG.lastMid=Date.now(); onDone&&onDone(); } else onFail&&onFail(); }; try{ CG.sdk.ad.requestAd(type,{adStarted:()=>{ adMute=true; },adFinished:()=>end(true),adError:()=>end(false)}); setTimeout(()=>{ if(!ended&&!adMute) end(false); },4000); }catch(e){ end(false); } }
+function cgAd(type,onDone,onFail){ if(!CG.sdk){ onFail&&onFail(); return; } if(type==='midgame'&&Date.now()-CG.lastMid<180000){ onFail&&onFail(); return; } let ended=false; const end=(ok)=>{ if(ended) return; ended=true; adMute=false; if(ok){ if(type==='midgame') CG.lastMid=Date.now(); onDone&&onDone(); } else onFail&&onFail(); }; try{ CG.sdk.ad.requestAd(type,{adStarted:()=>{ adMute=true; },adFinished:()=>{ adMute=false; end(true); },adError:()=>{ adMute=false; end(false); }}); setTimeout(()=>{ if(!ended&&!adMute) end(false); },4000); }catch(e){ end(false); } }
 addEventListener('pagehide',save); document.addEventListener('visibilitychange',()=>{ if(document.hidden) save(); });
 // ---------- Kutlama efektleri: ışık sütunu, yer dalgası, parıltı, sarsıntı ----------
 let camShake=0; const fx=[]; const pillarGeo=new THREE.CylinderGeometry(1,1,1,18,1,true); const shakeOff=new THREE.Vector3();
@@ -240,13 +245,13 @@ addEventListener('resize',resize); resize();
 function resizeSoon(){ resize(); for(const t of [120,350,800]) setTimeout(resize,t); }
 addEventListener('orientationchange',resizeSoon); if(window.visualViewport) visualViewport.addEventListener('resize',resize); if(screen.orientation&&screen.orientation.addEventListener) screen.orientation.addEventListener('change',resizeSoon);
 let last=performance.now(); const camTarget=new THREE.Vector3(); const camPos=new THREE.Vector3();
-function tick(dt){ gameT+=dt; updateGateMarks(dt); updatePlayer(dt); updateTrees(dt); updateRocks(dt); updateWorkers(dt); updateSoldiers(dt); updateTowers(dt); updatePads(dt); updateEnemies(dt); updateProjectiles(dt); updateBalls(dt); updateGates(dt); updateFliers(dt); updateChips(dt); updateCoins(dt); updateLoot(dt); updateCustomers(dt); updateCollectors(dt); updateTraderNpc(dt); updateFx(dt); updateRegions(dt); }
+function tick(dt){ gameT+=dt; updateGateMarks(dt); updatePlayer(dt); updateTrees(dt); updateRocks(dt); updateWorkers(dt); updateSoldiers(dt); updateTowers(dt); updatePads(dt); updateEnemies(dt); updateProjectiles(dt); updateBalls(dt); updateGates(dt); updateFliers(dt); updateChips(dt); updateCoins(dt); updateLoot(dt); updateCustomers(dt); updateCollectors(dt); updateTraderNpc(dt); updateFx(dt); updateRegions(dt); updateMachineFx(dt); depotFx(); }
 function frame(now){
   requestAnimationFrame(frame);
   let dt=Math.min(0.05,(now-last)/1000); last=now; if(slowT>0){ slowT=Math.max(0,slowT-dt); dt*=1-0.72*Math.min(1,slowT/0.9); }
   camera.position.sub(shakeOff); shakeOff.set(0,0,0);
   const playing=started&&!document.hidden&&!document.querySelector('.intro')&&!adMute; if(playing!==CG.playing){ CG.playing=playing; cgCall(k=>playing?k.game.gameplayStart():k.game.gameplayStop()); }
-  if(playing){ tick(dt); updateFloats(dt); updateLabels(); updateBubble(); autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; S.lastSeen=Date.now(); save(); } }
+  if(playing){ tick(dt); updateFloats(dt); updateLabels(); updateBubble(); autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; S.lastSeen=Date.now(); let gg=0; for(const c of coins) gg+=c.value||0; S.groundGold=Math.round(gg); save(); } }
   const p=player.g.position;
   if(follow){ camPan.multiplyScalar(Math.pow(0.001,dt)); } camTarget.set(p.x+camPan.x,0,p.z+camPan.z);
   zoom=lerp(zoom,zoomTarget,1-Math.pow(0.002,dt)); camPos.copy(camTarget).addScaledVector(camOff,zoom); camera.position.lerp(camPos,1-Math.pow(0.0005,dt));
@@ -259,5 +264,5 @@ function frame(now){
   renderer.render(scene,camera);
 }
 requestAnimationFrame(frame);
-window.__dbg={cards:{showWinCard,showFailCard,showEndCard},p7:{showBossWheel,showQuests,questEvent,ensureQuests,dawnRepair,ships,eArrows,bossChests,isWinter,get slowT(){ return slowT; }},get night(){ return night; },set night(v){ night=v; applyNight(v); },p6:{fogSides,chests,spawnChest,openChest,boats,mushNodes,oreNodes,crysNodes,herbalists,miners,cminers,SHUT_FRONT,FORGE_FRONT,JEW_FRONT,CAUL,FORGE,JEW,lampPosts,fogK,SC,CU,PIER_B:PIER_END,castle,bossPhase,SW,IR,CO,SN,swampPile,coastPile,snowPile},bubblePadId:()=>bubblePad&&bubblePad.def.id+":"+(bubblePad.needLeave?"NL":"")+(playerMoving?"MV":""),carts,QCUT,MILL,RC,QC,animals,hunters,HHUT_FRONT,MC,nextSefer,restartSefer,revealRegion,offlineRun,showOffline,regionGuide,get pileFish(){ return S.rg.fishPile||0; },FS,fishers,DOCK_END,HUT_FRONT,fishPile,rebuildT:rebuildTowers,placeSpotRaw:(x,z)=>{ const r=placeSpot(x,z); return r.ok&&Math.hypot(r.x-x,r.z-z)<0.01; },cancelPlacing,rocksArr:()=>rocks,S,D,damageEnemy,killEnemy,player,trees,enemies,workers,soldiers,towers,pads,coins,loot,customers,plan:()=>plan,get waveActive(){return waveActive;},get waveT(){return waveT;},set waveT(v){waveT=v;},get runOver(){return runOver;},set runOver(v){runOver=v;},get placing(){return placing;},get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},get guideTarget(){return guideTarget;},get zoom(){return zoom;},set zoom(v){zoom=v;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},camera,camOff,camTarget,camPan,tick,startWave,resetRun,showMap,showCardPick,levelWon,gateBroken,placeSpot,placeGhostAt,confirmPlace,instantBuy,sidePos,setBack,setPile,setStonePile,dropCoins,addWorker,addSoldier,makeEnemy,expandBase,nightHp,nightCount,celebrate,STALL,DEPOT,get H(){return H;},startPlay};
+window.__dbg={setFollow:v=>{ follow=v; },MFX,CUT,MIL,FRG,DRL,LAKE,MDW,SWP,SNW,CST,DEP,DEPOT,initRegions,cards:{showWinCard,showFailCard,showEndCard},p7:{showBossWheel,showQuests,questEvent,ensureQuests,dawnRepair,ships,eArrows,bossChests,isWinter,get slowT(){ return slowT; }},get night(){ return night; },set night(v){ night=v; applyNight(v); },p6:{fogSides,chests,spawnChest,openChest,boats,mushNodes,oreNodes,crysNodes,herbalists,miners,cminers,SHUT_FRONT,FORGE_FRONT,JEW_FRONT,CAUL,FORGE,JEW,lampPosts,fogK,SC,CU,PIER_B:PIER_END,castle,bossPhase,SW,IR,CO,SN,swampPile,coastPile,snowPile},bubblePadId:()=>bubblePad&&bubblePad.def.id+":"+(bubblePad.needLeave?"NL":"")+(playerMoving?"MV":""),carts,QCUT,MILL,RC,QC,animals,hunters,HHUT_FRONT,MC,nextSefer,restartSefer,revealRegion,offlineRun,showOffline,regionGuide,get pileFish(){ return S.rg.fishPile||0; },FS,fishers,DOCK_END,HUT_FRONT,fishPile,rebuildT:rebuildTowers,placeSpotRaw:(x,z)=>{ const r=placeSpot(x,z); return r.ok&&Math.hypot(r.x-x,r.z-z)<0.01; },cancelPlacing,rocksArr:()=>rocks,S,D,damageEnemy,killEnemy,player,trees,enemies,workers,soldiers,towers,pads,coins,loot,customers,plan:()=>plan,get waveActive(){return waveActive;},get waveT(){return waveT;},set waveT(v){waveT=v;},get runOver(){return runOver;},set runOver(v){runOver=v;},get placing(){return placing;},get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},get guideTarget(){return guideTarget;},get zoom(){return zoom;},set zoom(v){zoom=v;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},camera,camOff,camTarget,camPan,tick,startWave,resetRun,showMap,showCardPick,levelWon,gateBroken,placeSpot,placeGhostAt,confirmPlace,instantBuy,sidePos,setBack,setPile,setStonePile,dropCoins,addWorker,addSoldier,makeEnemy,expandBase,nightHp,nightCount,celebrate,STALL,DEPOT,get H(){return H;},startPlay};
 }

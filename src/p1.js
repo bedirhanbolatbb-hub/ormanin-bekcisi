@@ -1,7 +1,7 @@
 // CrazyGames köprüsü: site dışında sessizce çalışmaz, oyunu etkilemez
-const CG={sdk:null,env:'none',playing:false,lastMid:0};
+const CG={sdk:null,env:'none',playing:false,lastMid:0,mute:false};
 function cgCall(fn){ try{ if(CG.sdk) return fn(CG.sdk); }catch(e){} }
-(async function boot(){ const s=window.CrazyGames&&window.CrazyGames.SDK; if(s){ try{ await Promise.race([s.init(),new Promise(r=>setTimeout(r,3000))]); CG.sdk=s; CG.env=s.environment||'unknown'; cgCall(k=>k.game.loadingStart()); }catch(e){} } startGame(); })();
+(async function boot(){ const s=window.CrazyGames&&window.CrazyGames.SDK; if(s){ try{ await Promise.race([s.init(),new Promise(r=>setTimeout(r,3000))]); CG.sdk=s; CG.env=s.environment||'unknown'; cgCall(k=>k.game.loadingStart()); cgCall(k=>{ CG.mute=!!(k.game.settings&&k.game.settings.muteAudio); k.game.addSettingsChangeListener(st=>{ CG.mute=!!(st&&st.muteAudio); }); }); }catch(e){} } startGame(); })();
 function startGame(){
 'use strict';
 const THREE = window.THREE;
@@ -24,9 +24,9 @@ const META0={unlocked:1,stars:{},crowns:0,up:{gold:0,wall:0,arrow:0},dailyDate:'
 function runState(level){ return { fish:0, meat:0, planks:0, iron:0, ore:0, herb:0, crystal:0, rg:{}, revealed:{forest:true}, book:{fish:{},hunt:{},boss:{},chest:{}}, lastSeen:0, coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
 const S = Object.assign(runState(1), { muted:false, meta:JSON.parse(JSON.stringify(META0)) });
 const store={ get:k=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem(k); }catch(e){} if(v==null){ try{ v=localStorage.getItem(k); }catch(e){} } return v; }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem(k,v); }catch(e){} } };
-function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); return; } }catch(e){}
+function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); S.book=Object.assign({fish:{},hunt:{},boss:{},chest:{}},j.book||{}); for(const k of ['fish','hunt','boss','chest']) if(!S.book[k]||typeof S.book[k]!=='object') S.book[k]={}; S.rg=(j.rg&&typeof j.rg==='object')?j.rg:{}; S.revealed=Object.assign({forest:true},j.revealed||{}); if(typeof S.snd!=='number') S.snd=S.muted?2:0; return; } }catch(e){}
   // eski kayıttan geçiş: taç ve kalıcı güçlendirmeler korunur, krallık 1. seferden kurulur
-  try{ const o=JSON.parse(store.get(OLD_KEY)); if(o&&o.meta){ S.meta.crowns=o.meta.crowns||0; S.meta.up=Object.assign({gold:0,wall:0,arrow:0},o.meta.up||{}); S.muted=!!o.muted; S.meta.dailyDate=o.meta.dailyDate||''; S.meta.streak=o.meta.streak||0; } }catch(e){} }
+  try{ const o=JSON.parse(store.get(OLD_KEY)); if(o&&o.meta){ S.meta.crowns=o.meta.crowns||0; S.meta.up=Object.assign({gold:0,wall:0,arrow:0},o.meta.up||{}); S.muted=!!o.muted; S.snd=S.muted?2:0; S.meta.dailyDate=o.meta.dailyDate||''; S.meta.streak=o.meta.streak||0; } }catch(e){} }
 function save(){ if(S.started) S.lastSeen=Date.now(); store.set(SAVE_KEY, JSON.stringify(S)); }
 load();
 const gw=()=>(S.level-1)*WAVES+S.wave;
@@ -54,11 +54,12 @@ const sidesShown=()=>Math.min(4,sidesActive()+1);
 let AC=null;
 function audio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==='suspended') AC.resume(); if(AC) musicInit(); }
 let adMute=false;
-function tone(f0,f1,dur,type,vol){ if(S.muted||adMute||!AC) return; const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,AC.currentTime); o.frequency.exponentialRampToValueAtTime(f1,AC.currentTime+dur); g.gain.setValueAtTime(vol||0.08,AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+dur); }
-function noise(dur,vol){ if(S.muted||adMute||!AC) return; const n=AC.sampleRate*dur, b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.value=vol||0.25; s.connect(f).connect(g).connect(AC.destination); s.start(); }
+function sfxOff(){ return (S.snd|0)>=2||adMute||CG.mute; } function musOff(){ return (S.snd|0)>=1||adMute||CG.mute; }
+function tone(f0,f1,dur,type,vol){ if(sfxOff()||!AC) return; const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,AC.currentTime); o.frequency.exponentialRampToValueAtTime(f1,AC.currentTime+dur); g.gain.setValueAtTime(vol||0.08,AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+dur); }
+function noise(dur,vol){ if(sfxOff()||!AC) return; const n=AC.sampleRate*dur, b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.value=vol||0.25; s.connect(f).connect(g).connect(AC.destination); s.start(); }
 const SFX = {
   chop:()=>{ noise(0.08,0.35); tone(180,90,0.08,'square',0.04); }, fall:()=>{ noise(0.3,0.4); tone(120,50,0.3,'sawtooth',0.05); },
-  coin:()=>{ tone(880,1320,0.12,'sine',0.06); }, sell:()=>{ tone(660,990,0.08,'triangle',0.05); }, pay:(k)=>{ k=Math.max(0,Math.min(1,k||0)); const f=420+k*900; tone(f,f*1.12,0.05,'triangle',0.03+0.03*k); },
+  coin:()=>{ if(typeof coinChime==='function') coinChime(); else tone(880,1320,0.12,'sine',0.06); }, sell:()=>{ tone(660,990,0.08,'triangle',0.05); }, pay:(k)=>{ k=Math.max(0,Math.min(1,k||0)); const f=420+k*900; tone(f,f*1.12,0.05,'triangle',0.03+0.03*k); },
   build:()=>{ tone(300,600,0.15,'triangle',0.08); setTimeout(()=>tone(600,900,0.2,'triangle',0.08),120); setTimeout(()=>tone(900,1200,0.25,'sine',0.07),260); },
   slash:()=>{ noise(0.07,0.25); tone(900,300,0.09,'sawtooth',0.04); }, hit:()=>{ tone(300,120,0.1,'square',0.05); }, die:()=>{ tone(400,80,0.2,'sawtooth',0.05); },
   gate:()=>{ noise(0.12,0.3); tone(90,40,0.15,'square',0.06); }, wave:()=>{ tone(220,330,0.25,'triangle',0.08); setTimeout(()=>tone(330,440,0.3,'triangle',0.08),200); },
@@ -77,8 +78,8 @@ const SCALES={day:[60,62,64,67,69,72,74,76],night:[57,60,62,64,67,69,72,74]};
 const ROOTS={day:[48,45,41,43],night:[45,41,43,40]};
 function musicInit(){ if(MUS.vol||!AC) return; MUS.vol=AC.createGain(); MUS.vol.gain.value=0; MUS.lp=AC.createBiquadFilter(); MUS.lp.type='lowpass'; MUS.lp.frequency.value=1800; MUS.lp.connect(MUS.vol).connect(AC.destination); MUS.next=AC.currentTime+0.1; }
 function mnote(midi,t,dur,type,vol,det){ const o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.value=NOTE(midi); if(det) o.detune.value=det; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g).connect(MUS.lp); o.start(t); o.stop(t+dur+0.05); }
-function musicTick(night){ if(!AC||!MUS.vol) return; const target=(S.muted||adMute)?0:(night>0.5?0.09:0.07); MUS.vol.gain.setTargetAtTime(target,AC.currentTime,0.8); const mode=night>0.5?'night':'day'; if(mode!==MUS.mode){ MUS.mode=mode; MUS.lp.frequency.setTargetAtTime(mode==='night'?1200:1800,AC.currentTime,0.5); }
-  const bpm=mode==='night'?132:96; const st=60/bpm/2; while(MUS.next<AC.currentTime+0.4){ const t=MUS.next; const i=MUS.step; const bar=Math.floor(i/16), beat=i%16; const root=ROOTS[mode][Math.floor(bar/2)%4]; const sc=SCALES[mode];
+function musicTick(night){ if(!AC||!MUS.vol) return; const target=musOff()?0:(night>0.5?0.09:0.07); MUS.vol.gain.setTargetAtTime(target,AC.currentTime,0.8); const mode=night>0.5?'night':'day'; if(mode!==MUS.mode){ MUS.mode=mode; MUS.lp.frequency.setTargetAtTime(mode==='night'?1200:1800,AC.currentTime,0.5); }
+  const bpm=mode==='night'?132:96; const st=60/bpm/2; if(MUS.next<AC.currentTime) MUS.next=AC.currentTime+0.05; while(MUS.next<AC.currentTime+0.4){ const t=MUS.next; const i=MUS.step; const bar=Math.floor(i/16), beat=i%16; const root=ROOTS[mode][Math.floor(bar/2)%4]; const sc=SCALES[mode];
     if(beat===0){ mnote(root,t,st*16,'sine',0.5); mnote(root+7,t,st*16,'sine',0.25,6); mnote(root+12,t,st*16,'triangle',0.12,-5); }
     if(beat%4===0) mnote(root-12,t,st*3,mode==='night'?'sawtooth':'triangle',mode==='night'?0.28:0.2);
     if(mode==='night'&&beat%4===2) mnote(root-12,t,st*1.2,'square',0.06);

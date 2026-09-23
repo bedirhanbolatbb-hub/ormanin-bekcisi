@@ -10,7 +10,7 @@ const PADS=[
   {id:'worker', ord:4, lock:'Sur 1', name:'Oduncu', desc:'Senin yerine odun keser', res:'gold', pos:P(-2.9,2.9), kind:'worker', key:'worker', cost:l=>Math.round(45*Math.pow(1.5,l)), max:4, show:()=>S.lv.wall>=1},
   {id:'feet', ord:5, lock:'Bir asker', name:'Midilli', desc:'Hızlı koş, çok taşı', res:'gold', pos:P(-5.4,2.9), kind:'up', key:'feet', cost:l=>Math.round(30*Math.pow(1.4,l)), max:5, show:()=>S.lv.soldier>=1},
   {id:'trader', ord:6, lock:'İlk ganimet satışı', name:'Tezgâh', desc:'Miğferler pahalı ve hızlı satılır', res:'gold', pos:P(-5.4,-2.9), kind:'up', key:'trader', cost:l=>Math.round(40*Math.pow(1.4,l)), max:5, show:()=>(S.sold||0)>=1},
-  {id:'newCannon', ord:7, lock:'Gece 2', name:'Topçu Kulesi', desc:'Gülle atar; yerini sen seç', res:'gold', pos:P(5.4,-2.9), kind:'newTower', tk:'c', cost:l=>Math.round(90*Math.pow(1.6,l)), max:3, show:()=>S.wave>=2, lvl:()=>nFree('c')},
+  {id:'newCannon', ord:7, lock:'Gece 2', name:'Topçu Kulesi', desc:'Gülle atar; yerini sen seç', res:'gold', pos:P(5.4,-2.9), kind:'newTower', tk:'c', cost:l=>Math.round(90*Math.pow(1.6,l)), max:3, show:()=>S.level>1||S.wave>=2, lvl:()=>nFree('c')},
   {id:'expand', ord:8, lock:'Sur 2', name:'Genişlet', desc:'Sur büyür, merkez kule açılır', res:'wood', pos:P(-2.9,-5.4), kind:'expand', key:'expand', cost:l=>Math.round(60*Math.pow(1.7,l)), max:2, show:()=>S.lv.wall>=2},
   {id:'stoneWorker', ord:9, lock:'Taş Ocağı açılınca', name:'Taşçı', desc:'Senin yerine taş çıkarır', res:'gold', pos:P(-2.9,5.4), kind:'stoneWorker', key:'stoneWorker', cost:l=>Math.round(60*Math.pow(1.5,l)), max:3, show:()=>revealed('quarry')},
 ];
@@ -75,9 +75,9 @@ function instantBuy(pd){ const cost=padCost(pd); const cur=S.paid[pd.def.id]||0;
   else { if(S.coins<need-0.01){ toast('💰 Altın yetmiyor'); return; } S.coins-=need; for(let i=0;i<Math.min(14,Math.ceil(need/5)+3);i++) fly(player.g.position.clone().setY(2.4),pd.g.position.clone().setY(0.3),null,false,rand(4,7)); }
   S.paid[pd.def.id]=cost; SFX.pay(1); completePad(pd); }
 function cancelPad(pd){ const cur=S.paid[pd.def.id]||0; if(cur<=0) return; const r=padRes(pd); if(r==='iron') S.iron=(S.iron||0)+Math.round(cur); else if(r==='plank') S.planks=(S.planks||0)+Math.round(cur); else if(r==='wood') S.wood+=Math.round(cur); else if(r==='stone'){ S.stone+=Math.round(cur); setStonePile(Math.min(18,S.stone)); } else S.coins+=cur; S.paid[pd.def.id]=0; pd.cool=2.5; setPile(Math.min(24,S.wood)); toast('↩ Geri verildi','good'); }
-function completePad(pd){ const d=pd.def; S.paid[d.id]=0; pd.pop=1; pd.cool=1.2; questEvent('buy',1);
+function completePad(pd){ const d=pd.def; S.paid[d.id]=0; pd.pop=1; pd.cool=1.2; if(d.kind!=='newTower') questEvent('buy',1);
   if(d.kind==='tower'){ S.towers[d.ti].lvl++; buildTower(d.ti); layoutPads(); }
-  else if(d.kind==='newTower'){ startPlacing(d.tk,d.cost(padLevel(d)),pd); }
+  else if(d.kind==='newTower'){ if(!startPlacing(d.tk,d.cost(padLevel(d)),pd)) pd.needLeave=true; save(); return; }
   else if(d.kind==='wall'){ S.lv.wall++; buildWalls(S.lv.wall); buildGates(S.lv.wall); S.gateHp=D.gateMax(); }
   else if(d.kind==='worker'){ S.lv.worker++; addWorker(); }
   else if(d.kind==='stoneWorker'){ S.lv.stoneWorker++; addWorker('stone'); }
@@ -90,9 +90,9 @@ function completePad(pd){ const d=pd.def; S.paid[d.id]=0; pd.pop=1; pd.cool=1.2;
 let bubblePad=null;
 // Kilitli alanlardan yalnız sıradaki (en küçük sıra numaralı) görünür; kalabalık olmasın
 function nextLockedPad(){ const best={}; for(const pd of pads){ if(!pd.def.lock||pd.def.show()||padLevel(pd.def)>=pd.def.max) continue; const g=pd.def.grp||'base'; if(g!=='base'&&!revealed(g)) continue; if(!best[g]||(pd.def.ord||9)<(best[g].def.ord||9)) best[g]=pd; } return new Set(Object.values(best)); }
-function updatePads(dt){ const p=player.g.position; bubblePad=null; const nextL=nextLockedPad();
+function updatePads(dt){ const p=player.g.position; bubblePad=null; const nextL=nextLockedPad(); let payPad=null, payD=1e9; for(const pd of pads){ if(!pd.g.visible) continue; const d=Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z); if(d<(pd.locked?pd.r*0.8:pd.r)&&d<payD){ payD=d; payPad=pd; } }
   for(const pd of pads){ const unlocked=pd.def.show(); const vis=padLevel(pd.def)<pd.def.max&&!placing&&(unlocked||nextL.has(pd)); if(!vis){ pd.shown=0; } pd.g.visible=vis; pd.locked=!unlocked; if(!vis) continue;
-    if(pd.locked){ pd.wasLocked=true; pd.shown=Math.min(1,pd.shown+dt*2.5); pd.g.scale.set(0.6*pd.shown*pd.sc,1,0.6*pd.shown*pd.sc); pd.plane.position.y=0.05; pd.fill.scale.set(1,0.001,1); const key='L|'+padIcon(pd.def); if(key!==pd.last){ pd.last=key; drawLocked(pd); } if(Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z)<pd.r*0.8) bubblePad=pd; continue; }
+    if(pd.locked){ pd.wasLocked=true; pd.shown=Math.min(1,pd.shown+dt*2.5); pd.g.scale.set(0.6*pd.shown*pd.sc,1,0.6*pd.shown*pd.sc); pd.plane.position.y=0.05; pd.fill.scale.set(1,0.001,1); const key='L|'+padIcon(pd.def); if(key!==pd.last){ pd.last=key; drawLocked(pd); } if(pd===payPad) bubblePad=pd; continue; }
     const cost=padCost(pd); const paid=S.paid[pd.def.id]||0; const lvl=padLevel(pd.def);
     if(pd.wasLocked&&introT>3){ toast('✨ Yeni: '+pd.def.name,'good'); SFX.build(); } pd.wasLocked=false;
     pd.shown=Math.min(1,pd.shown+dt*2.5); const ease=1-Math.pow(1-pd.shown,3); const over=pd.shown<1? ease*(1+0.18*Math.sin(pd.shown*Math.PI)) : 1;
@@ -100,7 +100,7 @@ function updatePads(dt){ const p=player.g.position; bubblePad=null; const nextL=
     if(pd.pop>0){ pd.pop-=dt*2; const s2=1+Math.sin((1-pd.pop)*Math.PI)*0.25; pd.g.scale.set(s2*over*pd.sc,1,s2*over*pd.sc); } else pd.g.scale.set(over*pulse*pd.sc,1,over*pulse*pd.sc);
     pd.plane.position.y=0.05+(padAvail(pd)?0.02+0.02*Math.sin(performance.now()/180):0);
     pd.cool=Math.max(0,pd.cool-dt);
-    const dpd=Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z); if(pd.needLeave&&dpd>pd.r+0.8) pd.needLeave=false; const nearAny=dpd<pd.r; if(nearAny) bubblePad=pd; const near=nearAny&&!playerMoving&&!pd.needLeave;
+    const dpd=Math.hypot(p.x-pd.g.position.x,p.z-pd.g.position.z); if(pd.needLeave&&dpd>pd.r+0.8) pd.needLeave=false; const nearAny=dpd<pd.r&&pd===payPad; if(nearAny) bubblePad=pd; const near=nearAny&&!playerMoving&&!pd.needLeave;
     if(near&&pd.cool<=0&&paid<cost){ if(padRes(pd)==='gold'){ if(S.coins>0.01){ const rate=Math.max(60,cost/0.8); const amt=Math.min(rate*dt,S.coins,cost-paid); S.coins-=amt; S.paid[pd.def.id]=paid+amt; pd.payT-=dt; if(pd.payT<=0){ pd.payT=0.05; fly(p.clone().setY(2.4),pd.g.position.clone().setY(0.3),null,false,6); SFX.pay((paid+amt)/cost); } } }
       else if(padRes(pd)==='iron'){ pd.acc=(pd.acc||0)+Math.max(10,cost/0.8)*dt; let n=Math.floor(pd.acc); pd.acc-=n; let cur=paid; while(n>0&&(S.iron||0)>0&&cur<cost){ n--; S.iron--; cur++; S.paid[pd.def.id]=cur; SFX.pay(cur/cost); } }
       else if(padRes(pd)==='plank'){ pd.acc=(pd.acc||0)+Math.max(15,cost/0.8)*dt; let n=Math.floor(pd.acc); pd.acc-=n; let cur=paid; while(n>0&&(S.planks||0)>0&&cur<cost){ n--; S.planks--; cur++; S.paid[pd.def.id]=cur; pd.payT-=0.05; if(pd.payT<=0){ pd.payT=0.07; fly(DEPOT.clone().setY(1.2),pd.g.position.clone().setY(0.3),null,'plank',3.5); SFX.pay(cur/cost); } } }
@@ -108,9 +108,17 @@ function updatePads(dt){ const p=player.g.position; bubblePad=null; const nextL=
       else { pd.acc=(pd.acc||0)+Math.max(20,cost/0.8)*dt; let n=Math.floor(pd.acc); pd.acc-=n; let cur=paid; while(n>0&&(S.logs>0||S.wood>0)&&cur<cost){ n--; const fromBack=S.logs>0; if(fromBack){ S.logs--; } else { S.wood--; } cur++; S.paid[pd.def.id]=cur; pd.payT-=0.05; if(pd.payT<=0){ pd.payT=0.06; fly((fromBack?p.clone().setY(1.6):DEPOT.clone().setY(1.2)),pd.g.position.clone().setY(0.3),null,true,fromBack?6:4); SFX.pay(cur/cost); } } setBack(player); setPile(Math.min(24,S.wood)); } }
     const cur=S.paid[pd.def.id]||0; const k=clamp(cur/cost,0,1); pd.fill.scale.set(1,Math.max(0.001,k),1); pd.fill.position.z=(1-k)*1.0;
     const can=padAvail(pd);
-    const key=padIcon(pd.def)+'|'+lvl+'|'+Math.ceil(cost-cur)+'|'+can+'|'+padRes(pd); if(key!==pd.last){ pd.last=key; drawPad(pd,lvl,cur,cost,can); }
+    const key=padIcon(pd.def)+'|'+lvl+'|'+pd.def.max+'|'+Math.ceil(cost-cur)+'|'+can+'|'+padRes(pd); if(key!==pd.last){ pd.last=key; drawPad(pd,lvl,cur,cost,can); }
     if(cur>=cost-0.01) completePad(pd);
-  } }
+  } updateRangeRing(dt); }
+// kule menzili: kule kurarken ya da kulenin alanında dururken yerde halka (neyi koruduğu görünsün)
+const rangeRing=(()=>{ const g=new THREE.Group(); const ring=new THREE.Mesh(new THREE.RingGeometry(0.975,1,72),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7,depthWrite:false})); const fill=new THREE.Mesh(new THREE.CircleGeometry(1,72),new THREE.MeshBasicMaterial({color:0xfff2b0,transparent:true,opacity:0.1,depthWrite:false})); for(const m of [ring,fill]){ m.rotation.x=-Math.PI/2; g.add(m); } ring.position.y=0.07; fill.position.y=0.06; g.visible=false; scene.add(g); return {g,ring,fill,k:0,r:10}; })();
+function updateRangeRing(dt){ let at=null, r=0, ok=true;
+  if(placing&&placing.spot){ at=placing.spot; r=D.towerRange()+(placing.k==='c'?3:0); ok=placing.ok; }
+  else if(bubblePad&&bubblePad.def.kind==='tower'&&!waveActive){ const t=towers[bubblePad.def.ti]; if(t){ at=t.g.position; r=D.towerRange()+(t.isC?8:0)+(t.kind==='c'?3:0); } }
+  const R=rangeRing; R.k=Math.max(0,Math.min(1,R.k+(at?dt*4:-dt*5))); R.g.visible=R.k>0.01; if(!R.g.visible) return;
+  if(at){ R.g.position.set(at.x,0,at.z); R.r=r; R.ring.material.color.setHex(ok?0xffffff:0xff6b5f); }
+  const e=1-Math.pow(1-R.k,3); R.g.scale.setScalar(R.r*(0.85+0.15*e)); R.ring.material.opacity=0.7*e; R.fill.material.opacity=0.1*e; }
 
 // ---------- Kuleler: okçu, topçu, merkez; sur kenarına yerleşir ----------
 const towers=[];
@@ -150,17 +158,17 @@ function placeSpot(x,z){ const res=reservedPads(); const lim=H-1.8; const tryAt=
   return {x,z,s:nearestSide(x,z),ok:false}; }
 function startPlacing(k,refund,pd){ if(placing){ scene.remove(placing.ghost.g); } const sp=placeSpot(player.g.position.x,player.g.position.z);
   if(!sp.ok){ S.coins+=refund||0; toast('Yer yok — önce 🏗️ genişlet'); return false; }
-  const ghost=towerMesh(k,1,false,M.ghostOk); scene.add(ghost.g); placing={k,ghost,ok:false,spot:null,refund:refund||0,pd}; moveTarget=null; $('placeBar').style.display='flex';
+  const ghost=towerMesh(k,1,false,M.ghostOk); scene.add(ghost.g); placing={k,ghost,ok:false,spot:null,refund:refund||0,pd}; S.pendingRefund=refund||0; moveTarget=null; $('placeBar').style.display='flex';
   toast(isTouch?'👆 Boş yere dokun':'🖱️ Boş yere tıkla','good'); placeGhostAt(sp.x,sp.z); return true; }
-function cancelPlacing(){ if(!placing) return; scene.remove(placing.ghost.g); S.coins+=placing.refund; if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; toast('↩ Geri verildi','good'); }
+function cancelPlacing(){ if(!placing) return; scene.remove(placing.ghost.g); S.coins+=placing.refund; S.pendingRefund=0; if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; toast('↩ Geri verildi','good'); }
 function pushOutOfTowers(p,r){ for(let i=9;i<S.towers.length;i++){ const t=S.towers[i]; if(t.x===undefined||t.lvl<1) continue; const dx=p.x-t.x, dz=p.z-t.z, d=Math.hypot(dx,dz); if(d<r&&d>0.001){ p.x=t.x+dx/d*r; p.z=t.z+dz/d*r; } } }
 function placeGhostAt(x,z){ if(!placing) return; const sp=placeSpot(x,z); placing.spot=sp; placing.ok=sp.ok; placing.ghost.g.position.set(sp.x,0,sp.z); const d=SD[sp.s]; placing.ghost.g.rotation.y=Math.atan2(d.o[0],d.o[1]); const m=sp.ok?M.ghostOk:M.ghostBad; placing.ghost.g.traverse(o=>{ if(o.isMesh) o.material=m; }); }
-function confirmPlace(){ if(!placing) return; const sp=placing.spot; if(!sp||!sp.ok){ toast('Buraya olmaz'); return; } scene.remove(placing.ghost.g); S.towers.push({k:placing.k,side:sp.s,a:0,x:sp.x,z:sp.z,px:sp.px,pz:sp.pz,lvl:1,fixed:false}); const i=S.towers.length-1; buildTower(i); ensureTowerPads(); layoutPads(); if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; celebrate(new THREE.Vector3(sp.x,0,sp.z),1); floatText(new THREE.Vector3(sp.x,0,sp.z),'Kule kuruldu!','green'); save(); }
+function confirmPlace(){ if(!placing) return; const sp=placing.spot; if(!sp||!sp.ok){ toast('Buraya olmaz'); return; } scene.remove(placing.ghost.g); S.towers.push({k:placing.k,side:sp.s,a:0,x:sp.x,z:sp.z,px:sp.px,pz:sp.pz,lvl:1,fixed:false}); const i=S.towers.length-1; buildTower(i); ensureTowerPads(); applyCaps(); layoutPads(); S.pendingRefund=0; questEvent('buy',1); if(placing.pd) placing.pd.needLeave=true; placing=null; $('placeBar').style.display='none'; celebrate(new THREE.Vector3(sp.x,0,sp.z),1); floatText(new THREE.Vector3(sp.x,0,sp.z),'Kule kuruldu!','green'); save(); }
 
 // ---------- Askerler: düşmana göre kapılar arasında yer değiştirir ----------
 const soldiers=[]; let assignT=0, lastAssignKey='';
 function soldierSlot(side,i){ const row=Math.floor(i/2), sgn=i%2?1:-1; return sidePos(side,sgn*(1.6+0.7*row),1.3+1.2*row); }
-function addSoldier(fresh){ const s=makeGuy('soldier'); s.g.position.set(fresh?0:rand(-2,2),0,fresh?4:rand(-H-3,-H-1)); s.g.rotation.y=Math.PI; scene.add(s.g); soldiers.push({guy:s,side:'N',slot:soldierSlot('N',soldiers.length),cd:rand(0,0.5),arrived:false,moving:false,speed:5.5}); lastAssignKey=''; }
+function addSoldier(fresh){ const s=makeGuy('soldier'); s.g.position.set(fresh?rand(-1.2,1.2):rand(-2,2),0,fresh?4:rand(-H-3,-H-1)); s.g.rotation.y=Math.PI; scene.add(s.g); soldiers.push({guy:s,side:'N',slot:soldierSlot('N',soldiers.length),cd:rand(0,0.5),arrived:false,moving:false,speed:5.5}); lastAssignKey=''; }
 for(let i=0;i<S.lv.soldier;i++) addSoldier(false);
 function assignSoldiers(){ const n=soldiers.length; if(!n) return; const cnt={N:0,E:0,S:0,W:0}; let tot=0; for(const e of enemies){ if(e.dead) continue; cnt[e.side]++; tot++; }
   const want={N:0,E:0,S:0,W:0};
@@ -175,7 +183,7 @@ function updateSoldiers(dt){ assignT-=dt; if(assignT<=0){ assignT=0.5; assignSol
     else { let chase=null,bd=8; for(const o of enemies){ if(o.dead||o.side!==s.side) continue; const d=Math.hypot(o.g.position.x-p.x,o.g.position.z-p.z); if(d<bd&&!inW(o.g.position.x,o.g.position.z)){ bd=d; chase=o; } }
       if(chase){ walkTo(s,chase.g.position.x,chase.g.position.z,1.9,dt); }
       else if(!s.arrived){ if(walkTo(s,s.slot[0],s.slot[1],0.35,dt)) s.arrived=true; }
-      else { const d=SD[s.side]; g.rotation.y=lerp(g.rotation.y,Math.atan2(d.o[0],d.o[1]),Math.min(1,dt*3)); } }
+      else { const d=SD[s.side]; if(d) g.rotation.y=lerp(g.rotation.y,Math.atan2(d.o[0],d.o[1]),Math.min(1,dt*3)); else { s.side='N'; s.arrived=false; lastAssignKey=''; } } }
     animGuy(s.guy,dt,s.moving,0.9); } }
 
 // ---------- Yardımcılar: toplayıcı, tüccar ----------
@@ -216,13 +224,13 @@ function wallCollide(p,r,holeFn){ const ax=Math.abs(p.x), az=Math.abs(p.z);
     let s; if(Math.abs(dx)>=Math.abs(dz)) s=dx>0?'E':'W'; else s=dz>0?'S':'N'; const a=(s==='E'||s==='W')?cz:cx; if(Math.abs(a)<holeFn(s)) return;
     if(d<1e-4){ dx=s==='E'?1:s==='W'?-1:0; dz=s==='S'?1:s==='N'?-1:0; } else { dx/=d; dz/=d; }
     p.x=cx+dx*r; p.z=cz+dz*r; } }
-function walkTo(w,tx,tz,stopDist,dt){ const p=w.guy.g.position; const dReal=Math.hypot(tx-p.x,tz-p.z); if(dReal<=stopDist){ w.moving=false; w.stuckT=0; return true; }
+function walkTo(w,tx,tz,stopDist,dt){ const p=w.guy.g.position; if(!isFinite(p.x)||!isFinite(p.z)){ p.set(rand(-1,1),0,4); w.detourT=0; w.stuckN=0; } const dReal=Math.hypot(tx-p.x,tz-p.z); if(dReal<=stopDist){ w.moving=false; w.stuckT=0; return true; }
   let [gx,gz]=routeGoal(p,tx,tz);
   if(w.detourT>0){ w.detourT-=dt; gx=w.detour[0]; gz=w.detour[1]; }
   const dx=gx-p.x, dz=gz-p.z, d=Math.hypot(dx,dz); if(d<0.05){ return false; }
   const ox=p.x, oz=p.z; p.x+=dx/d*w.speed*dt; p.z+=dz/d*w.speed*dt; wallCollide(p,0.6,()=>2.3); pushOutOfTrunks(p,1.2); pushOutOfCenter(p,1.8); pushOutOfTowers(p,1.5);
   const adv=Math.hypot(p.x-ox,p.z-oz); if(adv<w.speed*dt*0.35){ w.longStuck=(w.longStuck||0)+dt; } else if(adv>w.speed*dt*0.8){ w.longStuck=0; w.okT=(w.okT||0)+dt; if(w.okT>1){ w.stuckN=0; } }
-  if(adv<w.speed*dt*0.35&&w.detourT<=0){ w.stuckT=(w.stuckT||0)+dt; if(w.stuckT>0.25){ w.stuckT=0; w.okT=0; w.stuckN=(w.stuckN||0)+1; let ang; if(w.stuckN<=2){ const side=(w.side=(w.side||1)*-1); ang=Math.atan2(dz,dx)+side*Math.PI/2; } else ang=rand(0,6.28); const L=3+Math.min(4,w.stuckN); w.detour=[p.x+Math.cos(ang)*L,p.z+Math.sin(ang)*L]; w.detourT=0.7+0.1*w.stuckN; } } else if(w.detourT<=0) w.stuckT=0;
+  if(adv<w.speed*dt*0.35&&!(w.detourT>0)){ w.stuckT=(w.stuckT||0)+dt; if(w.stuckT>0.25){ w.stuckT=0; w.okT=0; w.stuckN=(w.stuckN||0)+1; let ang; if(w.stuckN<=2){ const sg=(w.dodge=(w.dodge||1)*-1); ang=Math.atan2(dz,dx)+sg*Math.PI/2; } else ang=rand(0,6.28); const L=3+Math.min(4,w.stuckN); w.detour=[p.x+Math.cos(ang)*L,p.z+Math.sin(ang)*L]; w.detourT=0.7+0.1*w.stuckN; } } else if(!(w.detourT>0)) w.stuckT=0;
   w.guy.g.rotation.y=Math.atan2(dx,dz); w.moving=true; return false; }
 function updateWorkers(dt){
   for(const w of workers){ const g=w.guy.g, p=g.position;
@@ -265,7 +273,7 @@ function nightHp(){ const fails=Math.min(3,(S.meta.fails&&S.meta.fails[S.level])
 // Düşman vuruşu seferle güçlenir: geliştirilmiş sur da zorlanır, gece hep gergin kalır
 function atkK(){ return 1+0.12*Math.max(0,gw()-8); }
 function nightCount(){ return Math.round((8+5*S.wave)*(1+0.06*(S.level-1)*S.wave/WAVES)*(window.__cnt||1)); }
-function planWave(){ const total=nightCount(); const k=sidesActive(); const seed=Math.floor(Math.random()*4); const cnt={N:0,E:0,S:0,W:0}; const kinds=[]; const kc={}; for(let i=0;i<total;i++){ cnt[SIDES[(Math.floor(i/4)+seed)%k]]++; const kd=pickKind(i,total); kinds.push(kd); kc[kd]=(kc[kd]||0)+1; } plan={seed,cnt,total,kinds,kc}; return plan; }
+function planWave(){ const total=nightCount(); const k=sidesActive(); const seed=Math.floor(Math.random()*4); const cnt={N:0,E:0,S:0,W:0}; const kinds=[]; const kc={}; for(let i=0;i<total;i++){ cnt[SIDES[(Math.floor(i/4)+seed)%k]]++; const kd=pickKind(i,total); kinds.push(kd); kc[kd]=(kc[kd]||0)+1; } plan={seed,cnt,total,kinds,kc,id:Math.random()}; return plan; }
 function planText(){ if(!plan) planWave(); let t=SIDES.filter(s=>plan.cnt[s]>0).map(s=>SIDE_TR[s]+' '+plan.cnt[s]).join(' · '); const ex=[]; if(plan.kc.shield) ex.push('kalkanlı '+plan.kc.shield); if(plan.kc.ram) ex.push('kuşatma '+plan.kc.ram); if(plan.kc.boss) ex.push('patron'); if(ex.length) t+=' · '+ex.join(', '); return t; }
 // ---- Uyarlanan zorluk: her gece başında her kapının savunma gücü ölçülür; düşmanın toplam canı bu gücün gecelik payına göre ayarlanır.
 // Oyuncunun fazladan gücünün bir kısmı ona kalır (üs 0.75): geliştirme hep işe yarar, ama gece hiç boş geçmez.
@@ -273,13 +281,18 @@ function defenseDps(side,mA,mC){ const [gx,gz]=sidePos(side,0,2.5); let dps=0; f
 const TILT=[0,1.15,1.38,1.61,1.84,2.07];
 function balanceWave(pl){ const k=sidesActive(); const soldierDps=soldiers.length*D.soldierDmg()/Math.max(0.22,0.7-0.05*(S.lv.soldierTrain||0)); const playerDps=D.swordDmg()/0.45*0.5; const gateMax=D.gateMax(); pl.mul={};
   for(const s of SIDES){ const cnt=pl.cnt[s]; if(!cnt) continue; let avgHp=0,avgAtk=0,mA=0,mC=0,spd=0; for(let i=0;i<pl.kinds.length;i++){ if(SIDES[(Math.floor(i/4)+pl.seed)%k]!==s) continue; const K=EK[pl.kinds[i]]||EK.grunt; avgHp+=K.hp; avgAtk+=K.atk; mA+=K.arrow; mC+=K.cannon; spd+=K.spd; } avgHp/=cnt; avgAtk/=cnt; mA/=cnt; mC/=cnt; spd/=cnt;
-    const share=cnt/pl.total; const dps=defenseDps(s,mA,mC)+soldierDps*share+playerDps*share; const travel=(D.towerRange()-3)/(3.4*spd); const grace=clamp(0.5*gateMax*share/(cnt*0.75*avgAtk*atkK()),2.5,14); const T=0.36*cnt+travel+grace;
+    const share=cnt/pl.total; const dps0=defenseDps(s,mA,mC)+soldierDps*share+playerDps*share; const seen=S.dpsSeen||(S.dpsSeen={}); const dps=seen[s]>0?Math.min(dps0,seen[s]*1.3):dps0; seen[s]=dps; /* büyük geliştirmenin gücü ilk gecelerde hissedilsin: düşman gücü gecede en çok %30 yetişir */ const travel=(D.towerRange()-3)/(3.4*spd); const grace=clamp(0.5*gateMax*share/(cnt*0.75*avgAtk*atkK()),2.5,14); const T=0.36*cnt+travel+grace;
     const tilt=(window.__tilt||1)*TILT[Math.min(5,S.wave)]*(1-0.06*Math.min(3,(S.meta.fails&&S.meta.fails[S.level])||0)); const budget=dps*T*tilt; const nom=nightHp()*avgHp*cnt; const raw=budget/Math.max(1,nom);
     pl.mul[s]=(S.level<=1&&S.wave<=2)?1:clamp(Math.pow(raw,0.75),0.85,80); } }
-function startWave(){ if(!plan) planWave(); balanceWave(plan); gateWarned=false; waveActive=true; nightKills=0; const w=gw(); nightBanner(); SFX.night(); spawnQueue=plan.total; spawnT=0; spawnIdx=0; waveSeed=plan.seed; }
+function startWave(){ if(!plan) planWave(); balanceWave(plan); gateWarned=false; waveActive=true; S.nightOn=true; noRegen=false; nightKills=0; const w=gw(); nightBanner(); SFX.night(); spawnQueue=plan.total; spawnT=0; spawnIdx=0; waveSeed=plan.seed; }
 function spawnOne(){ const k=sidesActive(); const side=SIDES[(Math.floor(spawnIdx/4)+waveSeed)%k]; const kind=(plan&&plan.kinds[spawnIdx])||'grunt'; spawnIdx++; makeEnemy(kind,side); rigSpawn(enemies[enemies.length-1]); }
 const gateMarks={}; for(const s of SIDES){ const g=new THREE.Group(); const cone=mesh(G.cone,M.enemy,0.55,0.9,0.55,false); cone.rotation.x=Math.PI; const ring=new THREE.Mesh(new THREE.RingGeometry(2.2,2.7,32),new THREE.MeshBasicMaterial({color:0xd63a3a,transparent:true,opacity:0.7,depthWrite:false,side:THREE.DoubleSide})); ring.rotation.x=-Math.PI/2; ring.position.y=-5.4; g.add(cone,ring); g.visible=false; scene.add(g); gateMarks[s]={g,cone,ring}; }
-function updateGateMarks(dt){ const t=performance.now()/1000; for(const s of SIDES){ const m=gateMarks[s]; let on=false; if(celebT<=0&&!$('levelCard')){ if(!waveActive&&plan&&plan.cnt[s]>0) on=true; if(waveActive&&(enemies.some(e=>!e.dead&&e.side===s)||(spawnQueue>0&&plan&&plan.cnt[s]>0))) on=true; } m.g.visible=on; if(!on) continue; const [x,z]=sidePos(s,0,2.2); m.g.position.set(x,5.6+Math.sin(t*4)*0.3,z); m.g.rotation.y=t*2; const k=1+0.15*Math.sin(t*6); m.ring.scale.set(k,k,1); } }
+// gündüz: saldırılacak kapının üstünde kaç düşman ve hangi özel türler geleceği (simgeyle)
+const KIND_IC={runner:'💨',shield:'🛡️',ram:'🐏',knight:'⚔️',pirate:'🏴‍☠️',ice:'❄️',poison:'☠️',archer:'🏹',wolf:'🐺',raider:'🏇',boss:'👑'};
+const threatLbl={}; for(const s of SIDES){ const L=addLabel(new THREE.Vector3(0,0,0),'',7.6); L.near=-1; L.hide=true; L.avoid=true; L.el.classList.add('threat'); threatLbl[s]=L; }
+function sideKinds(pl){ if(pl.sk) return pl.sk; const k=sidesActive(); const sk={}; for(let i=0;i<pl.kinds.length;i++){ const sd=SIDES[(Math.floor(i/4)+pl.seed)%k]; const kd=pl.kinds[i]; (sk[sd]||(sk[sd]={}))[kd]=((sk[sd]||{})[kd]||0)+1; } pl.sk=sk; return sk; }
+function threatHtml(s){ const n=plan.cnt[s]; const kc=sideKinds(plan)[s]||{}; const ex=Object.keys(kc).filter(k=>KIND_IC[k]).sort((a,b)=>(b==='boss')-(a==='boss')||kc[b]-kc[a]).slice(0,3); return `<span class="ics"><span class="shield"></span>${n}${ex.map(k=>`<span>${KIND_IC[k]}</span>`).join('')}</span>`; }
+function updateGateMarks(dt){ const t=performance.now()/1000; for(const s of SIDES){ const m=gateMarks[s]; let on=false; if(celebT<=0&&!$('levelCard')){ if(!waveActive&&plan&&plan.cnt[s]>0) on=true; if(waveActive&&(enemies.some(e=>!e.dead&&e.side===s)||(spawnQueue>0&&plan&&plan.cnt[s]>0))) on=true; } m.g.visible=on; const TL=threatLbl[s]; TL.hide=!(on&&!waveActive&&plan&&plan.cnt[s]>0); if(!TL.hide){ const [lx,lz]=sidePos(s,0,2.2); TL.pos.set(lx,0,lz); const key=plan.id; if(TL._k!==key){ TL._k=key; TL.el.innerHTML=threatHtml(s); } } if(!on) continue; const [x,z]=sidePos(s,0,2.2); m.g.position.set(x,5.6+Math.sin(t*4)*0.3,z); m.g.rotation.y=t*2; const k=1+0.15*Math.sin(t*6); m.ring.scale.set(k,k,1); } }
 function damageEnemy(e,dmg,src){ if(e.dead||e.hold) return; if(!(e.flashT>0)) flashOn(e); e.flashT=0.07; let m=src&&e.K&&e.K[src]!==undefined? e.K[src] : 1; if(src==='arrow'&&e.kind==='knight'&&S.lv.ironArrow) m=Math.min(1,m+0.13*S.lv.ironArrow); e.hp-=dmg*m; if(e.boss&&!e.ph2&&e.hp>0) bossPhase(e); e.hitT=0.18; SFX.hit(); if(m<0.7&&src==='arrow'&&Math.random()<0.3) burst(e.g.position.clone().setY(1.2),3,M.metal,0.5); if(e.hp<=0) killEnemy(e); }
 function killEnemy(e){ e.dead=true; e.bar.remove(); S.kills++; nightKills++; questEvent('kill',1); if(e.boss){ cgCall(k=>k.game.happytime()); slowT=1.3; spawnBossChest(e.g.position.clone()); } comboKill(e); burst(e.g.position.clone().setY(0.8),9,M.enemy,1); const reward=(8+gw()*2.5)*(e.boss?10:e.kind==='ram'?3:1); scene.remove(e.g); const nl=e.K?e.K.loot:1; for(let i=0;i<nl;i++) dropLoot(e.g.position.x,e.g.position.z); if(e.kind==='ram'){ burst(e.g.position.clone().setY(1),16,M.woodDark,1.2); burst(e.g.position.clone().setY(1),8,M.trunk,1); } if(e.boss){ dropCoins(e.g.position.clone().setY(0.8),60,reward/60,8,1.3); } else if(Math.random()<0.35){ dropCoins(e.g.position.clone().setY(0.8),2,Math.round(reward/6),2.5,1); } }
 let gateShake=0, gateDownT=0, levelReward=0;
@@ -306,7 +319,7 @@ function updateEnemies(dt){
 }
 function animEnemy(e,dt,moving){ if(e.wolf){ animWolf(e.wolf,dt,moving); if(e.ramT>0){ e.ramT-=dt; e.wolf.head.rotation.x=-0.5*Math.sin(e.ramT*12); } return; } if(e.guy){ animGuy(e.guy,dt,moving,1.1*(e.kind==='runner'?1.4:1)); return; } for(const pg of e.pushers) animGuy(pg,dt,moving,0.9); if(e.ramT>0){ e.ramT-=dt; const k=e.ramT/0.5; e.ramLog.position.z=0.2+(k>0.5? (1-k)*2*1.0 : k*2*1.0); } else e.ramLog.position.z=lerp(e.ramLog.position.z,0.2,Math.min(1,dt*6)); }
 let failLeft=0;
-function gateBroken(){ if(runOver) return; S.gateHp=0; runOver=true; failLeft=Math.max(1,enemies.filter(e=>!e.dead).length+spawnQueue); SFX.lose(); SFX.boom(); camShake=0.6; setTimeout(showFailCard,900); }
+function gateBroken(){ if(runOver) return; S.gateHp=0; runOver=true; S.failed=true; S.nightOn=false; save(); failLeft=Math.max(1,enemies.filter(e=>!e.dead).length+spawnQueue); SFX.lose(); SFX.boom(); camShake=0.6; setTimeout(showFailCard,900); }
 let lastWaveFail=0;
 function shoot(from,target,dmg){ const m=mesh(G.cyl,M.handle,0.035,0.8,0.035,false); m.position.copy(from); scene.add(m); projectiles.push({m,target,dmg,spd:26}); }
 function updateProjectiles(dt){ for(let i=projectiles.length-1;i>=0;i--){ const p=projectiles[i]; const t=p.target; if(t.dead){ scene.remove(p.m); projectiles.splice(i,1); continue; } const to=t.g.position.clone(); to.y=0.9; const dir=to.sub(p.m.position); const dist=dir.length(); if(dist<0.7){ scene.remove(p.m); projectiles.splice(i,1); damageEnemy(t,p.dmg,'arrow'); continue; } dir.normalize(); p.m.position.addScaledVector(dir,p.spd*dt); p.m.lookAt(t.g.position.x,0.9,t.g.position.z); p.m.rotateX(Math.PI/2); } }

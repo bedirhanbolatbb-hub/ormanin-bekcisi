@@ -197,8 +197,9 @@ const guide=(function(){
 
 // ---------- Kontroller: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır ----------
 const keys={};
-addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; moveTarget=null; if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
-addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.code) keys[e.code]=true; moveTarget=null; if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; if(e.code) keys[e.code]=false; });
+function releaseKeys(){ for(const k in keys) keys[k]=false; } addEventListener('blur',releaseKeys); document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseKeys(); });
 const joy={active:false,id:null,ox:0,oy:0,dx:0,dy:0,t0:0,sx:0,sy:0,moved:false}; let zoom=1, zoomTarget=1; const ptrs=new Map(); let pinchD0=0, pinchZ0=1, pinchMid=null; let moveTarget=null;
 // Kamera gezinme: iki parmakla sürükle / sağ tuşla sürükle; karakter yürüyünce kamera ona döner
 const camPan=new THREE.Vector3(); let follow=true; let panDrag=null; const recenterEl=$('recenter');
@@ -219,7 +220,7 @@ canvas.addEventListener('pointermove',e=>{ if(panDrag){ panBy(e.clientX-panDrag[
 const joyEnd=e=>{ if(panDrag){ panDrag=null; return; } ptrs.delete(e.pointerId); if(ptrs.size<2) pinchMid=null; if(!joy.active||e.pointerId!==joy.id) return; const tap=!joy.moved&&performance.now()-joy.t0<350; joy.active=false; joy.dx=joy.dy=0; joyEl.style.display='none'; if(tap){ const gp=groundPoint(e.clientX,e.clientY); if(!gp) return; if(placing){ placeGhostAt(gp[0],gp[1]); confirmPlace(); return; } let tx=clamp(gp[0],-WORLD+2,WORLD-2), tz=clamp(gp[1],-WORLD+2,WORLD-2); for(const pd of pads){ if(pd.g.visible&&Math.hypot(pd.g.position.x-tx,pd.g.position.z-tz)<1.7){ tx=pd.g.position.x; tz=pd.g.position.z; break; } } moveTarget=[tx,tz]; moveMark.visible=true; moveMark.position.set(tx,0.05,tz); moveMark.scale.setScalar(1.6); } };
 canvas.addEventListener('wheel',e=>{ e.preventDefault(); zoomTarget=clamp(zoomTarget*(e.deltaY>0?1.08:0.92),0.6,2.2); },{passive:false});
 canvas.addEventListener('pointerup',joyEnd); canvas.addEventListener('pointercancel',joyEnd);
-function inputVec(){ let sx=0,sy=0; if(keys['w']||keys['arrowup']) sy-=1; if(keys['s']||keys['arrowdown']) sy+=1; if(keys['a']||keys['arrowleft']) sx-=1; if(keys['d']||keys['arrowright']) sx+=1; if(joy.active&&joy.moved){ sx+=joy.dx; sy+=joy.dy; } let l=Math.hypot(sx,sy); if(l>1){sx/=l;sy/=l;l=1;} const cy=Math.cos(YAW), sn=Math.sin(YAW); const x=sx*cy+sy*sn, z=-sx*sn+sy*cy; return {x,z,l}; }
+function inputVec(){ let sx=0,sy=0; if(keys['KeyW']||keys['arrowup']) sy-=1; if(keys['KeyS']||keys['arrowdown']) sy+=1; if(keys['KeyA']||keys['arrowleft']) sx-=1; if(keys['KeyD']||keys['arrowright']) sx+=1; if(joy.active&&joy.moved){ sx+=joy.dx; sy+=joy.dy; } let l=Math.hypot(sx,sy); if(l>1){sx/=l;sy/=l;l=1;} const cy=Math.cos(YAW), sn=Math.sin(YAW); const x=sx*cy+sy*sn, z=-sx*sn+sy*cy; return {x,z,l}; }
 
 // ---------- Yazılar / etiketler ----------
 const floats=[];
@@ -229,7 +230,7 @@ const labels=[];
 function addLabel(pos,text,h){ const el=document.createElement('div'); el.className='wl'; el.innerHTML=text; document.body.appendChild(el); const L={el,pos:pos.clone(),src:pos,h:h||3.2,hide:false,near:6}; labels.push(L); return L; }
 // yapı etiketleri yazı değil simge: depo = odun/taş bırakılır, tezgâh = miğfer altına döner
 const quarryLabels=QUARRIES.map(([qx,qz])=>{ const L=addLabel(new THREE.Vector3(qx,0,qz),'<span class="ics">⛏️</span>',4.2); L.near=5; return L; }); const depotLbl=addLabel(DEPOT,'<span class="ics">⬇ <span class="log-dot"></span></span>',3.9); addLabel(STALL,'<span class="ics"><span class="helm"></span>→<span class="coin-dot"></span></span>',3.6);
-function updateLabels(){ const pp=player.g.position; for(const L of labels){ v3.set(L.pos.x,L.h,L.pos.z).project(camera); const on=!L.hide&&L.el.firstChild!==null&&L.pos.distanceTo(pp)>L.near&&v3.z<1&&Math.abs(v3.x)<1.2&&Math.abs(v3.y)<1.2; L.el.style.display=on?'block':'none'; if(on){ L.el.style.left=((v3.x+1)/2*innerWidth)+'px'; L.el.style.top=((1-v3.y)/2*innerHeight)+'px'; } } }
+function updateLabels(){ const pp=player.g.position; for(const L of labels){ v3.set(L.pos.x,L.h,L.pos.z).project(camera); const on=!L.hide&&L.el.firstChild!==null&&L.pos.distanceTo(pp)>L.near&&v3.z<1&&Math.abs(v3.x)<1.2&&Math.abs(v3.y)<1.2; let sx=(v3.x+1)/2*innerWidth, sy=(1-v3.y)/2*innerHeight; let vis=on; if(on&&L.avoid){ for(const r of hudObstacles()){ if(sx+48>r.left&&sx-48<r.right&&sy>r.top&&sy-28<r.bottom){ vis=false; break; } } } L.el.style.display=vis?'block':'none'; if(vis){ L.el.style.left=sx+'px'; L.el.style.top=sy+'px'; } } }
 
 // ---------- Uçan nesneler / parçacıklar ----------
 const fliers=[];
@@ -241,11 +242,11 @@ function updateChips(dt){ for(let i=chips.length-1;i>=0;i--){ const c=chips[i]; 
 // Yerdeki ganimet: oyuncu ya da toplayıcı alır; kimse almazsa kendi tezgâha uçar (yerde kalmaz)
 const LOOT_MAX=200; const lootMesh=new THREE.InstancedMesh(helmGeo,M.enemy,LOOT_MAX); lootMesh.count=0; lootMesh.castShadow=true; lootMesh.frustumCulled=false; lootMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(lootMesh); const loot=[];
 function dropLoot(x,z){ if(loot.length>=LOOT_MAX) loot.shift(); loot.push({x:x+rand(-.6,.6),y:1,z:z+rand(-.6,.6),vy:rand(3,6),ry:rand(0,6),t:0,fly:false,auto:false,taken:false}); }
-function updateLoot(dt){ const p=player.g.position; const R=D.magnet(); let got=0;
+function updateLoot(dt){ const p=player.g.position; const R=D.magnet(); let got=0; let inAir=0; for(const l of loot) if(l.fly) inAir++;
   for(let i=loot.length-1;i>=0;i--){ const l=loot[i]; l.t+=dt;
     if(l.auto){ const tp=rotPt(STALL,0,1.5,-1.2); const dx=tp.x-l.x, dy=tp.y-l.y, dz=tp.z-l.z, d=Math.hypot(dx,dy,dz); const sp=(9+l.t*30)*dt; if(d<Math.max(0.5,sp)){ loot.splice(i,1); S.stall++; continue; } l.x+=dx/d*sp; l.y+=dy/d*sp+Math.sin(l.t*3)*0.02; l.z+=dz/d*sp; continue; }
-    if(!l.fly){ if(l.y>0.02||l.vy>0){ l.vy-=20*dt; l.y=Math.max(0.02,l.y+l.vy*dt); if(l.y<=0.02) l.vy=0; } const d=Math.hypot(l.x-p.x,l.z-p.z); if(l.t>0.4&&d<R&&S.loot<D.cap()){ l.fly=true; l.t=0; } else if(l.t>(l.taken?12:7)){ l.auto=true; l.t=0; } }
-    else { l.t+=dt; const dx=p.x-l.x, dy=1.2-l.y, dz=p.z-l.z, d=Math.hypot(dx,dy,dz); const sp=(7+l.t*40)*dt; if(d<Math.max(0.5,sp)){ loot.splice(i,1); if(S.loot<D.cap()){ S.loot++; setBack(player); got++; } continue; } l.x+=dx/d*sp; l.y+=dy/d*sp; l.z+=dz/d*sp; } }
+    if(!l.fly){ if(l.y>0.02||l.vy>0){ l.vy-=20*dt; l.y=Math.max(0.02,l.y+l.vy*dt); if(l.y<=0.02) l.vy=0; } const d=Math.hypot(l.x-p.x,l.z-p.z); if(l.t>0.4&&d<R&&S.loot+inAir<D.cap()){ l.fly=true; l.t=0; inAir++; } else if(l.t>(l.taken?12:7)){ l.auto=true; l.t=0; } }
+    else { l.t+=dt; const dx=p.x-l.x, dy=1.2-l.y, dz=p.z-l.z, d=Math.hypot(dx,dy,dz); const sp=(7+l.t*40)*dt; if(d<Math.max(0.5,sp)){ if(S.loot<D.cap()){ loot.splice(i,1); S.loot++; setBack(player); got++; } else { l.fly=false; l.auto=true; l.t=0; } continue; } l.x+=dx/d*sp; l.y+=dy/d*sp; l.z+=dz/d*sp; } }
   if(got>0) SFX.sell();
   loot.forEach((l,i)=>{ vp.set(l.x,l.y,l.z); e3.set(l.fly||l.auto?l.t*10:0,l.ry,0); q.setFromEuler(e3); vs.set(1,1,1); m4.compose(vp,q,vs); lootMesh.setMatrixAt(i,m4); }); lootMesh.count=loot.length; lootMesh.instanceMatrix.needsUpdate=true; }
 // ---------- Yerdeki altınlar ----------

@@ -19,7 +19,7 @@ function spawnBossChest(pos){ const g=new THREE.Group(); const body=mesh(G.box,M
   g.add(body,lidG,gl,beam); g.position.set(pos.x,0,pos.z); g.scale.setScalar(0.01); scene.add(g); bossChests.push({g,lidG,gl,beam,t:0,burst:false}); }
 function updateBossChests(dt){ for(const c of bossChests){ c.t+=dt; const k=Math.min(1,c.t/0.5); c.g.scale.setScalar(Math.max(0.01,k*(1+0.25*Math.sin(k*Math.PI)))); c.g.position.y=Math.max(0,3*(1-k)); c.beam.material.opacity=0.25+0.12*Math.sin(c.t*4); c.gl.material.opacity=0.6+0.3*Math.sin(c.t*5);
     if(c.t>0.9){ c.lidG.rotation.x=-Math.min(1.9,(c.t-0.9)*5); if(!c.burst){ c.burst=true; celebrate(c.g.position.clone(),1.6); burst(c.g.position.clone().setY(1.4),30,M.chestGold,1.8,1.6); SFX.fanfare(); } } } }
-function clearBossChests(){ for(const c of bossChests){ scene.remove(c.g); } bossChests.length=0; }
+function clearBossChests(){ for(const c of bossChests){ scene.remove(c.g); freeOwned(c.g); } bossChests.length=0; }
 // çark: 8 dilim; nadir büyük ödül; kıl payı kaçırma hissi
 const WHEEL=[{i:'💰',n:'Altın',w:28,c:'#f2b43c'},{i:'🪵',n:'Kereste',w:14,c:'#c98d4e'},{i:'👑',n:'+2 taç',w:14,c:'#e8961a'},{i:'💰',n:'Altın yağmuru',w:10,c:'#ffd23f'},{i:'⛓️',n:'Demir',w:12,c:'#9aa3ad'},{i:'👑',n:'+6 taç',w:4,c:'#d9534f',jack:true},{i:'💰',n:'Altın',w:14,c:'#f2b43c'},{i:'🃏',n:'Hazır güç kartı',w:4,c:'#3d63c9'}];
 function wheelReward(k){ const w=gw(); const W=WHEEL[k]; const at=player.g.position.clone(); let txt='';
@@ -42,7 +42,7 @@ function showBossWheel(done){ if($('wheelCard')){ done&&done(); return; } const 
     let tt=0; for(let n=0;n<22;n++){ tt+=40+n*n*0.55; setTimeout(()=>tone(1200,900,0.03,'square',0.03),tt); }
     setTimeout(()=>{ const txt=wheelReward(k); const res=$('wres'); if(res) res.innerHTML=`<b>${txt}</b>${(k===J-1||k===J+1)?'<small>Büyük ödüle kıl payı!</small>':''}`; if(WHEEL[k].jack) SFX.win(); else SFX.fanfare(); b.style.display='none'; const ok=$('wheelOk'); if(ok) ok.style.display=''; },3800); });
   $('wheelOk').addEventListener('click',()=>{ audio(); card.remove(); clearBossChests(); done&&done(); }); }
-function applyNextCard(){ const n=(S.meta&&S.meta.nextCard)||0; if(!n) return; S.meta.nextCard=0; const ks=['arrow','rate','range','powder','wall','drill']; for(let i=0;i<n;i++){ const k=ks[Math.floor(Math.random()*ks.length)]; S.cards[k]=(S.cards[k]||0)+1; if(k==='wall') S.gateHp=D.gateMax(); setTimeout(()=>toast('🃏 Hazır kart: '+CARDS[k].i+' '+CARDS[k].n,'good'),2600); } }
+function applyNextCard(){ S.wheelCards={}; const n=(S.meta&&S.meta.nextCard)||0; if(!n) return; S.meta.nextCard=0; const ks=['arrow','rate','range','powder','wall','drill']; for(let i=0;i<n;i++){ const k=ks[Math.floor(Math.random()*ks.length)]; S.cards[k]=(S.cards[k]||0)+1; S.wheelCards[k]=(S.wheelCards[k]||0)+1; if(k==='wall') S.gateHp=D.gateMax(); setTimeout(()=>toast('🃏 '+CARDS[k].i+' '+CARDS[k].n,'good'),2600+i*2600); } }
 
 // ----- günlük görevler: her gün 3 görev, bitince taç + altın -----
 const QPOOL=[
@@ -54,8 +54,10 @@ function ensureQuests(){ if(!S.meta) return null; const day=dayKey(); const Q=S.
   const tier=Math.min(6,Math.floor((S.level-1)/2)); S.meta.quests={day,list:pick.map((q,i)=>({k:q.k,n:q.b+q.s*tier,have:0,claimed:false,rw:2+(i===2?1:0)})),all:false}; return S.meta.quests; }
 function questText(q){ const d=QPOOL.find(x=>x.k===q.k); return d?d.t(q.n):q.k; }
 let questSaveT=0;
-function questEvent(k,amt){ if(!S.started||!S.meta) return; const Q=ensureQuests(); if(!Q) return; for(const q of Q.list){ if(q.k!==k||q.have>=q.n) continue; q.have=Math.min(q.n,q.have+(amt||1)); if(q.have>=q.n){ toast('📜 Görev tamam!','good'); SFX.card(); const c=$('questChip'); if(c){ c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } save(); } } }
-function renderQuestChip(){ const c=$('questChip'); if(!c) return; const Q=started&&S.started?ensureQuests():null; if(!Q){ c.style.display='none'; return; } c.style.display='flex'; const done=Q.list.filter(q=>q.have>=q.n).length, claim=Q.list.some(q=>q.have>=q.n&&!q.claimed); const t=`📜 ${done}/3`; if(c._t!==t){ c._t=t; $('questTxt').textContent=t; } c.classList.toggle('done',claim); }
+// günlük görevler ilk seferin ortasından sonra açılır (ilk dakikalarda ekran sade kalsın)
+function questsOn(){ return S.level>=2||(S.wave||1)>=3; }
+function questEvent(k,amt){ if(!S.started||!S.meta||!questsOn()) return; const Q=ensureQuests(); if(!Q) return; for(const q of Q.list){ if(q.k!==k||q.have>=q.n) continue; q.have=Math.min(q.n,q.have+(amt||1)); if(q.have>=q.n){ toast('📜 Görev tamam!','good'); SFX.card(); const c=$('questChip'); if(c){ c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } save(); } } }
+function renderQuestChip(){ const c=$('questChip'); if(!c) return; const Q=started&&S.started&&questsOn()?ensureQuests():null; if(!Q){ c.style.display='none'; return; } c.style.display='flex'; const done=Q.list.filter(q=>q.have>=q.n).length, claim=Q.list.some(q=>q.have>=q.n&&!q.claimed); const t=`📜 ${done}/3`; if(c._t!==t){ c._t=t; $('questTxt').textContent=t; } c.classList.toggle('done',claim); }
 function showQuests(){ if($('questCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='questCard'; document.body.appendChild(card);
   const render=()=>{ const Q=ensureQuests(); const gold=Math.round(60+20*gw()); const allDone=Q.list.every(q=>q.claimed);
     card.innerHTML=`<div class="card"><h1>Günün görevleri</h1><p>Her gün yenilenir. Bitirdiğin görevin ödülünü buradan al.</p>${Q.list.map((q,i)=>{ const ok=q.have>=q.n; return `<div class="q${ok?' ok':''}"><div class="qb"><b>${questText(q)}</b><div class="qbar"><i style="width:${Math.round(q.have/q.n*100)}%"></i></div><small>${Math.floor(q.have)}/${q.n}</small></div>${q.claimed?'<span class="rw">✓ Alındı</span>':ok?`<button data-i="${i}" class="qget">👑 ${q.rw} + 💰 ${gold}</button>`:`<span class="rw">👑 ${q.rw}</span>`}</div>`; }).join('')}${allDone?'<p class="sub">Hepsini bitirdin — yarın yeni görevler gelecek.</p>':''}<button id="qClose">Kapat</button></div>`;
@@ -97,7 +99,7 @@ function holdTick(e,dt){ const sh=e.hold; if(sh.k<1) return false; sh.dropT=(sh.
 function preArrive(e){ if(e.preKind==='raft'&&e.raft){ e.g.remove(e.raft); e.raft=null; e.g.position.y=0; e.speed=e.baseSpd||e.speed; burst(e.g.position.clone().setY(0.3),10,M.waterLight,1); } }
 function updateShips(dt){ const t=performance.now()/1000; for(let i=ships.length-1;i>=0;i--){ const s=ships[i]; s.t+=dt;
     if(!s.leaving){ if(s.k<1){ s.k=Math.min(1,s.k+dt/5); const e=s.k*(2-s.k); s.g.position.lerpVectors(s.from,s.land,e); if(Math.random()<dt*6) burst(s.g.position.clone().setY(0.3),1,M.foam,0.4); } else if(s.crew<=0&&spawnQueue<=0){ s.leaving=true; s.k=0; } }
-    else { s.k=Math.min(1,s.k+dt/6); s.g.position.lerpVectors(s.land,s.from,s.k*s.k); s.g.rotation.y+=dt*0.6*(1-s.k); if(s.k>0.6) s.g.position.y=-(s.k-0.6)*6; if(s.k>=1){ scene.remove(s.g); ships.splice(i,1); continue; } }
+    else { s.k=Math.min(1,s.k+dt/6); s.g.position.lerpVectors(s.land,s.from,s.k*s.k); s.g.rotation.y+=dt*0.6*(1-s.k); if(s.k>0.6) s.g.position.y=-(s.k-0.6)*6; if(s.k>=1){ scene.remove(s.g); freeOwned(s.g); ships.splice(i,1); continue; } }
     if(!s.leaving||s.k<0.6) s.g.position.y=0.1+Math.sin(t*1.4)*0.12; s.g.rotation.z=Math.sin(t*1.1)*0.05; } }
 
 // ----- kış: 9. sefer (ve sonsuzda her 10'un 9'u): ağaç yavaş kesilir, gündüz kısa, dünya karlı -----
@@ -108,5 +110,5 @@ function applyWinterLook(){ const w=isWinter(); if(w===winterOn) return; winterO
 // ----- ana döngü ve sıfırlama -----
 let p7T=0;
 function updateP7(dt){ updateBossChests(dt); updateEArrows(dt); updateShips(dt); p7T-=dt; if(p7T<=0){ p7T=1; applyWinterLook(); } }
-function clearP7Battle(){ for(const a of eArrows) scene.remove(a.m); eArrows.length=0; for(const s of ships) scene.remove(s.g); ships.length=0; if(!$("wheelCard")) clearBossChests(); }
+function clearP7Battle(){ for(const a of eArrows) scene.remove(a.m); eArrows.length=0; for(const s of ships){ scene.remove(s.g); freeOwned(s.g); } ships.length=0; if(!$("wheelCard")) clearBossChests(); }
 function resetP7(){ clearP7Battle(); clearBossChests(); document.querySelectorAll('.hpbar.tw').forEach(b=>b.remove()); comboN=0; }
