@@ -202,7 +202,9 @@ addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 const joy={active:false,id:null,ox:0,oy:0,dx:0,dy:0,t0:0,sx:0,sy:0,moved:false}; let zoom=1, zoomTarget=1; const ptrs=new Map(); let pinchD0=0, pinchZ0=1, pinchMid=null; let moveTarget=null;
 // Kamera gezinme: iki parmakla sürükle / sağ tuşla sürükle; karakter yürüyünce kamera ona döner
 const camPan=new THREE.Vector3(); let follow=true; let panDrag=null; const recenterEl=$('recenter');
-function worldPerPx(){ const portrait=innerHeight>innerWidth; const halfW=portrait?13:22; return 2*halfW*zoom/innerWidth; }
+// ekranın kısa kenarı her zaman aynı genişlikte dünya gösterir: telefon dönünce dünya büyüyüp küçülmez, sadece yanlar açılır
+function viewHalfW(){ const a=innerWidth/Math.max(1,innerHeight); return a<1?13:Math.max(22,13*a); }
+function worldPerPx(){ return 2*viewHalfW()*zoom/innerWidth; }
 function panBy(dxPx,dyPx){ const k=worldPerPx(); const cy=Math.cos(YAW), sn=Math.sin(YAW); camPan.x-=(dxPx*cy+dyPx*sn)*k; camPan.z-=(-dxPx*sn+dyPx*cy)*k; const lim=WORLD+10; camPan.x=clamp(camPan.x,-lim-player.g.position.x,lim-player.g.position.x); camPan.z=clamp(camPan.z,-lim-player.g.position.z,lim-player.g.position.z); follow=false; recenterEl.classList.add('show'); }
 function recenter(){ follow=true; recenterEl.classList.remove('show'); }
 recenterEl.addEventListener('click',()=>{ audio(); recenter(); });

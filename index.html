@@ -39,7 +39,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .q .rw{font-family:var(--font-display);font-weight:800;color:var(--coin-ink);white-space:nowrap}
 .away{font-size:15px;text-align:left;margin:8px 0 14px}
 .away div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-weight:700}
-.away b{font-family:var(--font-display);font-size:18px;color:var(--green)}
+.away b{font-family:var(--font-display);font-size:18px;color:var(--green);white-space:nowrap;margin-left:10px;text-align:right}
 .helm{width:18px;height:12px;border-radius:9px 9px 3px 3px;background:#d63a3a;box-shadow:0 3px 0 -1px #9c2323}
 .shield{width:16px;height:18px;background:#fff;border-radius:3px 3px 8px 8px;box-shadow:inset 0 0 0 3px #d63a3a,inset 0 0 0 5px #fff}
 .wave{min-width:150px;flex-direction:column;align-items:stretch;gap:4px;padding:8px 12px}
@@ -74,7 +74,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .float.green{color:var(--green)}
 .joy{position:fixed;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.25);border:2px solid rgba(255,255,255,.6);transform:translate(-50%,-50%);pointer-events:none;z-index:4;display:none}
 .joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.85);transform:translate(-50%,-50%);box-shadow:var(--shadow)}
-.toast{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--danger);color:#fff;padding:10px 18px;border-radius:14px;font-family:var(--font-display);font-weight:800;font-size:18px;z-index:7;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
+.toast{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:max-content;max-width:min(88vw,460px);box-sizing:border-box;background:var(--danger);color:#fff;padding:10px 18px;border-radius:14px;font-family:var(--font-display);font-weight:800;font-size:18px;z-index:7;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
 .toast.show{opacity:1}
 .toast.good{background:var(--green)}
 .mini{position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:132px;height:132px;border-radius:14px;box-shadow:var(--shadow);border:2px solid rgba(255,255,255,.7);z-index:5;touch-action:none;background:#d7b989}
@@ -82,7 +82,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .recenter.show{display:block}
 .wave .next{font-family:var(--font-body);font-weight:800;font-size:12px;color:var(--danger);min-height:14px}
 .intro{position:fixed;inset:0;z-index:30;background:rgba(43,58,46,.55);display:flex;align-items:center;justify-content:center;padding:16px}
-.intro .card{background:var(--panel);border-radius:24px;padding:22px 22px 18px;max-width:380px;width:100%;box-shadow:var(--shadow);text-align:center}
+.intro .card{background:var(--panel);border-radius:24px;padding:22px 22px 18px;max-width:424px;width:100%;box-shadow:var(--shadow);text-align:center}
 .intro h1{font-family:var(--font-display);font-size:34px;margin:0 0 6px;color:var(--green);line-height:1.05;text-wrap:balance}
 .intro p{margin:0 0 14px;color:var(--ink-soft);font-weight:700;line-height:1.4}
 .intro button{width:100%;border:0;border-radius:16px;padding:14px;background:var(--green);color:#fff;font-family:var(--font-display);font-size:20px;font-weight:800;cursor:pointer}
@@ -158,7 +158,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .result .prog i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f7c75a,#e8961a);transition:width 1.1s cubic-bezier(.2,.8,.3,1)}
 .result .prog span{position:relative;font-family:var(--font-display);font-weight:800;font-size:14px;line-height:24px;color:var(--ink)}
 .result .hint{background:#f1fae9;border-radius:12px;padding:8px 10px;color:var(--green);font-size:14px}
-.card.map{max-width:440px;text-align:left}
+.card.map{max-width:484px;text-align:left}
 .maphead{display:flex;justify-content:space-between;align-items:center}
 .card.map h1{margin:0}.card.map h2{font-family:var(--font-display);font-size:20px;margin:14px 0 6px}
 .crowns.big{font-family:var(--font-display);font-weight:800;font-size:24px;color:var(--coin-ink);background:#fff3cf;border-radius:14px;padding:4px 12px}
@@ -205,7 +205,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 @media (max-width:600px){.fishUI{bottom:calc(122px + env(safe-area-inset-bottom,0px))}}
 .iron-dot{width:18px;height:10px;border-radius:2px;background:linear-gradient(#e2e8ee,#8a939c);box-shadow:inset 0 0 0 2px rgba(40,46,52,.4)}
 .potion-dot{width:13px;height:15px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 40% 35%,#e8c2ff,#9a4ad6 60%,#5a1a7a);box-shadow:0 0 6px rgba(180,106,230,.8)}
-.card.end h1{font-size:34px;background:linear-gradient(90deg,#ffd23f,#fff3b0,#ffd23f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card.end h1{font-size:34px;background:linear-gradient(90deg,#d98e00,#f5b921 50%,#d98e00);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #8a5a00)}
 .chip.quest.pop{animation:qpop .5s ease}@keyframes qpop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
 .intro .q button{width:auto;padding:8px 10px;font-size:14px;background:var(--coin);color:var(--coin-ink);margin:0;white-space:nowrap}
 .hpbar.tw{width:44px;height:6px}.hpbar.tw i{background:#6fd36f}
@@ -217,6 +217,78 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .wdisc em{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;background:radial-gradient(#fff3cf,#e8961a);box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .wpin{position:absolute;left:50%;top:-12px;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:28px solid #d9534f;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
 .wres{min-height:44px;margin:4px 0 8px}.wres b{display:block;font-family:var(--font-display);font-size:22px;color:var(--green)}.wres small{display:block;color:var(--danger);font-weight:800}
+
+/* ---- telefon dik de yan da: ekran yönüne göre yerleşim ---- */
+.res{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+@keyframes pulseC{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
+.nightBtn{animation-name:pulseC}
+.hud{padding-left:calc(12px + env(safe-area-inset-left,0px));padding-right:calc(12px + env(safe-area-inset-right,0px))}
+.mute,.kingBtn{left:calc(14px + env(safe-area-inset-left,0px))}
+.mini{right:calc(12px + env(safe-area-inset-right,0px))}
+.intro{padding:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
+.intro .card{box-sizing:border-box;max-height:100%;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+@media (orientation:landscape) and (max-height:520px){
+  .hud{padding-top:calc(6px + env(safe-area-inset-top,0px))}
+  .right{gap:5px}
+  .res{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:min(440px,54vw);gap:5px}
+  .right .wave{order:-1}
+  .left{gap:5px}
+  .chip{font-size:15px;padding:4px 9px;gap:6px;border-radius:12px}
+  .chip small{font-size:11px}
+  .wave{min-width:0;width:min(300px,40vw);padding:6px 10px;gap:3px}
+  .wave .next{font-size:11px;min-height:0}
+  .mini{width:92px;height:92px;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  .mute{bottom:calc(10px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
+  .kingBtn{bottom:calc(56px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
+  .nightBtn{bottom:calc(10px + env(safe-area-inset-bottom,0px));font-size:16px;padding:9px 16px}
+  .nightBtn span{font-size:13px}
+  .fishUI{bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:8px 12px;gap:6px}
+  .fishUI button{padding:8px 26px;font-size:19px}
+  .placeBar{bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  .recenter{bottom:calc(58px + env(safe-area-inset-bottom,0px))}
+  .toast{top:auto;bottom:calc(96px + env(safe-area-inset-bottom,0px));font-size:15px;padding:7px 14px;max-width:min(56vw,520px)}
+  .tip{bottom:calc(60px + env(safe-area-inset-bottom,0px));font-size:13px;padding:6px 12px}
+  .banner{top:36%}.banner b{font-size:clamp(28px,11vh,52px)}.banner small{font-size:15px}
+  .wl{font-size:12px;padding:3px 8px}.wl small{font-size:10px}.guide{font-size:13px;padding:4px 10px}
+  .intro{padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))}
+  .intro .card{padding:12px 18px 12px;border-radius:20px}
+  .intro h1{font-size:25px;margin-bottom:4px}
+  .intro p{margin-bottom:8px;font-size:14px}
+  .intro button{padding:9px;font-size:17px;border-radius:14px}
+  .intro button+button{margin-top:6px}
+  .intro .sub{margin-top:6px}
+  .result .bigstars{font-size:38px;margin:-2px 0 2px}
+  .result .crowns{font-size:16px;margin-bottom:8px;padding:4px 10px}
+  .result .near{font-size:17px}.result .near b{font-size:21px}
+  .result .prog{margin:2px 0 8px}
+  .nextreg{margin-bottom:8px;padding:6px 10px}
+  .away{margin:4px 0 8px;display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .away div{padding:3px 0}.away b{font-size:15px}
+  #awayCard .card,.card.end{max-width:656px}
+  #cardPick .card{max-width:676px}
+  .intro .cards{flex-direction:row;gap:8px}
+  .intro .cards button{flex:1;grid-template-columns:1fr;grid-template-rows:auto auto auto;justify-items:center;text-align:center;padding:10px 8px;gap:2px}
+  .intro .cards button i{grid-row:auto;font-size:28px}
+  .intro .cards button b{font-size:17px}.intro .cards button small{font-size:13px}
+  #wheelCard .card{max-width:636px;display:grid;grid-template-columns:auto 1fr;column-gap:18px;align-items:center}
+  #wheelCard .wheel{grid-column:1;grid-row:1/span 5;width:210px;height:210px;margin:4px 0}
+  #wheelCard .card>*:not(.wheel){grid-column:2}
+  .wdisc span b{top:-88px;left:-16px;width:32px;font-size:24px}
+  #questCard .card{max-width:596px}
+  .q{padding:6px 10px;margin-bottom:6px}
+  .card.map{max-width:716px}
+  .sefers{grid-template-columns:repeat(10,1fr)}
+  .book{grid-template-columns:repeat(auto-fill,minmax(64px,1fr))}
+}
+@media (orientation:portrait) and (max-height:760px){
+  .left,.right{gap:5px}
+  .res{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:66vw;gap:5px}
+  .chip{font-size:15px;padding:4px 9px;gap:6px;border-radius:12px}
+  .chip small{font-size:11px}
+  .wave{padding:6px 10px;gap:3px}
+  .wave .next{font-size:11px;min-height:0}
+  .toast{font-size:16px;padding:8px 14px}
+}
 .plank-dot{width:18px;height:12px;border-radius:2px;background:repeating-linear-gradient(180deg,#e8b86a 0 3px,#a8742e 3px 4px);box-shadow:inset 0 0 0 2px rgba(90,55,20,.35)}
 </style>
 
@@ -226,7 +298,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="hud">
   <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div><div class="chip quest" id="questChip" style="display:none"><span id="questTxt">📜 0/3</span></div></div>
   <div class="right">
-    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div><div class="chip" id="plankChip" style="display:none"><span class="plank-dot"></span><small>kereste</small><span id="plankStock">0</span></div><div class="chip" id="ironChip" style="display:none"><span class="iron-dot"></span><small>demir</small><span id="ironStock">0</span></div><div class="chip" id="potionChip" style="display:none"><span class="potion-dot"></span><small>iksir</small><span id="potionStock">0</span></div>
+    <div class="res"><div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div><div class="chip" id="plankChip" style="display:none"><span class="plank-dot"></span><small>kereste</small><span id="plankStock">0</span></div><div class="chip" id="ironChip" style="display:none"><span class="iron-dot"></span><small>demir</small><span id="ironStock">0</span></div><div class="chip" id="potionChip" style="display:none"><span class="potion-dot"></span><small>iksir</small><span id="potionStock">0</span></div></div>
     <div class="chip wave">
       <div class="row"><span id="waveLbl">Dalga 1</span><small id="waveT">20 sn</small></div>
       <div class="next" id="waveNext"></div>

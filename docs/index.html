@@ -39,7 +39,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .q .rw{font-family:var(--font-display);font-weight:800;color:var(--coin-ink);white-space:nowrap}
 .away{font-size:15px;text-align:left;margin:8px 0 14px}
 .away div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-weight:700}
-.away b{font-family:var(--font-display);font-size:18px;color:var(--green)}
+.away b{font-family:var(--font-display);font-size:18px;color:var(--green);white-space:nowrap;margin-left:10px;text-align:right}
 .helm{width:18px;height:12px;border-radius:9px 9px 3px 3px;background:#d63a3a;box-shadow:0 3px 0 -1px #9c2323}
 .shield{width:16px;height:18px;background:#fff;border-radius:3px 3px 8px 8px;box-shadow:inset 0 0 0 3px #d63a3a,inset 0 0 0 5px #fff}
 .wave{min-width:150px;flex-direction:column;align-items:stretch;gap:4px;padding:8px 12px}
@@ -74,7 +74,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .float.green{color:var(--green)}
 .joy{position:fixed;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.25);border:2px solid rgba(255,255,255,.6);transform:translate(-50%,-50%);pointer-events:none;z-index:4;display:none}
 .joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.85);transform:translate(-50%,-50%);box-shadow:var(--shadow)}
-.toast{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--danger);color:#fff;padding:10px 18px;border-radius:14px;font-family:var(--font-display);font-weight:800;font-size:18px;z-index:7;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
+.toast{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:max-content;max-width:min(88vw,460px);box-sizing:border-box;background:var(--danger);color:#fff;padding:10px 18px;border-radius:14px;font-family:var(--font-display);font-weight:800;font-size:18px;z-index:7;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
 .toast.show{opacity:1}
 .toast.good{background:var(--green)}
 .mini{position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:132px;height:132px;border-radius:14px;box-shadow:var(--shadow);border:2px solid rgba(255,255,255,.7);z-index:5;touch-action:none;background:#d7b989}
@@ -82,7 +82,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .recenter.show{display:block}
 .wave .next{font-family:var(--font-body);font-weight:800;font-size:12px;color:var(--danger);min-height:14px}
 .intro{position:fixed;inset:0;z-index:30;background:rgba(43,58,46,.55);display:flex;align-items:center;justify-content:center;padding:16px}
-.intro .card{background:var(--panel);border-radius:24px;padding:22px 22px 18px;max-width:380px;width:100%;box-shadow:var(--shadow);text-align:center}
+.intro .card{background:var(--panel);border-radius:24px;padding:22px 22px 18px;max-width:424px;width:100%;box-shadow:var(--shadow);text-align:center}
 .intro h1{font-family:var(--font-display);font-size:34px;margin:0 0 6px;color:var(--green);line-height:1.05;text-wrap:balance}
 .intro p{margin:0 0 14px;color:var(--ink-soft);font-weight:700;line-height:1.4}
 .intro button{width:100%;border:0;border-radius:16px;padding:14px;background:var(--green);color:#fff;font-family:var(--font-display);font-size:20px;font-weight:800;cursor:pointer}
@@ -158,7 +158,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .result .prog i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f7c75a,#e8961a);transition:width 1.1s cubic-bezier(.2,.8,.3,1)}
 .result .prog span{position:relative;font-family:var(--font-display);font-weight:800;font-size:14px;line-height:24px;color:var(--ink)}
 .result .hint{background:#f1fae9;border-radius:12px;padding:8px 10px;color:var(--green);font-size:14px}
-.card.map{max-width:440px;text-align:left}
+.card.map{max-width:484px;text-align:left}
 .maphead{display:flex;justify-content:space-between;align-items:center}
 .card.map h1{margin:0}.card.map h2{font-family:var(--font-display);font-size:20px;margin:14px 0 6px}
 .crowns.big{font-family:var(--font-display);font-weight:800;font-size:24px;color:var(--coin-ink);background:#fff3cf;border-radius:14px;padding:4px 12px}
@@ -205,7 +205,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 @media (max-width:600px){.fishUI{bottom:calc(122px + env(safe-area-inset-bottom,0px))}}
 .iron-dot{width:18px;height:10px;border-radius:2px;background:linear-gradient(#e2e8ee,#8a939c);box-shadow:inset 0 0 0 2px rgba(40,46,52,.4)}
 .potion-dot{width:13px;height:15px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 40% 35%,#e8c2ff,#9a4ad6 60%,#5a1a7a);box-shadow:0 0 6px rgba(180,106,230,.8)}
-.card.end h1{font-size:34px;background:linear-gradient(90deg,#ffd23f,#fff3b0,#ffd23f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card.end h1{font-size:34px;background:linear-gradient(90deg,#d98e00,#f5b921 50%,#d98e00);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #8a5a00)}
 .chip.quest.pop{animation:qpop .5s ease}@keyframes qpop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
 .intro .q button{width:auto;padding:8px 10px;font-size:14px;background:var(--coin);color:var(--coin-ink);margin:0;white-space:nowrap}
 .hpbar.tw{width:44px;height:6px}.hpbar.tw i{background:#6fd36f}
@@ -217,6 +217,78 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .wdisc em{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;background:radial-gradient(#fff3cf,#e8961a);box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .wpin{position:absolute;left:50%;top:-12px;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:28px solid #d9534f;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
 .wres{min-height:44px;margin:4px 0 8px}.wres b{display:block;font-family:var(--font-display);font-size:22px;color:var(--green)}.wres small{display:block;color:var(--danger);font-weight:800}
+
+/* ---- telefon dik de yan da: ekran yönüne göre yerleşim ---- */
+.res{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+@keyframes pulseC{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
+.nightBtn{animation-name:pulseC}
+.hud{padding-left:calc(12px + env(safe-area-inset-left,0px));padding-right:calc(12px + env(safe-area-inset-right,0px))}
+.mute,.kingBtn{left:calc(14px + env(safe-area-inset-left,0px))}
+.mini{right:calc(12px + env(safe-area-inset-right,0px))}
+.intro{padding:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
+.intro .card{box-sizing:border-box;max-height:100%;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+@media (orientation:landscape) and (max-height:520px){
+  .hud{padding-top:calc(6px + env(safe-area-inset-top,0px))}
+  .right{gap:5px}
+  .res{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:min(440px,54vw);gap:5px}
+  .right .wave{order:-1}
+  .left{gap:5px}
+  .chip{font-size:15px;padding:4px 9px;gap:6px;border-radius:12px}
+  .chip small{font-size:11px}
+  .wave{min-width:0;width:min(300px,40vw);padding:6px 10px;gap:3px}
+  .wave .next{font-size:11px;min-height:0}
+  .mini{width:92px;height:92px;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  .mute{bottom:calc(10px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
+  .kingBtn{bottom:calc(56px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
+  .nightBtn{bottom:calc(10px + env(safe-area-inset-bottom,0px));font-size:16px;padding:9px 16px}
+  .nightBtn span{font-size:13px}
+  .fishUI{bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:8px 12px;gap:6px}
+  .fishUI button{padding:8px 26px;font-size:19px}
+  .placeBar{bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  .recenter{bottom:calc(58px + env(safe-area-inset-bottom,0px))}
+  .toast{top:auto;bottom:calc(96px + env(safe-area-inset-bottom,0px));font-size:15px;padding:7px 14px;max-width:min(56vw,520px)}
+  .tip{bottom:calc(60px + env(safe-area-inset-bottom,0px));font-size:13px;padding:6px 12px}
+  .banner{top:36%}.banner b{font-size:clamp(28px,11vh,52px)}.banner small{font-size:15px}
+  .wl{font-size:12px;padding:3px 8px}.wl small{font-size:10px}.guide{font-size:13px;padding:4px 10px}
+  .intro{padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))}
+  .intro .card{padding:12px 18px 12px;border-radius:20px}
+  .intro h1{font-size:25px;margin-bottom:4px}
+  .intro p{margin-bottom:8px;font-size:14px}
+  .intro button{padding:9px;font-size:17px;border-radius:14px}
+  .intro button+button{margin-top:6px}
+  .intro .sub{margin-top:6px}
+  .result .bigstars{font-size:38px;margin:-2px 0 2px}
+  .result .crowns{font-size:16px;margin-bottom:8px;padding:4px 10px}
+  .result .near{font-size:17px}.result .near b{font-size:21px}
+  .result .prog{margin:2px 0 8px}
+  .nextreg{margin-bottom:8px;padding:6px 10px}
+  .away{margin:4px 0 8px;display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .away div{padding:3px 0}.away b{font-size:15px}
+  #awayCard .card,.card.end{max-width:656px}
+  #cardPick .card{max-width:676px}
+  .intro .cards{flex-direction:row;gap:8px}
+  .intro .cards button{flex:1;grid-template-columns:1fr;grid-template-rows:auto auto auto;justify-items:center;text-align:center;padding:10px 8px;gap:2px}
+  .intro .cards button i{grid-row:auto;font-size:28px}
+  .intro .cards button b{font-size:17px}.intro .cards button small{font-size:13px}
+  #wheelCard .card{max-width:636px;display:grid;grid-template-columns:auto 1fr;column-gap:18px;align-items:center}
+  #wheelCard .wheel{grid-column:1;grid-row:1/span 5;width:210px;height:210px;margin:4px 0}
+  #wheelCard .card>*:not(.wheel){grid-column:2}
+  .wdisc span b{top:-88px;left:-16px;width:32px;font-size:24px}
+  #questCard .card{max-width:596px}
+  .q{padding:6px 10px;margin-bottom:6px}
+  .card.map{max-width:716px}
+  .sefers{grid-template-columns:repeat(10,1fr)}
+  .book{grid-template-columns:repeat(auto-fill,minmax(64px,1fr))}
+}
+@media (orientation:portrait) and (max-height:760px){
+  .left,.right{gap:5px}
+  .res{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:66vw;gap:5px}
+  .chip{font-size:15px;padding:4px 9px;gap:6px;border-radius:12px}
+  .chip small{font-size:11px}
+  .wave{padding:6px 10px;gap:3px}
+  .wave .next{font-size:11px;min-height:0}
+  .toast{font-size:16px;padding:8px 14px}
+}
 .plank-dot{width:18px;height:12px;border-radius:2px;background:repeating-linear-gradient(180deg,#e8b86a 0 3px,#a8742e 3px 4px);box-shadow:inset 0 0 0 2px rgba(90,55,20,.35)}
 </style>
 
@@ -226,7 +298,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="hud">
   <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div><div class="chip quest" id="questChip" style="display:none"><span id="questTxt">📜 0/3</span></div></div>
   <div class="right">
-    <div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div><div class="chip" id="plankChip" style="display:none"><span class="plank-dot"></span><small>kereste</small><span id="plankStock">0</span></div><div class="chip" id="ironChip" style="display:none"><span class="iron-dot"></span><small>demir</small><span id="ironStock">0</span></div><div class="chip" id="potionChip" style="display:none"><span class="potion-dot"></span><small>iksir</small><span id="potionStock">0</span></div>
+    <div class="res"><div class="chip"><span class="log-dot"></span><span id="logs">0</span><small id="cap">/25</small></div><div class="chip"><span class="log-dot"></span><small>depo</small><span id="woodStock">0</span></div><div class="chip" id="stoneChip"><span class="stone-dot"></span><small>taş</small><span id="stoneStock">0</span></div><div class="chip" id="plankChip" style="display:none"><span class="plank-dot"></span><small>kereste</small><span id="plankStock">0</span></div><div class="chip" id="ironChip" style="display:none"><span class="iron-dot"></span><small>demir</small><span id="ironStock">0</span></div><div class="chip" id="potionChip" style="display:none"><span class="potion-dot"></span><small>iksir</small><span id="potionStock">0</span></div></div>
     <div class="chip wave">
       <div class="row"><span id="waveLbl">Dalga 1</span><small id="waveT">20 sn</small></div>
       <div class="next" id="waveNext"></div>
@@ -253,7 +325,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
     <h1>Ormanın Bekçisi</h1>
     <p>Her bölüm 5 gece. Gündüz ağaç kes, kule ve sur kur; gece kırmızı ordu gelir. Sur yıkılırsa bölüm biter. 5. gecenin patronunu yen, yıldızları topla.</p>
     <button id="startBtn">Oyna</button>
-    <div class="sub">Sürüm 29 · 23 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
+    <div class="sub">Sürüm 30 · 23 Eyl 2026 · Telefonda: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır · Bilgisayarda: WASD / tıkla</div>
   </div>
 </div>
 
@@ -682,7 +754,9 @@ addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 const joy={active:false,id:null,ox:0,oy:0,dx:0,dy:0,t0:0,sx:0,sy:0,moved:false}; let zoom=1, zoomTarget=1; const ptrs=new Map(); let pinchD0=0, pinchZ0=1, pinchMid=null; let moveTarget=null;
 // Kamera gezinme: iki parmakla sürükle / sağ tuşla sürükle; karakter yürüyünce kamera ona döner
 const camPan=new THREE.Vector3(); let follow=true; let panDrag=null; const recenterEl=$('recenter');
-function worldPerPx(){ const portrait=innerHeight>innerWidth; const halfW=portrait?13:22; return 2*halfW*zoom/innerWidth; }
+// ekranın kısa kenarı her zaman aynı genişlikte dünya gösterir: telefon dönünce dünya büyüyüp küçülmez, sadece yanlar açılır
+function viewHalfW(){ const a=innerWidth/Math.max(1,innerHeight); return a<1?13:Math.max(22,13*a); }
+function worldPerPx(){ return 2*viewHalfW()*zoom/innerWidth; }
 function panBy(dxPx,dyPx){ const k=worldPerPx(); const cy=Math.cos(YAW), sn=Math.sin(YAW); camPan.x-=(dxPx*cy+dyPx*sn)*k; camPan.z-=(-dxPx*sn+dyPx*cy)*k; const lim=WORLD+10; camPan.x=clamp(camPan.x,-lim-player.g.position.x,lim-player.g.position.x); camPan.z=clamp(camPan.z,-lim-player.g.position.z,lim-player.g.position.z); follow=false; recenterEl.classList.add('show'); }
 function recenter(){ follow=true; recenterEl.classList.remove('show'); }
 recenterEl.addEventListener('click',()=>{ audio(); recenter(); });
@@ -1864,7 +1938,7 @@ function offline6(sec,out){
   if(revealed('coast')){ if(boats.length||rg('boat')>0){ const n=boatWantN(); const trip=2*(isleDock(0).distanceTo(PIER_B))/boatSpd()+4.7; const before=pileVal(coastPile); pileAdd(coastPile,n*sec/trip*tripValue()); out.gold+=Math.round(pileVal(coastPile)-before); out.boat=Math.round(n*sec/trip); } const want=Math.min(chestMax()-chests.filter(c=>!c.open).length,Math.floor(sec/chestEvery())); for(let i=0;i<want;i++) spawnChest(true); if(want>0) out.chests=want; }
   if(revealed('snow')){ const cr=sec*(cminers.length*2/6.5+cdRate()); const sold=Math.min((S.rg.crysIn||0)+cr,sec/jewSellT()); S.rg.crysIn=Math.max(0,Math.min(crysCap(),(S.rg.crysIn||0)+cr-sold)); const before=pileVal(snowPile); pileAdd(snowPile,sold*crysPrice()); out.gold+=Math.round(pileVal(snowPile)-before); out.crystal=Math.round(cr); }
   return out; }
-function offlineRows6(o){ return `${o.herb?`<div><span>Otacı ve mantar tarlası</span><b>+${o.herb} mantar${o.potions?` · 🧪 ${o.potions}`:''}</b></div>`:''}${o.iron?`<div><span>Madenci, matkap ve ocak</span><b>+${o.iron} demir</b></div>`:''}${o.boat?`<div><span>Ticaret teknesi</span><b>${o.boat} sefer</b></div>`:''}${o.crystal?`<div><span>Kristalci ve matkap</span><b>+${o.crystal} kristal</b></div>`:''}${o.chests?`<div><span>Sahile vuran sandık</span><b>${o.chests} sandık seni bekliyor!</b></div>`:''}`; }
+function offlineRows6(o){ return `${o.herb?`<div><span>Otacı ve mantar tarlası</span><b>+${o.herb} mantar${o.potions?` · 🧪 ${o.potions}`:''}</b></div>`:''}${o.iron?`<div><span>Madenci, matkap ve ocak</span><b>+${o.iron} demir</b></div>`:''}${o.boat?`<div><span>Ticaret teknesi</span><b>${o.boat} sefer</b></div>`:''}${o.crystal?`<div><span>Kristalci ve matkap</span><b>+${o.crystal} kristal</b></div>`:''}${o.chests?`<div><span>Sahilde seni bekleyen sandık</span><b>🎁 ${o.chests}</b></div>`:''}`; }
 // ----- rehber (yeni bölgeler) -----
 function regionGuide6(mode){ const p=player.g.position; const near=(list)=>{ let best=null,bd=1e9; for(const n of list){ if(!n.alive||n.claimed) continue; const d=Math.hypot(n.pos.x-p.x,n.pos.z-p.z); if(d<bd){ bd=d; best=n; } } return best; };
   if(mode==='carry'){ if((S.ore||0)>0&&revealed('iron')) return {t:FORGE_FRONT,text:'Cevheri demirciye götür'}; if((S.crystal||0)>0&&revealed('snow')) return {t:JEW_FRONT,text:'Kristali kuyumcuya götür'}; if((S.herb||0)>0&&revealed('swamp')) return {t:SHUT_FRONT,text:'Mantarı otacıya götür'}; return null; }
@@ -2059,7 +2133,7 @@ function updatePlayer(dt){
   const tipEl=$('tip'); let tip='';
   if(placing) tip='';
   else if(introT<7&&S.wave===1&&S.coins===0&&S.level===1) tip = isTouch? 'Sürükle: yürü · Dokun: oraya git · İki parmak: yakınlaştır' : 'WASD ile yürü · Tıkla: oraya git · Tekerlek: yakınlaştır';
-  tipEl.textContent=tip; tipEl.classList.toggle('hide',!tip);
+  if(tip&&tipEl.textContent!==tip) tipEl.textContent=tip; tipEl.classList.toggle('hide',!tip);
   introT+=dt;
 }
 let moveStuck=0, trampleT=0, guideTarget=null;
@@ -2072,9 +2146,17 @@ function updateGuide(target,text,dt){
   const pulse=1+Math.sin(performance.now()/160)*0.08; guide.arrow.scale.set(pulse,pulse,1);
   guide.ring.visible=true; guide.ring.position.set(target.x,0.05,target.z); guide.ring.rotation.z+=dt*1.5; const rs=1+Math.sin(performance.now()/220)*0.1; guide.ring.scale.set(rs,rs,1);
   guide.pin.visible=true; guide.pin.position.set(target.x,4.2+Math.sin(performance.now()/200)*0.25,target.z);
-  guide.el.style.display='block'; guide.el.textContent = near? text : `${text} · ${Math.round(dist)} m`;
-  v3.set(target.x,5.1,target.z).project(camera); const gw2=guide.el.offsetWidth/2+8; guide.el.style.left=clamp((v3.x+1)/2*innerWidth,gw2,innerWidth-gw2)+'px'; guide.el.style.top=clamp((1-v3.y)/2*innerHeight,50,innerHeight-40)+'px';
+  guide.el.style.display='block'; const gtxt=near? text : `${text} · ${Math.round(dist)} m`; if(guide.el.textContent!==gtxt) guide.el.textContent=gtxt;
+  v3.set(target.x,5.1,target.z).project(camera); const gw2=guide.el.offsetWidth/2+8, gh=guide.el.offsetHeight+8;
+  const gx=clamp((v3.x+1)/2*innerWidth,gw2,innerWidth-gw2); let gy=clamp((1-v3.y)/2*innerHeight,50,innerHeight-40);
+  // yazı ekranın kenarına yapışınca üstteki sayaçların / alttaki düğmelerin altında kalmasın: engelin dışına kaydır
+  const obs=hudObstacles(); for(let pass=0;pass<2;pass++) for(const r of obs){ if(gx+gw2-8<r.left-4||gx-gw2+8>r.right+4||gy<r.top-4||gy-gh>r.bottom+4) continue; gy= (r.top+r.bottom<innerHeight)? r.bottom+gh+4 : r.top-6; }
+  guide.el.style.left=gx+'px'; guide.el.style.top=clamp(gy,gh,innerHeight-4)+'px';
 }
+let hudRects=[], hudRectT=-1;
+function hudObstacles(){ const now=performance.now(); if(now-hudRectT<250) return hudRects; hudRectT=now; hudRects=[];
+  for(const el of document.querySelectorAll('.hud .left,.hud .right,#mini,#muteBtn,#kingBtn,#nightBtn,#placeBar,#recenter,.fishUI')){ const r=el.getBoundingClientRect(); if(r.width>1&&r.height>1) hudRects.push(r); }
+  return hudRects; }
 
 // ---------- Kapılar ----------
 function updateGates(dt){
@@ -2209,11 +2291,14 @@ function drawMini(){ if(!miniBase) drawMiniBase(); const N=132; const px=v=>(v+W
   for(const w of workers) dot(w.guy.g.position.x,w.guy.g.position.z,'#fff8e7',1.6); for(const c of collectors) dot(c.guy.g.position.x,c.guy.g.position.z,'#fff8e7',1.6); for(const so of soldiers) dot(so.guy.g.position.x,so.guy.g.position.z,'#3d63c9',1.8); for(const e of enemies){ if(!e.dead) dot(e.g.position.x,e.g.position.z,'#d63a3a',e.boss?3:2); }
   if(plan&&(!waveActive||spawnQueue>0)){ for(const s of SIDES){ if(!plan.cnt[s]) continue; const [gx,gz]=sidePos(s,0,6); mctx.fillStyle='#d63a3a'; mctx.font='bold 11px sans-serif'; mctx.textAlign='center'; mctx.fillText('!',px(gx),px(gz)+4); } }
   const p=player.g.position; dot(p.x,p.z,'#ffd23f',3); mctx.strokeStyle='#2b3a2e'; mctx.lineWidth=1; mctx.beginPath(); mctx.arc(px(p.x),px(p.z),3,0,7); mctx.stroke();
-  const portrait=innerHeight>innerWidth; const hw=(portrait?13:22)*zoom, hh=hw*innerHeight/innerWidth; mctx.strokeStyle='rgba(255,255,255,.85)'; mctx.lineWidth=1; mctx.strokeRect(px(camTarget.x-hw),px(camTarget.z-hh),px(camTarget.x+hw)-px(camTarget.x-hw),px(camTarget.z+hh)-px(camTarget.z-hh)); }
+  const hw=viewHalfW()*zoom, hh=hw*innerHeight/innerWidth; mctx.strokeStyle='rgba(255,255,255,.85)'; mctx.lineWidth=1; mctx.strokeRect(px(camTarget.x-hw),px(camTarget.z-hh),px(camTarget.x+hw)-px(camTarget.x-hw),px(camTarget.z+hh)-px(camTarget.z-hh)); }
 miniEl.addEventListener('pointerdown',e=>{ e.stopPropagation(); audio(); const r=miniEl.getBoundingClientRect(); const wx=((e.clientX-r.left)/r.width)*2*WORLD-WORLD, wz=((e.clientY-r.top)/r.height)*2*WORLD-WORLD; const p=player.g.position; camPan.set(wx-p.x,0,wz-p.z); follow=false; recenterEl.classList.add('show'); });
 // ---------- Döngü ----------
-function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; const portrait=h>w; const halfW=portrait?13:22; const dist=camOff.length(); const hf=2*Math.atan(halfW/dist); camera.fov=2*Math.atan(Math.tan(hf/2)/camera.aspect)*180/Math.PI; camera.updateProjectionMatrix(); }
+function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; const halfW=viewHalfW(); const dist=camOff.length(); const hf=2*Math.atan(halfW/dist); camera.fov=2*Math.atan(Math.tan(hf/2)/camera.aspect)*180/Math.PI; camera.updateProjectionMatrix(); }
 addEventListener('resize',resize); resize();
+// telefon döndürülünce: bazı telefonlar yeni ekran boyunu biraz geç bildirir, birkaç kez yeniden ölç
+function resizeSoon(){ resize(); for(const t of [120,350,800]) setTimeout(resize,t); }
+addEventListener('orientationchange',resizeSoon); if(window.visualViewport) visualViewport.addEventListener('resize',resize); if(screen.orientation&&screen.orientation.addEventListener) screen.orientation.addEventListener('change',resizeSoon);
 let last=performance.now(); const camTarget=new THREE.Vector3(); const camPos=new THREE.Vector3();
 function tick(dt){ gameT+=dt; updateGateMarks(dt); updatePlayer(dt); updateTrees(dt); updateRocks(dt); updateWorkers(dt); updateSoldiers(dt); updateTowers(dt); updatePads(dt); updateEnemies(dt); updateProjectiles(dt); updateBalls(dt); updateGates(dt); updateFliers(dt); updateChips(dt); updateCoins(dt); updateLoot(dt); updateCustomers(dt); updateCollectors(dt); updateTraderNpc(dt); updateFx(dt); updateRegions(dt); }
 function frame(now){
@@ -2234,7 +2319,7 @@ function frame(now){
   renderer.render(scene,camera);
 }
 requestAnimationFrame(frame);
-window.__dbg={p7:{showBossWheel,showQuests,questEvent,ensureQuests,dawnRepair,ships,eArrows,bossChests,isWinter,get slowT(){ return slowT; }},get night(){ return night; },set night(v){ night=v; applyNight(v); },p6:{fogSides,chests,spawnChest,openChest,boats,mushNodes,oreNodes,crysNodes,herbalists,miners,cminers,SHUT_FRONT,FORGE_FRONT,JEW_FRONT,CAUL,FORGE,JEW,lampPosts,fogK,SC,CU,PIER_B:PIER_END,castle,bossPhase,SW,IR,CO,SN,swampPile,coastPile,snowPile},bubblePadId:()=>bubblePad&&bubblePad.def.id+":"+(bubblePad.needLeave?"NL":"")+(playerMoving?"MV":""),carts,QCUT,MILL,RC,QC,animals,hunters,HHUT_FRONT,MC,nextSefer,restartSefer,revealRegion,offlineRun,showOffline,regionGuide,get pileFish(){ return S.rg.fishPile||0; },FS,fishers,DOCK_END,HUT_FRONT,fishPile,rebuildT:rebuildTowers,placeSpotRaw:(x,z)=>{ const r=placeSpot(x,z); return r.ok&&Math.hypot(r.x-x,r.z-z)<0.01; },cancelPlacing,rocksArr:()=>rocks,S,D,damageEnemy,killEnemy,player,trees,enemies,workers,soldiers,towers,pads,coins,loot,customers,plan:()=>plan,get waveActive(){return waveActive;},get waveT(){return waveT;},set waveT(v){waveT=v;},get runOver(){return runOver;},set runOver(v){runOver=v;},get placing(){return placing;},get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},get guideTarget(){return guideTarget;},get zoom(){return zoom;},set zoom(v){zoom=v;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},camera,camOff,camTarget,camPan,tick,startWave,resetRun,showMap,showCardPick,levelWon,gateBroken,placeSpot,placeGhostAt,confirmPlace,instantBuy,sidePos,setBack,setPile,setStonePile,dropCoins,addWorker,addSoldier,makeEnemy,expandBase,nightHp,nightCount,celebrate,STALL,DEPOT,get H(){return H;},startPlay};
+window.__dbg={cards:{showWinCard,showFailCard,showEndCard},p7:{showBossWheel,showQuests,questEvent,ensureQuests,dawnRepair,ships,eArrows,bossChests,isWinter,get slowT(){ return slowT; }},get night(){ return night; },set night(v){ night=v; applyNight(v); },p6:{fogSides,chests,spawnChest,openChest,boats,mushNodes,oreNodes,crysNodes,herbalists,miners,cminers,SHUT_FRONT,FORGE_FRONT,JEW_FRONT,CAUL,FORGE,JEW,lampPosts,fogK,SC,CU,PIER_B:PIER_END,castle,bossPhase,SW,IR,CO,SN,swampPile,coastPile,snowPile},bubblePadId:()=>bubblePad&&bubblePad.def.id+":"+(bubblePad.needLeave?"NL":"")+(playerMoving?"MV":""),carts,QCUT,MILL,RC,QC,animals,hunters,HHUT_FRONT,MC,nextSefer,restartSefer,revealRegion,offlineRun,showOffline,regionGuide,get pileFish(){ return S.rg.fishPile||0; },FS,fishers,DOCK_END,HUT_FRONT,fishPile,rebuildT:rebuildTowers,placeSpotRaw:(x,z)=>{ const r=placeSpot(x,z); return r.ok&&Math.hypot(r.x-x,r.z-z)<0.01; },cancelPlacing,rocksArr:()=>rocks,S,D,damageEnemy,killEnemy,player,trees,enemies,workers,soldiers,towers,pads,coins,loot,customers,plan:()=>plan,get waveActive(){return waveActive;},get waveT(){return waveT;},set waveT(v){waveT=v;},get runOver(){return runOver;},set runOver(v){runOver=v;},get placing(){return placing;},get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},get guideTarget(){return guideTarget;},get zoom(){return zoom;},set zoom(v){zoom=v;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},camera,camOff,camTarget,camPan,tick,startWave,resetRun,showMap,showCardPick,levelWon,gateBroken,placeSpot,placeGhostAt,confirmPlace,instantBuy,sidePos,setBack,setPile,setStonePile,dropCoins,addWorker,addSoldier,makeEnemy,expandBase,nightHp,nightCount,celebrate,STALL,DEPOT,get H(){return H;},startPlay};
 }
 
 </script>
