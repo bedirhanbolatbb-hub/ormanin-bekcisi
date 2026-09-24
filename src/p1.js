@@ -22,17 +22,21 @@ document.documentElement.lang=LANG; if(LANG==='en'){ document.title='Forest Keep
 const SAVE_KEY='ormanin-bekcisi-v8'; const OLD_KEY='ormanin-bekcisi-v7';
 const WAVES=5; const MAXL=10; const LEVELS=10;
 const LV0={axe:0,bag:0,feet:0,worker:0,stoneWorker:0,sword:0,wall:0,soldier:0,expand:0,trader:0,towerTrain:0,magnet:0,collector:0,gateLv:0,range:0,depotLv:0,workerSpd:0,price:0,soldierTrain:0,cannonTrain:0};
-const SIDES=['N','E','S','W']; const SIDE_TR={N:T('Kuzey','North'),E:T('Doğu','East'),S:T('Güney','South'),W:T('Batı','West')};
+const SIDES=['N','E','S','W']; const SIDE_TR={N:T('Kuzey','North'),E:T('Doğu','East'),S:T('Güney','South'),W:T('Batı','West'),C:T('Merkez','Central')};
 function defaultTowers(){ const t=[{k:'a',side:'C',a:0,lvl:0,fixed:true}]; for(const s of SIDES) for(const a of [-5.2,5.2]) t.push({k:'a',side:s,a,lvl:0,fixed:true}); return t; }
 // Kalıcı (meta): açılan bölüm, yıldızlar, taç, kalıcı güçlendirmeler. Bölümlük (run): her bölüm başında sıfırlanır.
 const META0={unlocked:1,stars:{},crowns:0,up:{gold:0,wall:0,arrow:0},dailyDate:'',streak:0,fails:{}};
 function runState(level){ return { fish:0, meat:0, planks:0, iron:0, ore:0, herb:0, crystal:0, rg:{}, revealed:{forest:true}, book:{fish:{},hunt:{},boss:{},chest:{}}, lastSeen:0, coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
 const S = Object.assign(runState(1), { muted:false, meta:JSON.parse(JSON.stringify(META0)) });
 const store={ get:k=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem(k); }catch(e){} if(v==null){ try{ v=localStorage.getItem(k); }catch(e){} } return v; }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem(k,v); }catch(e){} } };
-function load(){ try{ const j=JSON.parse(store.get(SAVE_KEY)); if(j){ Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); S.book=Object.assign({fish:{},hunt:{},boss:{},chest:{}},j.book||{}); for(const k of ['fish','hunt','boss','chest']) if(!S.book[k]||typeof S.book[k]!=='object') S.book[k]={}; S.rg=(j.rg&&typeof j.rg==='object')?j.rg:{}; S.revealed=Object.assign({forest:true},j.revealed||{}); if(typeof S.snd!=='number') S.snd=S.muted?2:0; return; } }catch(e){}
+function load(){ try{ let j=JSON.parse(store.get(SAVE_KEY)); if(j){
+  // gece ortasında kapatıldıysa: gece başındaki kayda dön, gece baştan başlar (yarım gecenin ganimeti/altını tekrar toplanamaz)
+  const sn=j.nightSnap; if(j.nightOn&&!j.failed&&!j.won&&sn&&typeof sn==='object'&&sn.level===j.level&&sn.wave===j.wave) j=Object.assign(sn,{snd:j.snd,muted:j.muted,lastSeen:j.lastSeen,revived:j.revived,reviveLv:j.reviveLv,minGate:Math.min(...[sn.minGate,j.minGate].map(v=>typeof v==='number'?v:1)),nightOn:false,nightSnap:null,nightRe:1},j.revived&&!sn.revived&&j.meta?{meta:j.meta}:{}); // yıldız için en kötü sur anı korunur; bu gece reklamla dönüldüyse kayıptan gelen taç/sayaç (meta) korunur
+  Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); S.book=Object.assign({fish:{},hunt:{},boss:{},chest:{}},j.book||{}); for(const k of ['fish','hunt','boss','chest']) if(!S.book[k]||typeof S.book[k]!=='object') S.book[k]={}; S.rg=(j.rg&&typeof j.rg==='object')?j.rg:{}; S.revealed=Object.assign({forest:true},j.revealed||{}); if(typeof S.snd!=='number') S.snd=S.muted?2:0; return; } }catch(e){}
   // eski kayıttan geçiş: taç ve kalıcı güçlendirmeler korunur, krallık 1. seferden kurulur
   try{ const o=JSON.parse(store.get(OLD_KEY)); if(o&&o.meta){ S.meta.crowns=o.meta.crowns||0; S.meta.up=Object.assign({gold:0,wall:0,arrow:0},o.meta.up||{}); S.muted=!!o.muted; S.snd=S.muted?2:0; S.meta.dailyDate=o.meta.dailyDate||''; S.meta.streak=o.meta.streak||0; } }catch(e){} }
-function save(){ if(S.started) S.lastSeen=Date.now(); store.set(SAVE_KEY, JSON.stringify(S)); }
+let saveHook=null; // p4: gün sayacı ve yerdeki altın her kayıtta güncel yazılır
+function save(){ if(saveHook) try{ saveHook(); }catch(e){} if(S.started) S.lastSeen=Date.now(); store.set(SAVE_KEY, JSON.stringify(S)); }
 load();
 const gw=()=>(S.level-1)*WAVES+S.wave;
 // Gece arası güç kartları (bölüm boyunca geçerli, üst üste eklenir)
@@ -43,16 +47,27 @@ const CARDS={
   pony:{n:T('Çevik Midilli','Nimble Pony'),d:T('Midilli %15 daha hızlı','Pony 15% faster'),i:'🥕'}, axe:{n:T('Güçlü Balta','Strong Axe'),d:T('Ağaçları %30 daha hızlı kesersin','Chop trees 30% faster'),i:'🪓'}, lumber:{n:T('Odun Bereketi','Wood Galore'),d:T('Her ağaç +2 odun verir','+2 wood per tree'),i:'🌲'},
   magnet:{n:T('Mıknatıs','Magnet'),d:T('Altın ve ganimet %60 daha uzaktan gelir','Gold and loot pickup range +60%'),i:'🧲'}, trade:{n:T('Pazarlık','Haggling'),d:T('Miğferler %30 daha pahalı satılır','Helmets sell for 30% more'),i:'🤝'}, gold:{n:T('Hazine Sandığı','Treasure Chest'),d:T('Hemen altın kazan','Instant gold'),i:'💰'},
 };
+// kart ancak etkileyeceği bir şey varsa sunulur (topçu yokken Barut, asker yokken Talimli Asker çıkmaz)
+const CARD_NEED={arrow:()=>S.towers.some(t=>t.k!=='c'&&t.lvl>=1), rate:()=>CARD_NEED.arrow(), range:()=>S.towers.some(t=>t.lvl>=1), powder:()=>S.towers.some(t=>t.k==='c'&&t.lvl>=1), drill:()=>(S.lv.soldier||0)>0};
+const cardUseful=k=>!!CARDS[k]&&(!CARD_NEED[k]||CARD_NEED[k]());
+// ekonomi kartları da duruma bakar: odun bolken balta/odun kartı, altın yığılmışken hazine/pazarlık çıkmaz (etkisi yok denecek kadar az)
+const woodWanted=()=>S.wood+S.logs<300||(revealed('river')&&S.wood<400)||pads.some(pd=>padVisible(pd)&&!pd.locked&&padRes(pd)==='wood'&&!padAvail(pd));
+function goldRich(){ const ga=40+25*S.wave+10*S.level; let need=0; for(const pd of pads){ if(padVisible(pd)&&!pd.locked&&padRes(pd)==='gold') need=Math.max(need,padCost(pd)-(S.paid[pd.def.id]||0)); } return S.coins>=Math.max(15*ga,2*need); }
+Object.assign(CARD_NEED,{axe:woodWanted, lumber:woodWanted, gold:()=>!goldRich(), trade:()=>!goldRich()});
+const CARD_FIGHT=['arrow','rate','range','powder','wall','mend','sword','drill','trample'];
 const cc=k=>(S.cards&&S.cards[k])||0; const mu=k=>(S.meta&&S.meta.up&&S.meta.up[k])||0;
+// F7: kahramanın kılıcı seferle güçlenir (eskiden 1. seferdeki 9'da kalıyordu, geç seferlerde düşman canının %1'i): gece saldırılan kapıda durmak her seferde hissedilir
+const heroK=()=>1+1.5*Math.max(0,(S.level|0)-1);
 const hasPerk=k=>cc({arrows:'rate',mason:'mend',gold:'trade',lumber:'lumber',magnet:'magnet',cannon:'powder',trample:'trample'}[k]||k)>0;
 const D = {
   chopRate:()=>4.0*(1+0.3*cc('axe'))*(isWinter()?0.72:1), treeHits:()=>1, logsPerTree:()=>4+2*cc('lumber'),
   cap:()=>40+15*S.lv.feet, speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>3.8*(1+0.6*cc('magnet')), lootPrice:()=>(8+gw()*1.5+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
-  swordDmg:()=>9*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'),
+  swordDmg:()=>9*heroK()*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'),
   gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.1*mu('wall'))*(1+0.12*(S.lv.ironWall||0))), towerDmg:l=>(5+3*(l-1))*(1+0.25*cc('arrow'))*(1+0.08*mu('arrow'))*(1+0.1*(S.lv.ironArrow||0)), towerRange:()=>17+3*cc('range'), towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*(1+0.4*cc('powder')), soldierDmg:()=>8*(1+0.4*cc('drill')),
 };
 // Kapı sayısı: bölümün gecesine ve bölüm numarasına göre açılır
-const sidesActive=()=>Math.min(4,1+Math.floor((S.wave-1)/2)+Math.floor((S.level-1)/2));
+// F7: kapılar seferler arasında yeniden kapanmaz: 1. sefer 1-1-2-3-3 (patron gecesinde yeni kapı yok), 2. sefer 1. seferin 3 kapısıyla başlar (4. kapı 3. gecede), sonra hep 4
+const GATE_PLAN={1:[1,1,2,3,3],2:[3,3,4,4,4]}; const sidesActive=()=>{ const g=GATE_PLAN[S.level]; return g?g[Math.max(0,Math.min(4,S.wave-1))]:4; };
 const sidesShown=()=>Math.min(4,sidesActive()+1);
 
 // ---------- Ses ----------
@@ -115,6 +130,8 @@ sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.02; sun.shadow.camera.updatePro
 scene.add(sun); scene.add(sun.target);
 
 const mat=(c,extra)=>new THREE.MeshLambertMaterial(Object.assign({color:c},extra||{}));
+/* F6: count=0 olan InstancedMesh hiç çizilmez (boş sırt yığını/raf her karede 2 boş çizim çağrısıydı): katman maskesi 0 olur */
+Object.defineProperty(THREE.InstancedMesh.prototype,'count',{configurable:true,get(){ return this._cnt; },set(v){ this._cnt=v; if(this.layers) this.layers.mask=v>0?1:0; }});
 const M={
   trunk:mat(0x8a5a36), leaf:mat(0xffffff), log:mat(0xc98d4e), logEnd:mat(0xf0cd9c),
   wood:mat(0xb5803f), woodDark:mat(0x7d5124), plank:mat(0xd2a15e), stone:mat(0xa8a49c), stoneDark:mat(0x7f7b74), stoneBlue:mat(0x8a93a6), bush:mat(0x4fa66a), flower:mat(0xffffff),
@@ -133,6 +150,20 @@ const G={
 };
 function mesh(g,m,sx,sy,sz,shadow){ const o=new THREE.Mesh(g,m); o.scale.set(sx,sy,sz); o.castShadow=shadow!==false; o.receiveShadow=true; return o; }
 function mergeGeos(list){ const pos=[],nor=[]; for(const g of list){ const gg=g.index?g.toNonIndexed():g; const p=gg.attributes.position.array, n=gg.attributes.normal.array; for(let i=0;i<p.length;i++){ pos.push(p[i]); nor.push(n[i]); } } const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); return geo; }
+/* F6: grubun doğrudan çocuğu olan durağan ağları malzemeye göre tek ağda birleştirir (çizim çağrısı ve gölge çağrısı azalır). Gruplar (canlı parçalar), sprite, instanced ve keep içindekiler dokunulmaz */
+function bakeStatic(root,keep){ root.updateMatrixWorld(true); const inv=new THREE.Matrix4().copy(root.matrixWorld).invert(), B=new Map();
+  for(const c of root.children){ if((keep&&keep.has(c))||!c.isMesh||c.isInstancedMesh||!c.visible||Array.isArray(c.material)||c.material.map||!c.geometry.attributes.normal||c.geometry.attributes.color) continue; const k=c.material.uuid+(c.castShadow?'s':'')+(c.receiveShadow?'r':''); let e=B.get(k); if(!e) B.set(k,e={m:c.material,cs:c.castShadow,rs:c.receiveShadow,l:[]}); e.l.push(c); }
+  for(const e of B.values()){ if(e.l.length<2) continue; const gs=e.l.map(c=>{ const g=c.geometry.index?c.geometry.toNonIndexed():c.geometry.clone(); g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,c.matrixWorld)); return g; }); const m=new THREE.Mesh(mergeGeos(gs),e.m); gs.forEach(g=>g.dispose()); m.castShadow=e.cs; m.receiveShadow=e.rs; m.userData.baked=true; for(const c of e.l) root.remove(c); root.add(m); } return root; }
+/* F6: karakter parçaları: grubun doğrudan çocuğu olan düz renkli ağlar köşe renkli tek ağ olur (kişi başına ~20 yerine ~9 çizim). Işıltılı/saydam/dokulu malzemeler ayrı kalır */
+const M_VC=new THREE.MeshLambertMaterial({vertexColors:true}); const VC_CACHE=new Map();
+function bakeVC(root){ root.updateMatrixWorld(true); const inv=new THREE.Matrix4().copy(root.matrixWorld).invert(), B={};
+  for(const c of root.children){ const m=c.material; if(!c.isMesh||c.isInstancedMesh||!c.visible||!m||Array.isArray(m)||!m.isMeshLambertMaterial||m.map||m.transparent||m.vertexColors||(m.emissive&&m.emissive.getHex()!==0)||!c.geometry.attributes.normal) continue; (B[c.castShadow?'s':'n']=B[c.castShadow?'s':'n']||[]).push(c); }
+  for(const k in B){ const l=B[k]; if(l.length<2) continue; const mats=l.map(c=>new THREE.Matrix4().multiplyMatrices(inv,c.matrixWorld)); const key=k+l.map((c,i)=>c.geometry.uuid+c.material.color.getHexString()+mats[i].elements.map(v=>Math.round(v*1000)).join(',')).join('|'); let geo=VC_CACHE.get(key);
+    if(!geo){ const pos=[],nor=[],col=[]; l.forEach((c,j)=>{ const g=c.geometry.index?c.geometry.toNonIndexed():c.geometry.clone(); g.applyMatrix4(mats[j]); const P=g.attributes.position.array, N=g.attributes.normal.array, C=c.material.color; for(let i=0;i<P.length;i+=3){ pos.push(P[i],P[i+1],P[i+2]); nor.push(N[i],N[i+1],N[i+2]); col.push(C.r,C.g,C.b); } g.dispose(); });
+      geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3)); if(VC_CACHE.size<400) VC_CACHE.set(key,geo); else geo.userData.own=true; }
+    for(const c of l) root.remove(c); const m=new THREE.Mesh(geo,M_VC); m.castShadow=k==='s'; m.receiveShadow=true; if(geo.userData.own) m.userData.baked=true; root.add(m); } return root; } /* aynı görünüşlü karakterler (düşman türleri, işçiler) aynı birleşik geometriyi paylaşır: her gece yeni düşman bellek sızdırmaz */
+function bakeGuy(g){ for(const r of [g.root,g.legL,g.legR,g.armL,g.armR]) if(r) bakeVC(r); return g; }
+function disposeBaked(root){ root.traverse(o=>{ if(o.userData&&o.userData.baked&&o.geometry) o.geometry.dispose(); }); }
 const m4=new THREE.Matrix4(), q=new THREE.Quaternion(), e3=new THREE.Euler(), vs=new THREE.Vector3(), vp=new THREE.Vector3(), v3=new THREE.Vector3();
 function instanced(geo,material,items,shadow){ const im=new THREE.InstancedMesh(geo,material,Math.max(1,items.length)); items.forEach((it,i)=>{ e3.set(it.rx||0,it.ry||0,it.rz||0); q.setFromEuler(e3); vp.set(it.x,it.y||0,it.z); vs.set(it.sx||it.s||1,it.sy||it.s||1,it.sz||it.s||1); m4.compose(vp,q,vs); im.setMatrixAt(i,m4); if(it.c!==undefined) im.setColorAt(i,new THREE.Color(it.c)); }); im.count=items.length; im.castShadow=shadow!==false; im.receiveShadow=true; scene.add(im); return im; }
 
@@ -170,14 +201,16 @@ const REG={
   dark:{sefer:10,name:T('Kara Kale','Black Castle'),job:T('Son kuşatma','Final siege'),c:[0,-86],r:9,clear:20},
 };
 const QUARRIES=[[41,39],[49,47]];
+/* F6: Demir Dağı zirveleri [x,z,yarıçap,yükseklik]: içlerinde ağaç çıkmaz, oyuncu içine giremez (p6 aynı listeyle çizer) */
+const IRON_PEAKS=(()=>{ const c=REG.iron.c, L=Math.hypot(c[0],c[1]), dx=-c[0]/L, dz=-c[1]/L; return [[-15,-14,9,13],[-19,-4,11,16],[-17,8,9,12],[-24,-12,12,18],[-25,5,13,20],[-22,17,10,14],[-13,19,7,9],[-12,-22,7,10]].map(([d,s,r,h])=>[c[0]+dx*d-dz*s,c[1]+dz*d+dx*s,r,h]); })();
 // Yük arabası yolları (ağaçsız, toprak) ve nehir
-const CART_PATHS=[[[34,29],[32,14],[31,4]],[[-37,-35],[-33,-18],[-31,-4]],[[17,-54],[9,-38],[4,-28]]];
+const CART_PATHS=[[[34,29],[32,14],[31,4]],[[-37,-35],[-33,-18],[-31,-4]],[[13.8,-57.6],[11.3,-54],[9,-38],[4,-28]]]; /* F6: demir arabası ped sırasının yanından geçer, üstünden değil */
 const SEA={x:100,z:100,r:30};
 const RIVER=[[-100,-30],[-70,-36],[-52,-40],[-42,-42],[-38,-52],[-34,-70],[-30,-100]];
 function polyDist(P,x,z){ let best=1e9; for(let i=0;i<P.length-1;i++){ const [ax,az]=P[i],[bx,bz]=P[i+1]; const dx=bx-ax,dz=bz-az; const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1); const d=Math.hypot(ax+dx*t-x,az+dz*t-z); if(d<best) best=d; } return best; }
 function nearQuarry(x,z,m){ return QUARRIES.some(qq=>Math.hypot(x-qq[0],z-qq[1])<m); }
 function inRegClear(x,z){ for(const k in REG){ const R=REG[k]; if(Math.hypot(x-R.c[0],z-R.c[1])<R.clear) return true; } return false; }
-function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5) && !inRegClear(x,z) && polyDist(RIVER,x,z)>4.5+pad && Math.hypot(x-SEA.x,z-SEA.z)>SEA.r+3+pad && !CART_PATHS.some(P=>polyDist(P,x,z)<3+pad); }
+function freeSpot(x,z,pad){ return !nearBase(x,z,5.5) && !IRON_PEAKS.some(k=>Math.hypot(x-k[0],z-k[1])<k[2]*0.92+pad) && roadDist(x,z)>4.2+pad && !nearQuarry(x,z,7.5) && !inRegClear(x,z) && polyDist(RIVER,x,z)>4.5+pad && Math.hypot(x-SEA.x,z-SEA.z)>SEA.r+3+pad && !CART_PATHS.some(P=>polyDist(P,x,z)<3+pad); }
 
 let groundTex=null;
 function paintGround(){
