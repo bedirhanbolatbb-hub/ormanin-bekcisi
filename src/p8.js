@@ -43,7 +43,7 @@ function powerOn(P,pos){ if(!P) return; P.flashT=1.2; const at=pos||P.g.getWorld
 function updatePosts(dt){ for(const P of MFX.posts){ P.t+=dt; let op=0.55, sc=0.27; const st=P.state;
     if(st==='on'){ op=0.45+0.2*Math.sin(P.t*3); } else if(st==='wait'){ op=Math.sin(P.t*6)>0?0.85:0.12; } else if(st==='full'){ op=0.75+0.2*Math.sin(P.t*9); sc=0.3; } else op=0.15;
     if(P.flashT>0){ P.flashT=Math.max(0,P.flashT-dt); op=Math.min(1,op+P.flashT*1.5); sc+=P.flashT*0.3; }
-    P.gl.material.opacity=op; P.bulb.scale.setScalar(sc); P.pole.rotation.y=0.35*Math.sin(P.t*2.6); } }
+    P.gl.material.opacity=op; if(st==='full') P.bulb.scale.set(sc*0.72,sc*2.1,sc*0.72); else P.bulb.scale.setScalar(sc); /* FX3: dolu lamba uzun çubuk (renk körü: biçimle de ayrılır) */ P.pole.rotation.y=0.35*Math.sin(P.t*2.6); } }
 
 // --- yığına eklenen ürün küçük bir sıçramayla belirir ---
 function setStack(im,n){ n=Math.max(0,Math.min(im.instanceMatrix.count,Math.floor(n||0))); if(n===im.count) return;
@@ -65,11 +65,11 @@ function updateArcs(dt){ for(let i=MFX.arcs.length-1;i>=0;i--){ const A=MFX.arcs
 
 // --- para: art arda toplanan altınlar yarım ton yükselen sesle (zincir kısa bir boşlukta sıfırlanır) ---
 let coinChainN=0, coinChainT=0;
-function coinChime(){ const now=performance.now(); coinChainN=(now-coinChainT<380)?Math.min(14,coinChainN+1):0; coinChainT=now; const f=880*Math.pow(2,coinChainN/12); tone(f,f*1.45,0.11,'sine',0.055); }
+function coinChime(){ const now=performance.now(); coinChainN=(now-coinChainT<380)?Math.min(14,coinChainN+1):0; coinChainT=now; const f=880*Math.pow(2,coinChainN/12); tone(f,f*1.45,0.11,'sine',0.1); tone(f*2,f*2.9,0.06,'sine',0.025); } /* FX4: para sesi kesme/savaş seslerinin altında kalıyordu */
 
 // oyun zamanıyla ertelenen iş (duraklatınca / reklamda bekler; setTimeout gibi gerçek saatle kaçmaz)
 const LATER=[]; function later(sec,fn){ LATER.push({t:sec,fn}); }
-function updateLater(dt){ for(let i=LATER.length-1;i>=0;i--){ const L=LATER[i]; L.t-=dt; if(L.t<=0){ LATER.splice(i,1); try{ L.fn(); }catch(e){} } } }
+function updateLater(dt){ for(let i=LATER.length-1;i>=0;i--){ const L=LATER[i]; L.t-=dt; if(L.t<=0){ LATER.splice(i,1); try{ L.fn(); }catch(e){ console.error(e); } } } }
 function updateMachineFx(dt){ updateLater(dt); updateBelts(dt); updatePosts(dt); updatePops(dt); updatePulses(dt); updateArcs(dt); }
 
 // yığındaki i. yerin konumu (ebeveyn koordinatında)

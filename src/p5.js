@@ -27,11 +27,11 @@ function makePile(pos,capFn){ const g=new THREE.Group(); g.position.copy(pos); c
 function pileVal(P){ return (S.rg[P.id]||0); }
 function pileAdd(P,v){ const cap=P.capFn(); S.rg[P.id]=Math.min(cap,(S.rg[P.id]||0)+v); }
 function updatePiles(dt){ const p=player.g.position; for(const P of piles){ if(!P.g.visible) continue; const v=pileVal(P), cap=P.capFn(); const n=v<=0?0:Math.min(64,Math.max(1,Math.ceil(v/cap*64))); if(P.im.count!==n){ P.im.count=n; }
-    P.full=v>=cap-0.5; const key=Math.floor(v)+'|'+P.full; if(key!==P.key){ P.key=key; P.L.el.innerHTML=v<1?'':'💰 '+Math.floor(v)+(P.full?' <b class="full">MAX</b>':''); P.L.el.style.display=v<1?'none':''; } P.L.hide=v<1;
-    if(v>=1&&Math.hypot(p.x-P.pos.x,p.z-P.pos.z)<2.6){ P.t-=dt; if(P.t<=0){ P.t=0.05; const take=Math.max(1,Math.min(v,Math.max(4,v/10))); S.rg[P.id]=v-take; questEvent('pile',take); fly(P.pos.clone().setY(0.8+n*0.02),player.g,()=>{ S.coins+=take; coinPop(); },false,5); if(coinSfxT<=0){ coinSfxT=0.06; SFX.coin(); } } } } }
+    P.full=v>=cap-0.5; const key=Math.floor(v)+'|'+P.full; if(key!==P.key){ P.key=key; P.L.el.innerHTML=v<1?'':'💰 '+fmtN(v)+(P.full?' <b class="full">'+T('DOLU','MAX')+'</b>':''); P.L.el.style.display=v<1?'none':''; } P.L.hide=v<1;
+    if(v>=1&&Math.hypot(p.x-P.pos.x,p.z-P.pos.z)<2.6){ P.t-=dt; if(P.t<=0){ P.t=0.05; const take=Math.max(1,Math.min(v,Math.max(4,v/10))); S.rg[P.id]=v-take; S.coins+=take; /* FX1: alınır alınmaz sayılır (uçan altın sayfa kapanınca kaybolmaz) */ questEvent('pile',take); fly(P.pos.clone().setY(0.8+n*0.02),player.g,()=>{ sellGain+=take; coinPop(); },false,5); if(coinSfxT<=0){ coinSfxT=0.06; SFX.coin(); } } } } }
 
 // ----- kilitli bölgeler: bulut örtüsü + tabela; sefer kazanınca törenle açılır -----
-const REG_IC={lake:'🎣',meadow:'🦌',quarry:'⛏️',river:'🪚',swamp:'🍄',iron:'⚒️',coast:'⚓',snow:'💎',dark:'🏰'};
+const REG_IC={lake:'🎣',meadow:'🦌',quarry:'⛏️',river:'🌊',swamp:'🍄',iron:'⚒️',coast:'⚓',snow:'💎',dark:'🏰'};
 const regionFx={};
 function buildClouds(id){ const R=REG[id]; const g=new THREE.Group(); g.position.set(R.c[0],0,R.c[1]); const n=Math.round(10+R.r*1.1); const puffs=[];
   for(let i=0;i<n;i++){ const a=i/n*6.283+rand(-.2,.2), rr=rand(0.2,1)*R.r; const s=rand(3.2,5.6); const m=new THREE.Mesh(G.sph,M.cloud); m.scale.set(s,s*0.62,s); m.position.set(Math.cos(a)*rr,s*0.35+rand(0,1.2),Math.sin(a)*rr); m.castShadow=false; m.receiveShadow=true; g.add(m); puffs.push({m,y0:m.position.y,ph:rand(0,6)}); }
@@ -49,7 +49,7 @@ function updateRegionFx(dt){ const t=performance.now()/1000; for(const id in reg
       else if(r.t<(RC.T||3.2)){ camPan.copy(tgt); const k=clamp((r.t-1.2)/1.6,0,1); for(const pf of F.puffs){ const s0=pf.s0||(pf.s0=pf.m.scale.x); const s=s0*(1-k*k); pf.m.scale.set(Math.max(0.001,s),Math.max(0.001,s*0.62),Math.max(0.001,s)); pf.m.position.y+=dt*6*k; } M.cloud.opacity=0.96;
         if(!r.boom&&r.t>1.25){ r.boom=true; F.L.hide=true; /* F9b: kilit tabelası bulut dağılınca kalkar */ if(id==='dark'){ SFX.doom(); DOOM=1.8; camShake=0.8; for(let i=0;i<10;i++) burst(new THREE.Vector3(R.c[0]+rand(-R.r,R.r),2,R.c[1]+rand(-R.r,R.r)),10,i%2?M.darkRoof:M.cloud,1.4,2.2); burst(new THREE.Vector3(4.2,9,-89),30,M.enemy,2.2,1.8); } /* F9b: Kara Kale kutlanmaz: uğursuz vuruş, kırmızı ışık, altın sütun yok */
           else { SFX.fanfare(); camShake=0.5; for(let i=0;i<8;i++) burst(new THREE.Vector3(R.c[0]+rand(-R.r,R.r),2,R.c[1]+rand(-R.r,R.r)),10,M.cloud,1.4,2.2); celebrate(new THREE.Vector3(R.c[0],0,R.c[1]),1.6); } }
-        if(!r.ban&&r.t>1.6){ r.ban=true; if(id==='dark') banner(T('KARA KALE','THE BLACK CASTLE'),T('🏰 Kara Kral bekliyor · son sefer','🏰 The Black King awaits · the final chapter'),'boss'); else banner(T('Yeni bölge: '+R.name,'New region: '+R.name),(REG_IC[id]||'')+' '+R.job,'day'); } }
+        if(!r.ban&&r.t>1.6){ r.ban=true; if(id==='dark') banner(T('KARA KALE','THE BLACK CASTLE'),T('🏰 Kara Kral bekliyor · son sefer','🏰 The Black King awaits · the final chapter'),'boss'); else banner(R.name,T('Yeni bölge','New region')+' · '+(REG_IC[id]||'')+' '+R.job,'day'); } }
       else { F.g.visible=false; F.L.hide=true; for(const pf of F.puffs){ if(pf.s0) pf.m.scale.set(pf.s0,pf.s0*0.62,pf.s0); } F.rev=null; if(RC.z) zoomTarget=r.z0; recenter(); if(r.cb) setTimeout(r.cb,300); } } } }
 function regionCollide(p){ for(const id in REG){ if(revealed(id)) continue; const R=REG[id]; const dx=p.x-R.c[0], dz=p.z-R.c[1], d=Math.hypot(dx,dz), rr=R.r+2.2; if(d<rr&&d>0.001){ p.x=R.c[0]+dx/d*rr; p.z=R.c[1]+dz/d*rr; } }
   if(revealed('lake')) lakeCollide(p); collide6(p); propCollide(p); }
@@ -144,7 +144,7 @@ let hutT=0, fishDropT=0;
 function updateHut(dt){ if(!revealed('lake')) return; lakeFx(dt); const st=S.rg.hutFish||0; setStack(hutFish,Math.min(24,st)); hutT-=dt;
   if(st>=1&&hutT<=0&&pileVal(fishPile)<fishPile.capFn()-0.5){ hutT=hutSellT(); const b=(S.rg.hutB||0)/st; S.rg.hutFish=st-1; stat('fish'); S.rg.hutB=st>1?Math.max(0,(S.rg.hutB||0)-b):0; const v=fishPrice()*(1+b); pileAdd(fishPile,v); if(b>=0.9) floatText(fishPile.pos.clone().setY(1.2),'+'+Math.round(v),'green'); pulse(hut,0.05); fly(HUT.clone().setY(1.4),fishPile.pos.clone().setY(0.8),null,false,4); }
   const p=player.g.position; if(S.fish>0&&Math.hypot(p.x-HUT_FRONT.x,p.z-HUT_FRONT.z)<3.0){ fishDropT-=dt; if(fishDropT<=0&&(S.rg.hutFish||0)<hutCap()){ fishDropT=0.06; const b=takeFishB(); S.fish--; setBack(player); S.rg.hutFish=(S.rg.hutFish||0)+1; S.rg.hutB=(S.rg.hutB||0)+b; fly(p.clone().setY(1.6),HUT.clone().setY(1.3),null,'fish',5); SFX.sell(); } }
-  const k=(S.rg.hutFish||0)+'|'+hutCap()+'|'+rg('fishhut'); if(hutLbl._k!==k){ hutLbl._k=k; const full=(S.rg.hutFish||0)>=hutCap(); hutLbl.el.innerHTML=`🐟 ${Math.floor(S.rg.hutFish||0)}/${hutCap()}${full?' <b class="full">MAX</b>':''}`; } }
+  const k=(S.rg.hutFish||0)+'|'+hutCap()+'|'+rg('fishhut'); if(hutLbl._k!==k){ hutLbl._k=k; const full=(S.rg.hutFish||0)>=hutCap(); hutLbl.el.innerHTML=`🐟 ${Math.floor(S.rg.hutFish||0)}/${hutCap()}${full?' <b class="full">'+T('DOLU','MAX')+'</b>':''}`; } }
 // nadir balık değeri: sırttaki ve dükkândaki balıkların 'sazan üstü' değer toplamı (fishB / rg.hutB). Satışta ortalama pay eklenir
 function takeFishB(){ const n=S.fish||0, b=n>0?Math.max(0,S.fishB||0)/n:0; S.fishB=n>1?Math.max(0,(S.fishB||0)-b):0; return b; }
 function toHut(from,n){ for(let i=0;i<n;i++) later(i*0.14,()=>lakeToBin(from.clone())); }
@@ -166,7 +166,7 @@ function catchFish(f,qual){ FS.state='cool'; FS.t=0.55; fishUI.style.display='no
   questEvent('fish',1); S.book.fish[f.k]=(S.book.fish[f.k]||0)+1; const first=S.book.fish[f.k]===1; floatText(player.g.position,(qual>0.8?T('Mükemmel! ','Perfect! '):'')+f.n,first?'green':''); if(first&&f.k!=='sazan'&&f.k!=='levrek'){ banner(T('Yeni tür: '+f.n,'New species: '+f.n),T('📖 Deftere eklendi','📖 Added to book'),'day'); SFX.fanfare(); }
   if(f.v>=3){ camShake=0.25; celebrate(from.clone().setY(0),0.6); } }
 function updateFishing(dt){ const p=player.g.position; const nearPier=revealed('coast')&&Math.hypot(p.x-PIER_END.x,p.z-PIER_END.z)<1.9, nearDock=revealed('lake')&&Math.hypot(p.x-DOCK_END.x,p.z-DOCK_END.z)<1.9; const loc=nearPier?'sea':nearDock?'lake':(FS.loc||'lake'); if(loc!==FS.loc){ if(FS.state!=='idle') endFishing(); FS.loc=loc; } const onDock=nearPier||nearDock; const can=onDock&&!playerMoving&&(S.fish||0)<fishCap()&&!nearestEnemy(p,6)&&!document.querySelector('.intro');
-  if(!can){ if(FS.state!=='idle') endFishing(); if(onDock&&(S.fish||0)>=fishCap()&&!playerMoving){ FS.fullT=(FS.fullT||0)-dt; if(FS.fullT<=0){ FS.fullT=2.5; floatText(p,'MAX','red'); } } return; }
+  if(!can){ if(FS.state!=='idle') endFishing(); if(onDock&&(S.fish||0)>=fishCap()&&!playerMoving){ FS.fullT=(FS.fullT||0)-dt; if(FS.fullT<=0){ FS.fullT=2.5; floatText(p,T('DOLU','MAX'),'red'); } } return; }
   rodMesh.visible=true; if(FS.loc==='sea') player.g.rotation.y=Math.atan2(SC.x-p.x,SC.z-p.z); else player.g.rotation.y=Math.atan2(-LDIR.x,-LDIR.z);
   if(FS.state==='idle'){ FS.state='cast'; FS.t=0; FS.spot=fishSpot(); bob.visible=true; fishLine.visible=true; SFX.slash(); }
   const tip=new THREE.Vector3(); rodMesh.getWorldPosition(tip); tip.y+=0.9;
@@ -251,11 +251,12 @@ const EREG={rod:[3,1,10,55,G1], fisher:[2,1,3,90,1.9], net:[2,1,10,180,G1], fish
 // ayar katsayıları (tam sefer benzetimiyle ayarlandı: yeni açılan seviyeler ≈ seferin gelirinin %60-90'ı; kaynak seviyeleri ≈ o kaynağın sefer üretimi)
 const ECK={gold:1.8, base:1.0, wood:1.2, plank:1, stone:1, iron:1};
 const ERES=(r,ok)=>ok?r:'gold';
+const WOOD_CAP=()=>250+60*S.level; /* FX2: bölge odun seviyeleri en çok 250+60×sefer (sefer 10: 850): geç oyunda altın seviyeleri odun kapısında birikmesin */
 function econRegion(d){ const E=EREG[d.id]; const c0=E[3], g=E[4];
   if(d.id==='ironArrow'||d.id==='ironWall'){ d.res='iron'; d.cost=l=>Math.round(ECK.iron*c0*Math.pow(g,l)); return; }
   // Sv0 kuruluş ve Sv3 genişletme odunla (odunun sona dek kullanımı), Sv4+ çift seviyeler kereste, gerisi altın
   d.res=l=>(l===0||l===3)?'wood':(l>=4&&l%2===0)?ERES('plank',revealed('river')):'gold';
-  d.cost=l=>{ const r=d.res(l); return r==='wood'?Math.round(ECK.wood*c0*(l===0?1:Math.pow(g,l-1))):r==='plank'?Math.round(ECK.plank*(25+0.1*c0)*Math.pow(1.5,(l-4)/2)):Math.round(ECK.gold*c0*Math.pow(g,l-1)); }; }
+  d.cost=l=>{ const r=d.res(l); return r==='wood'?Math.round(Math.min(ECK.wood*c0*(l===0?1:Math.pow(g,l-1)),WOOD_CAP())):r==='plank'?Math.round(ECK.plank*(25+0.1*c0)*Math.pow(1.5,(l-4)/2)):Math.round(ECK.gold*c0*Math.pow(g,l-1)); }; }
 // kule: Sv0 odun, 1-5 altın (eskisi gibi), 6 taş, 7 altın, 8 kereste, 9 altın, 10 demir, 11 taş (kaynağın bölgesi açık değilse altın)
 const ETW=['gold','gold','gold','gold'], ETC={stone:110,plank:60,iron:16,gold:700}; /* F9a: 13+ kule seviyeleri altınla (×1.3/seviye): taş+kereste sura, demir Delici Ok/Demir Kapı'ya kalır; sabit gelirli kaynakta seviye duvarı olmaz */
 function econTower(d){ const t=S.towers[d.ti]; const cK=()=>t.k==='c'?1.6:t.side==='C'?1.3:1;
@@ -287,7 +288,8 @@ function padBlockOf(pd){ const d=pd.def, dn=BN_DOWN[d.id]; if(!dn||!revealed(d.g
 // rehber: Haraç yalnız gerçek fazlalıkta (altın ≥ 2× fiyat) önerilir
 // kulelerin taş seviyesi suru aç bırakmasın: sur taşla yükseltilebiliyorken rehber taşı önce sura yollar (sur canı kulelerden önce gelir)
 function guideSkip(pd){ if(pd.def.id==='tribute') return waveActive||S.coins<padCost(pd)*2; /* gece hiç: kapıyı savun */ if(pd.def.kind==='tower'&&padRes(pd)==='stone'){ const w=padById.wall; if(w&&padVisible(w)&&padRes(w)==='stone'&&(!endless()||padCost(w)-(S.paid[w.def.id]||0)<=1.5*S.stone)) return true; } return false; } /* F9a: sonsuzda sur hep bir üst seviye ister: kule taşı yalnız sur alınabilirken bekler */
-function blockHint(pd){ const dp=padById[pd.block]; const n=dp?dp.def.name:''; return T(`⬆ Önce ${n} yükselt: şu an çıktıyı o sınırlıyor`,`⬆ Upgrade the ${n} first: it limits the output now`); }
+function blockHint(pd){ const dp=padById[pd.block]; const n=dp?dp.def.name:''; return T(`⬆ Önce şunu geliştir: ${n} (üretimi o yavaşlatıyor)`,`⬆ Upgrade the ${n} first: it's slowing production`); }
+function blockShort(pd){ const dp=padById[pd.block]; const n=dp?dp.def.name:''; return T(`⬆ Önce geliştir: ${n}`,`⬆ First upgrade: ${n}`); } /* FX3: rehber hapı için kısa biçim */
 let BN=new Set(); // şu an darboğaz olan (önce yükseltilmesi gereken) ped kimlikleri
 function applyCaps(){ const L=S.level; const bn=new Set(); for(const pd of pads){ const d=pd.def; econPatch(d); d.max=capOf(d,L); pd.block=null; } for(const pd of pads){ const b=padBlockOf(pd); if(b){ pd.block=b; bn.add(b); } } BN=bn; }
 // Kraliyet Haracı: bankada gerçekten işe yaramayan altın için tekrarlanabilir yutak; her ödeme 1 taç, fiyatı her seferinde yükselir
@@ -332,7 +334,7 @@ function updateHHut(dt){ if(!revealed('meadow')) return; meadowFx(dt); const st=
   if(rg('smoke')>0){ const sm=smoke.find(s=>s.t<=0); if(Math.random()<dt*6){ const s=sm||(()=>{ const m=new THREE.Mesh(G.sph,new THREE.MeshLambertMaterial({color:0xdddddd,transparent:true,opacity:0.7,depthWrite:false})); scene.add(m); const o={m,t:0}; smoke.push(o); return o; })(); s.t=2.2; s.m.position.copy(chimneyTop).add(new THREE.Vector3(rand(-.2,.2),0,rand(-.2,.2))); s.m.visible=true; } }
   for(const s of smoke){ if(s.t<=0){ s.m.visible=false; continue; } s.t-=dt; const k=1-s.t/2.2; s.m.position.y+=dt*1.4; s.m.position.x+=dt*0.4; s.m.scale.setScalar(0.25+k*0.9); s.m.material.opacity=0.6*(1-k); }
   const p=player.g.position; if((S.meat||0)>0&&Math.hypot(p.x-HHUT_FRONT.x,p.z-HHUT_FRONT.z)<3.0){ meatDropT-=dt; if(meatDropT<=0&&(S.rg.huntMeat||0)<hhutCap()){ meatDropT=0.06; S.meat--; setBack(player); S.rg.huntMeat=(S.rg.huntMeat||0)+1; fly(p.clone().setY(1.6),HHUT.clone().setY(1.3),null,'meat',5); SFX.sell(); } }
-  const k=(S.rg.huntMeat||0)+'|'+hhutCap()+'|'+rg('smoke'); if(hhutLbl._k!==k){ hhutLbl._k=k; const full=(S.rg.huntMeat||0)>=hhutCap(); hhutLbl.el.innerHTML=`🍖 ${S.rg.huntMeat||0}/${hhutCap()}${full?' <b class="full">MAX</b>':''}`; } }
+  const k=(S.rg.huntMeat||0)+'|'+hhutCap()+'|'+rg('smoke'); if(hhutLbl._k!==k){ hhutLbl._k=k; const full=(S.rg.huntMeat||0)>=hhutCap(); hhutLbl.el.innerHTML=`🍖 ${S.rg.huntMeat||0}/${hhutCap()}${full?' <b class="full">'+T('DOLU','MAX')+'</b>':''}`; } }
 function toHHut(from,n){ for(let i=0;i<n;i++) later(i*0.11,()=>{ if((S.rg.huntMeat||0)>=hhutCap()) return; S.rg.huntMeat=(S.rg.huntMeat||0)+1; fly(from.clone(),HHUT.clone().setY(1.3),null,'meat',2.2); }); }
 // ----- hayvanlar -----
 function animalMesh(k){ const g=new THREE.Group(); const b=new THREE.Group(); g.add(b); const legs=[]; let head;
@@ -342,14 +344,14 @@ function animalMesh(k){ const g=new THREE.Group(); const b=new THREE.Group(); g.
     if(deer){ const neck=mesh(G.box,mat(col),0.26,0.55,0.26); neck.position.set(0,L+0.5,0.5); neck.rotation.x=-0.4; b.add(neck); const tail=mesh(G.box,mat(0xffffff),0.14,0.2,0.1,false); tail.position.set(0,L+0.4,-0.62); b.add(tail); if(Math.random()<0.6||k==='ak_geyik'){ for(const s of [-1,1]){ const an=mesh(G.cyl,mat(k==='ak_geyik'?0xffd23f:0xe8d6b0),0.04,0.5,0.04,false); an.position.set(0.12*s,0.4,-0.05); an.rotation.z=-0.4*s; const tip=an.clone(); tip.position.set(0.25*s,0.55,0.05); tip.rotation.z=0.6*s; tip.scale.y=0.6; head.add(an,tip); } } }
     else { const sn=mesh(G.box,mat(0x7a5a48),0.28,0.22,0.2); sn.position.set(0,-0.08,0.32); const t1=mesh(G.cone,mat(0xfff4dc),0.05,0.2,0.05,false); t1.position.set(0.12,-0.02,0.38); t1.rotation.x=-0.6; const t2=t1.clone(); t2.position.x=-0.12; head.add(sn,t1,t2); const mane=mesh(G.box,mat(0x3a2a20),0.2,0.2,0.9,false); mane.position.set(0,L+0.62,0); b.add(mane); }
     for(const [x,z] of [[-0.18,0.4],[0.18,0.4],[-0.18,-0.4],[0.18,-0.4]]){ const lg=new THREE.Group(); lg.position.set(x*(deer?1:1.4),L,z*(deer?1.1:1)); const lm=mesh(G.box,mat(deer?0x8a5a30:0x3a2a20),0.12,L,0.12); lm.position.y=-L/2; lg.add(lm); b.add(lg); legs.push(lg); } b.add(body,head); }
-  return {g,b,legs,head,ph:rand(0,6)}; }
+  blobAdd(g,0.6); return {g,b,legs,head,ph:rand(0,6)}; } /* FX4: yuvarlak gölge */
 const animals=[]; let spawnAT=0;
 function spawnAnimal(){ let tot=0; for(const h of HUNT) tot+=h.w; let r=Math.random()*tot, H=HUNT[0]; for(const h of HUNT){ r-=h.w; if(r<=0){ H=h; break; } } const a=rand(0,6.28), rr=rand(3,MD.r-1); const m=animalMesh(H.k); m.g.position.set(MC.x+Math.cos(a)*rr,0,MC.z+Math.sin(a)*rr); m.g.rotation.y=rand(0,6); m.g.scale.setScalar(0.01); scene.add(m.g); animals.push({H,m,hp:H.hp,tx:null,tz:null,wait:rand(0,2),pop:0,hit:0,claimed:null}); }
-function killAnimal(a,byHunter){ const i=animals.indexOf(a); if(i>=0) animals.splice(i,1); scene.remove(a.m.g); const pos=a.m.g.position.clone(); burst(pos.clone().setY(0.6),10,M.meat,1.1); SFX.die();
+function killAnimal(a,byHunter){ const i=animals.indexOf(a); if(i>=0) animals.splice(i,1); scene.remove(a.m.g); const pos=a.m.g.position.clone(); burst(pos.clone().setY(0.6),10,M.meat,1.1); sfxAt(pos).die();
   const n=Math.max(1,Math.round(a.H.meat*(1+0.25*rg('bow')))); S.book.hunt[a.H.k]=(S.book.hunt[a.H.k]||0)+1; const first=S.book.hunt[a.H.k]===1;
   if(byHunter){ toHHut(pos.clone().setY(0.6),n); }
   else { questEvent('hunt',1); const got=Math.max(0,Math.min(n,meatCap()-(S.meat||0)-meatFly)); meatFly+=got; for(let j=0;j<got;j++){ setTimeout(()=>fly(pos.clone().setY(0.6),player.g,()=>{ meatFly=Math.max(0,meatFly-1); if((S.meat||0)<meatCap()){ S.meat=(S.meat||0)+1; setBack(player); } },'meat',3.2),j*70); } floatText(pos,T(a.H.n+' +'+got+' et',a.H.n+' +'+got+' meat')+(got<n?' · MAX':''),first?'green':got<n?'red':''); if(first&&a.H.k!=='tavsan'){ banner(T('Yeni av: '+a.H.n,'New prey: '+a.H.n),T('📖 Deftere eklendi','📖 Added to book'),'day'); SFX.fanfare(); } if(a.H.k==='ak_geyik'){ celebrate(pos,1); camShake=0.3; } } }
-function hurtAnimal(a,dmg,byHunter){ a.hp-=dmg; a.hit=0.2; SFX.hit(); if(a.hp<=0) killAnimal(a,byHunter); }
+function hurtAnimal(a,dmg,byHunter){ a.hp-=dmg; a.hit=0.2; sfxAt(a.m.g.position).hit(); if(a.hp<=0) killAnimal(a,byHunter); }
 let huntCd=0, meatFly=0, meatFullT=0;
 function updateAnimals(dt){ const p=player.g.position; const target=7+2*rg('trap'); spawnAT-=dt; if(animals.length<target&&spawnAT<=0){ spawnAT=3.5/(1+0.25*rg('trap')); spawnAnimal(); } /* F4: tuzak av sıklığını da artırır (sabit 3.5 sn avcıları sınırlıyordu) */
   for(const a of animals.slice()){ const g=a.m.g, pos=g.position; if(a.pop<1){ a.pop=Math.min(1,a.pop+dt*2.5); g.scale.setScalar(Math.max(0.01,a.pop*(1+0.2*Math.sin(a.pop*Math.PI)))); }
@@ -395,7 +397,7 @@ function makeWolf(big){ const g=new THREE.Group(); const b=new THREE.Group(); g.
   const ear1=mesh(G.cone4,col,0.1,0.22,0.08); ear1.position.set(0.12,0.28,-0.02); const ear2=ear1.clone(); ear2.position.x=-0.12; head.add(hd,sn,nose,e1,e2,ear1,ear2); const tail=mesh(G.box,col,0.14,0.14,0.6); tail.position.set(0,0.85,-0.8); tail.rotation.x=0.6;
   b.add(body,chest,head,tail); const legs=[]; for(const [x,z] of [[-0.17,0.42],[0.17,0.42],[-0.17,-0.42],[0.17,-0.42]]){ const lg=new THREE.Group(); lg.position.set(x,0.55,z); const lm=mesh(G.box,dark,0.12,0.55,0.12); lm.position.y=-0.27; lg.add(lm); b.add(lg); legs.push(lg); }
   if(big){ const collar=mesh(G.cyl,M.enemy,0.32,0.12,0.32,false); collar.position.set(0,0.95,0.55); b.add(collar); for(let i=0;i<4;i++){ const sp=mesh(G.cone,M.metal,0.05,0.16,0.05,false); sp.position.set(-0.2+i*0.13,1.05,0.55); b.add(sp); } }
-  return {g,b,legs,head,tail,ph:rand(0,6)}; }
+  blobAdd(g,0.7); return {g,b,legs,head,tail,ph:rand(0,6)}; } /* FX4: yuvarlak gölge */
 function animWolf(w,dt,moving){ w.ph+=dt*(moving?15:3); const s=moving?Math.sin(w.ph)*0.8:0; w.legs.forEach((l,i)=>{ l.rotation.x=(i===0||i===3)?s:-s; }); w.b.position.y=moving?Math.abs(Math.sin(w.ph))*0.1:0; w.tail.rotation.y=Math.sin(w.ph*0.5)*0.4; }
 
 // =====================================================================
@@ -428,9 +430,9 @@ function avoidTowers(R){ const obs=[]; if(S.towers[0].lvl>=1) obs.push([0,0,2.8,
 const cartKey=kind=>kind==='quarry'?'qcart':kind==='iron'?'forge':'mcart'; const cartCap=kind=>10+6*rg(cartKey(kind)); const cartSpd=kind=>7+1.6*rg(cartKey(kind));
 function cartArrive(c,end){ if(c.kind==='iron') return ironArrive(c,end); const pos=c.C.g.position.clone();
   if(c.kind==='quarry'){ if(end==='A'){ const n=Math.min(Math.floor(S.rg.cutOut||0),cartCap('quarry')); if(n<=0) return false; S.rg.cutOut-=n; c.load='stone'; c.n=n; cargoShow(c.C,'stone',n); return true; }
-    if(c.n>0){ const n=c.n; for(let i=0;i<Math.min(10,n);i++) setTimeout(()=>fly(pos.clone().setY(1.2),rotPt(DEPOT,1.1,0.9,1.1),null,'stone',4),i*60); S.stone+=n; setStonePile(Math.min(18,S.stone)); floatText(pos,T('+'+n+' taş','+'+n+' stone'),''); SFX.sell(); c.n=0; cargoShow(c.C,'',0); } return true; }
+    if(c.n>0){ const n=c.n; for(let i=0;i<Math.min(10,n);i++) setTimeout(()=>fly(pos.clone().setY(1.2),rotPt(DEPOT,1.1,0.9,1.1),null,'stone',4),i*60); S.stone+=n; setStonePile(Math.min(18,S.stone)); floatText(pos,T('+'+n+' taş','+'+n+' stone'),'',{key:'dstone',v:n,fmt:v=>T('+'+v+' taş','+'+v+' stone')}); sfxAt(DEPOT).sell(); c.n=0; cargoShow(c.C,'',0); } return true; }
   // değirmen arabası: depodan odun götürür, keresteyi getirir
-  if(end==='A'){ if(c.n>0&&c.load==='plank'){ const n=c.n; for(let i=0;i<Math.min(10,n);i++) setTimeout(()=>fly(pos.clone().setY(1.2),rotPt(DEPOT,-0.4,1.0,0.6),null,'plank',4),i*60); S.planks=(S.planks||0)+n; floatText(pos,T('+'+n+' kereste','+'+n+' planks'),'green'); SFX.sell(); c.n=0; }
+  if(end==='A'){ if(c.n>0&&c.load==='plank'){ const n=c.n; for(let i=0;i<Math.min(10,n);i++) setTimeout(()=>fly(pos.clone().setY(1.2),rotPt(DEPOT,-0.4,1.0,0.6),null,'plank',4),i*60); S.planks=(S.planks||0)+n; floatText(pos,T('+'+n+' kereste','+'+n+' planks'),'green',{key:'dplank',v:n,fmt:v=>T('+'+v+' kereste','+'+v+' planks')}); sfxAt(DEPOT).sell(); c.n=0; }
     const n=Math.min(Math.max(0,S.wood-15),cartCap('mill'),Math.max(0,millInCap()-(S.rg.millIn||0))); if(n<=0&&(S.rg.millOut||0)<1){ cargoShow(c.C,'',0); return false; } if(n>0){ S.wood-=n; setPile(Math.min(24,S.wood)); c.load='log'; c.n=n; cargoShow(c.C,'log',n); } else { c.load=null; c.n=0; cargoShow(c.C,'',0); } return true; }
   if(c.load==='log'&&c.n>0){ S.rg.millIn=(S.rg.millIn||0)+c.n; for(let i=0;i<Math.min(8,c.n);i++) setTimeout(()=>fly(pos.clone().setY(1.2),MILL_IN.clone().setY(0.8),null,true,4),i*60); }
   const out=Math.min(Math.floor(S.rg.millOut||0),cartCap('mill')); S.rg.millOut=(S.rg.millOut||0)-out; c.load=out>0?'plank':null; c.n=out; cargoShow(c.C,out>0?'plank':'',out); return true; }
@@ -460,7 +462,7 @@ const cutLbl=addLabel(QCUT,'',4.0); cutLbl.near=-1; cutLbl.el.classList.add('mac
 const cutRate=()=>rg('cutter')/2.6; // saniyede taş
 const cutCap=()=>30+20*rg('cutter');
 function updateCutter(dt){ const l=rg('cutter'); cutter.visible=l>0; cutLbl.hide=l<=0; if(l<=0) return; const full=cutterFx(dt,l);
-  setStack(cutStack,Math.min(24,Math.floor(S.rg.cutOut||0))); const k=Math.floor(S.rg.cutOut||0)+'|'+l+'|'+full; if(cutLbl._k!==k){ cutLbl._k=k; cutLbl.el.innerHTML=`🪨 ${Math.floor(S.rg.cutOut||0)}/${cutCap()}${full?' <b class="full">MAX</b>':''}`; } }
+  setStack(cutStack,Math.min(24,Math.floor(S.rg.cutOut||0))); const k=Math.floor(S.rg.cutOut||0)+'|'+l+'|'+full; if(cutLbl._k!==k){ cutLbl._k=k; cutLbl.el.innerHTML=`<span class="stone-dot"></span> ${Math.floor(S.rg.cutOut||0)}/${cutCap()}${full?' <b class="full">'+T('DOLU','MAX')+'</b>':''}`; } }
 const QPADS=[
   {id:'cutter', grp:'quarry', ord:1, name:T('Taş Kesme Tezgâhı','Stone Cutter'), desc:T('Makine: taş kendiliğinden kesilir','Machine: auto-cuts stone'), res:'gold', pos:()=>{ const v=qat(QD.r+5,-5.2); return [v.x,v.z]; }, kind:'up', key:'cutter', cost:l=>Math.round(260*Math.pow(1.7,l)), max:5, show:()=>revealed('quarry'), onBuy:()=>{ if(!carts.some(c=>c.kind==='quarry')) addCart('quarry'); cutter.scale.setScalar(1+0.06*(rg('cutter')-1)); celebrate(QCUT.clone(),1.4); camShake=0.4; if(CUT.post) powerOn(CUT.post); CUT.acc=99; }},
   {id:'qcart', grp:'quarry', ord:2, lock:T('Taş kesme tezgâhı','Stone Cutter'), name:T('Taş Arabası','Stone Cart'), desc:T('Araba çok taşır, hızlı gider','Bigger loads, faster cart'), res:'gold', pos:()=>{ const v=qat(QD.r+5,-2.6); return [v.x,v.z]; }, kind:'up', key:'qcart', cost:l=>Math.round(150*Math.pow(1.6,l)), max:5, show:()=>revealed('quarry')&&rg('cutter')>=1, onBuy:()=>{ const c=carts.find(c=>c.kind==='quarry'); if(c) celebrate(c.C.g.position.clone(),0.8); }},
@@ -511,17 +513,36 @@ function offRow(o,l,v,g,full){ if(!v&&!g&&!full) return; (o.rows=o.rows||[]).pus
 function sinkLeft(res){ let t=0; for(const pd of pads){ const d=pd.def; if(d.grp&&!revealed(d.grp)) continue; let sh=false; try{ sh=d.show(); }catch(e){} if(!sh||!(d.max>0)) continue; const l0=padLevel(d); for(let l=l0;l<d.max&&l<l0+12;l++){ const r=typeof d.res==='function'?d.res(l):d.res; if(r===res) t+=d.cost(l); } }
   const have=res==='wood'?S.wood+S.logs:res==='stone'?S.stone+(S.stones||0):res==='plank'?(S.planks||0):res==='iron'?(S.iron||0):0; return Math.max(0,t-have); }
 function offCap(res,sec){ return Math.floor(0.25*sinkLeft(res)*sec/3600); }
-function offlineRun(sec){ const out={sec,fish:0,gold:0,wood:0,rows:[]}; if(sec<60) return out; if(sec>2*3600){ sec=2*3600; out.sec=sec; out.capped=true; }
+// FX2: sen yokken altın GERÇEK üretim hızından ödenir (yalnız yığın kabından değil). Her zincir: canlı hız (üretim ile satış hızının küçüğü × fiyat),
+// ama bir yığın saatte en çok OFF_TURN kez dolar (dikkatli bir oyuncunun toplama sıklığı) + köy vergisi. En çok OFF_H saat sayılır; yığına düşen altın bu toplamın içindedir, kalanı kesene girer.
+const OFF_TURN=0.5, OFF_H=3;
+function offParts(){ const P=[]; const add=(l,r,P0)=>{ r=Math.min(r,P0?P0.capFn()*OFF_TURN/3600:r); if(r>0.0001) P.push({l,r}); };
+  add(T('Köy vergisi','Village taxes'),(60+30*gw())/3600);
+  if(revealed('lake')) add(T('Balıkçılar ve ağlar','Fishers & nets'),Math.min(fishers.length/7+netRate(),1/hutSellT())*fishPrice(),fishPile);
+  if(revealed('meadow')) add(T('Avcılar ve tuzaklar','Hunters & traps'),Math.min(hunters.length*2/10+trapRate()*2,1/hhutSellT())*meatPrice(),meatPile);
+  if(typeof offParts6==='function') offParts6(add);
+  return P; }
+function offRate(){ return offParts().reduce((a,p)=>a+p.r,0); } /* altın/sn, çevrimdışı */
+window.__offRate=()=>({rate:offRate(),parts:offParts()});
+function offlineRun(sec){ const out={sec,fish:0,gold:0,wood:0,rows:[]}; const gift=typeof dailyGift==='function'&&S.started?dailyGift():0; if(gift){ out.gift=gift; out.streak=S.meta.streak||1; } /* FX2: günlük hediye dönüşte verilir (Krallık ekranına gizlenmez) */
+  if(sec<60){ if(gift) out.rows.push({gift:1}); return out; } const sec0=sec, gsec=Math.min(sec,OFF_H*3600), orate=offRate(); if(sec>2*3600){ sec=2*3600; } out.sec=gsec; out.capped=sec0>OFF_H*3600;
   if(revealed('lake')){ const rate=fishers.length/7+netRate(); if(rate>0){ const r=offChain(sec,rate,'hutFish',hutCap(),hutSellT(),fishPrice(),fishPile,'hutB'); out.fish=r.made; out.gold+=r.gold; offRow(out,T('Balıkçılar ve ağlar','Fishers & nets'),r.made?T(`+${r.made} balık`,`+${r.made} fish`):'',r.gold,r.full); } }
   if(revealed('meadow')){ const rate=hunters.length*2/10+trapRate()*2; if(rate>0){ const r=offChain(sec,rate,'huntMeat',hhutCap(),hhutSellT(),meatPrice(),meatPile); out.meat=r.made; out.gold+=r.gold; offRow(out,T('Avcılar ve tuzaklar','Hunters & traps'),r.made?T(`+${r.made} et`,`+${r.made} meat`):'',r.gold,r.full); } }
   if(rg('cutter')>0&&carts.some(c=>c.kind==='quarry')){ const st0=Math.floor(sec*Math.min(cutRate(),cartThru('quarry'))*0.8), st=Math.min(st0,offCap('stone',sec)); if(st>0||st0>0){ S.stone+=st; out.stone=st; offRow(out,T('Taş kesme tezgâhı','Stone Cutter'),st>0?T(`+${st} taş`,`+${st} stone`):'',0,st<st0); } }
   const wood=Math.min(Math.round(sec/60*workers.filter(w=>w.kind!=='stone').length*9),offCap('wood',sec)+(rg('mill')>0?2*offCap('plank',sec):0)); if(wood>0){ S.wood+=wood; out.wood=wood; out.rows.unshift({l:T('Oduncular depoya','Lumberjacks to depot'),v:T(`+${wood} odun`,`+${wood} wood`)}); }
-  if(rg('mill')>0&&carts.some(c=>c.kind==='mill')){ const pl=Math.max(0,Math.floor(Math.min(sec*Math.min(millRate(),cartThru('mill')/2)*0.8,(S.wood-15)/2,offCap('plank',sec)))); if(pl>0){ S.planks=(S.planks||0)+pl; S.wood-=pl*2; out.planks=pl; offRow(out,T('Su değirmeni','Water Mill'),T(`+${pl} kereste (−${2*pl} odun)`,`+${pl} planks (−${2*pl} wood)`)); } }
+  if(rg('mill')>0&&carts.some(c=>c.kind==='mill')){ const pl=Math.max(0,Math.floor(Math.min(sec*Math.min(millRate(),cartThru('mill')/2)*0.8,(S.wood-15)/2,offCap('plank',sec)))); if(pl>0){ S.planks=(S.planks||0)+pl; S.wood-=pl*2; out.planks=pl; offRow(out,T('Su değirmeni','Water Mill'),T(`+${pl} kereste<small>−${2*pl} odun</small>`,`+${pl} planks<small>−${2*pl} wood</small>`)); } }
   setPile(Math.min(24,S.wood)); offline6(sec,out);
+  const purse=Math.max(0,Math.round(orate*gsec)-out.gold); if(purse>0){ S.coins+=purse; out.purse=purse; out.rows.push({l:T('Vergi ve satış, kesene','Taxes & sales, to your purse'),v:'',g:purse}); } out.total=out.gold+(out.purse||0); out.rate=Math.round(orate*3600); /* FX2: yığın dolsa da üretim hızı kadar altın kesene akar (en çok OFF_H saat) */
+  if(gift) out.rows.push({gift:1});
   return out; }
-function showOffline(o){ const rows=o.rows||[]; if(o.sec<60||!rows.length) return false; if(S.post||S.pendingReveal||F8busy()){ showOffline.pend=o; return false; } /* F8: patron sandığı/kazanma kartı/bölge açılışı bitene dek bekler */ const m=Math.round(o.sec/60); const card=document.createElement('div'); card.className='intro'; card.id='awayCard'; const full=rows.some(r=>r.full);
-  card.innerHTML=`<div class="card"><h1>${T('Sen yokken','While you were away')}</h1><p>${T(`${m>=60?Math.floor(m/60)+' saat '+(m%60)+' dakika':m+' dakika'} boyunca krallığın çalıştı.`,`Your kingdom worked for ${m>=60?Math.floor(m/60)+'h '+(m%60)+'m':m+' min'}.`)}${o.capped?T(' (en çok 2 saat sayılır)',' (max 2 h counted)'):''}</p><div class="away">${rows.map(r=>`<div><span>${r.l}</span><b>${[r.v,r.g?'💰 '+r.g:''].filter(x=>x).join(' · ')}${r.full?` <em class="full">${T('dolu','full')}</em>`:''}</b></div>`).join('')}</div>${o.gold?`<p class="sub">${T(`💰 ${o.gold} altın yığınlarda seni bekliyor — yanına gidip topla.`,`💰 ${o.gold} gold is waiting in the piles — go grab it.`)}</p>`:''}${full?`<p class="sub">⚠ ${T('Dolan yığın ya da depoda üretim durdu. Daha sık topla ya da dükkânı geliştir.','A pile or shop filled up and production stopped. Collect more often or upgrade the shop.')}</p>`:''}<button id="awayOk">${T('Krallığa dön','Back to Kingdom')}</button></div>`;
-  document.body.appendChild(card); $('awayOk').addEventListener('click',()=>{ audio(); card.remove(); }); return true; }
+function showOffline(o){ const rows=(o.rows||[]).filter(r=>!r.gift); const gift=o.gift||0; if(!gift&&(o.sec<60||!rows.length)) return false; if(S.post||S.pendingReveal||F8busy()){ showOffline.pend=o; return false; } /* F8: patron sandığı/kazanma kartı/bölge açılışı bitene dek bekler */ const m=Math.round(o.sec/60); const card=document.createElement('div'); card.className='intro'; card.id='awayCard'; const full=rows.some(r=>r.full), none=rows.every(r=>r.full&&!r.v&&!r.g);
+  /* FX2: dönüş kartı: başlıkta toplam altın, saatlik çevrimdışı hız, günlük hediye + 7 günlük seri */
+  const tm=m>=60?T(Math.floor(m/60)+' saat'+(m%60?' '+(m%60)+' dakika':''),Math.floor(m/60)+' h'+(m%60?' '+(m%60)+' min':'')):T(m+' dakika',m+' min');
+  const st=o.streak||S.meta.streak||1, nx=typeof giftOf==='function'?giftOf(st+1):0, pips=Array.from({length:7},(_,i)=>`<i class="${i<Math.min(7,st)?'on':''}${i===Math.min(7,st)-1?' now':''}">${i===6?'🎁':i+1}</i>`).join('');
+  const giftH=gift?`<div class="gift dgift"><div>🎁 ${T(`Günlük hediye · ${st}. gün: <b>+${gift} 👑</b>`,`Daily gift · Day ${st}: <b>+${gift} 👑</b>`)}</div><div class="streak">${pips}</div><small>${T(`Yarın gel: +${nx} 👑 · her gün artar`,`Come back tomorrow: +${nx} 👑 · grows every day`)}</small></div>`:'';
+  const awayH=rows.length&&o.sec>=60?`${o.total?`<div class="awayGold">💰 +${fmtN(o.total)}</div>`:''}<p>${T(`${tm} boyunca krallığın çalıştı.`,`Your kingdom worked for ${tm}.`)}${o.rate?T(` Sen yokken ≈${fmtN(o.rate)} altın/saat kazanır (en çok ${OFF_H} saat).`,` Away income ≈${fmtN(o.rate)} gold/h (up to ${OFF_H} h).`):''}</p><div class="away">${rows.map(r=>`<div><span>${r.l}</span><b>${[r.v,r.g?'💰 '+fmtN(r.g):''].filter(x=>x).join(' · ')}${r.full?` <em class="full">${T('dolu','full')}</em>`:''}</b></div>`).join('')}</div>${o.gold?`<p class="sub">${T(`💰 ${fmtN(o.gold)} altın yığınlarda seni bekliyor — yanına gidip topla.${o.purse?` 💰 ${fmtN(o.purse)} kesende.`:''}`,`💰 ${fmtN(o.gold)} gold is waiting in the piles — go grab it.${o.purse?` 💰 ${fmtN(o.purse)} is already in your purse.`:''}`)}</p>`:''}${none?`<p class="sub">${T('Her şey doluydu, bu yüzden üretim durdu. Yığınları topla, dükkânları geliştir.','Everything was full, so production stopped. Collect your piles and upgrade the shops.')}</p>`:full&&!o.total?`<p class="sub">⚠ ${T('Bir yığın ya da dükkân dolunca üretim durdu. Daha sık topla ya da dükkânı geliştir.','A pile or shop filled up and production stopped. Collect more often or upgrade the shop.')}</p>`:''}`:'';
+  card.innerHTML=`<div class="card"><h1>${awayH?T('Sen yokken','While you were away'):T('Tekrar hoş geldin!','Welcome back!')}</h1>${giftH}${awayH}<button id="awayOk">${T('Devam et','Continue')}</button></div>`;
+  document.body.appendChild(card); if(gift) setTimeout(()=>{ try{ SFX.fanfare(); }catch(e){} },200); $('awayOk').addEventListener('click',()=>{ audio(); card.remove(); }); return true; }
 
 // ----- rehber: taşınan balığı götür, dolan yığını topla, boşken balık tut -----
 // Her bölge için tek mantık. İş = elle topla → sırtta taşı → teslim et; satılan mal para yığınında birikir.
@@ -529,14 +550,14 @@ function showOffline(o){ const rows=o.rows||[]; if(o.sec<60||!rows.length) retur
 const GS={drop:{},pile:null,pileT:0};
 function newRegion(){ for(const id in REG) if(REG[id].sefer===S.level&&revealed(id)) return id; return null; }
 function fishDrop(){ const p=player.g.position; const whOk=revealed('coast')&&pileVal(coastPile)<coastPile.capFn()-0.5, hutOk=revealed('lake')&&(S.rg.hutFish||0)<hutCap();
-  if(whOk&&(!hutOk||p.distanceTo(WH_FRONT)<p.distanceTo(HUT_FRONT))) return {t:WH_FRONT,text:T('Balıkları limana sat','Sell fish at Harbor')}; return hutOk?{t:HUT_FRONT,text:T('Balıkları balıkhaneye götür','Take fish to Fish Shop')}:null; }
+  if(whOk&&(!hutOk||p.distanceTo(WH_FRONT)<p.distanceTo(HUT_FRONT))) return {t:WH_FRONT,text:T('Balıkları limanda sat','Sell fish at the Harbor')}; return hutOk?{t:HUT_FRONT,text:T('Balıkları balıkhaneye götür','Take fish to the Fish Shop')}:null; }
 // kaya katı: rehber kayanın oyuncuya bakan kenarını gösterir (kazma menzili 3.4)
 function rockSpot(r,p){ const dx=p.x-r.x, dz=p.z-r.z, d=Math.hypot(dx,dz)||1, k=r.s*0.8+PR+0.4; return new THREE.Vector3(r.x+dx/d*k,0,r.z+dz/d*k); }
 const jobLoad=(P,st,cap)=>(P?pileVal(P)/P.capFn():0)+(cap?st/cap:0);
 function rgJobs(){ const p=player.g.position, J=[];
   if(revealed('lake')) J.push({rg:'lake',key:'fish',n:S.fish||0,cap:fishCap(),g:()=>({t:DOCK_END,text:T('İskelede balık tut','Fish at the pier')}),d:fishDrop,P:fishPile,ok:()=>!!fishDrop(),load:jobLoad(fishPile,S.rg.hutFish||0,hutCap())});
   if(revealed('meadow')) J.push({rg:'meadow',key:'meat',n:S.meat||0,cap:meatCap(),g:()=>{ let best=null,bd=1e9; for(const a of animals){ const d=Math.hypot(a.m.g.position.x-p.x,a.m.g.position.z-p.z); if(d<bd){ bd=d; best=a; } } return best&&{t:best.m.g.position.clone(),text:T('Çayırda avlan','Hunt in the meadow')}; },
-    d:()=>(S.rg.huntMeat||0)<hhutCap()?{t:HHUT_FRONT,text:T('Eti av kulübesine götür','Take meat to Hunting Lodge')}:null,P:meatPile,ok:()=>(S.rg.huntMeat||0)<hhutCap(),load:jobLoad(meatPile,S.rg.huntMeat||0,hhutCap())});
+    d:()=>(S.rg.huntMeat||0)<hhutCap()?{t:HHUT_FRONT,text:T('Eti tütsühaneye götür','Take meat to the Smokehouse')}:null,P:meatPile,ok:()=>(S.rg.huntMeat||0)<hhutCap(),load:jobLoad(meatPile,S.rg.huntMeat||0,hhutCap())});
   if(revealed('quarry')) J.push({rg:'quarry',n:0,cap:1,intro:1,g:()=>{ const r=nearestRock(p,300); return r&&{t:rockSpot(r,p),text:T('Taş çıkar','Mine stone')}; }});
   jobs6(J); return J; }
 // yeni bölgenin elle işi bir kez denendi mi (eski kayıtlarda defterden anlaşılır)
@@ -547,14 +568,14 @@ function rgTried(id){ const t=S.tried||(S.tried={}); if(t[id]) return true; cons
 function regionGuide(mode,arg){ const p=player.g.position, J=rgJobs(); for(const j of J) if(j.key&&!(j.n>0)) delete GS.drop[j.key];
   if(mode==='intro'){ if(waveActive||S.wave>1) return null; const id=newRegion(); if(!id||rgTried(id)) return null; const j=J.find(j=>j.rg===id), g=j&&j.g(); if(g&&waveT<2*Math.hypot(g.t.x-p.x,g.t.z-p.z)/Math.max(4,D.speed())+6) return null; /* F8: gün bitmeden dönülemeyecekse yollama */ return g?{t:g.t,text:'✨ '+g.text}:null; }
   if(mode==='carry'){ const ending=!waveActive&&waveT<9; let cb=null,cd=1e9; for(const j of J){ if(!(j.n>0)||!j.d) continue; const d=j.d();
-      if(!d){ if(j.n>=j.cap&&j.P&&pileVal(j.P)>=1) return {t:j.P.pos,text:T('Yığın doldu — Altınları topla','Pile full — Collect gold')}; continue; }
+      if(!d){ if(j.n>=j.cap&&j.P&&pileVal(j.P)>=1) return {t:j.P.pos,text:T('Yığın doldu — altınları topla','Pile full — collect gold')}; continue; }
       if(!GS.drop[j.key]&&(j.n>=Math.ceil(j.cap*0.7)||ending||(!waveActive&&!j.g()))&&!(j.key==='fish'&&FS.state==='bite')) GS.drop[j.key]=1;
-      if(GS.drop[j.key]){ const P=j.P; if(P&&P.g.visible&&pileVal(P)>=P.capFn()*0.85&&P.pos.distanceTo(d.t)<14){ GS.pile=P; GS.pileT=gameT; return {t:P.pos,text:T('Yığın doldu — Altınları topla','Pile full — Collect gold'),v:()=>P.g.visible&&pileVal(P)>=3}; } const k=j.key, dd=Math.hypot(d.t.x-p.x,d.t.z-p.z); if(dd<cd){ cd=dd; cb=Object.assign({v:()=>(S[k]||0)>0},d); } } } return cb; } /* iki tür taşınıyorsa en yakın teslim yeri */
+      if(GS.drop[j.key]){ const P=j.P; if(P&&P.g.visible&&pileVal(P)>=P.capFn()*0.85&&P.pos.distanceTo(d.t)<14){ GS.pile=P; GS.pileT=gameT; return {t:P.pos,text:T('Yığın doldu — altınları topla','Pile full — collect gold'),v:()=>P.g.visible&&pileVal(P)>=3}; } const k=j.key, dd=Math.hypot(d.t.x-p.x,d.t.z-p.z); if(dd<cd){ cd=dd; cb=Object.assign({v:()=>(S[k]||0)>0},d); } } } return cb; } /* iki tür taşınıyorsa en yakın teslim yeri */
   if(mode==='pile'&&waveActive) return null;
   if(mode==='pile'){ // arg<0: yalnız dolmak üzere olan yığın (üretim durmasın) ya da zaten gidilen yığın; arg>0: alınamayan pedin eksik altını
     if(GS.pile&&(!GS.pile.g.visible||pileVal(GS.pile)<3||gameT-GS.pileT>25)) GS.pile=null;
     if(!GS.pile){ let best=null,bv=-1e9; for(const P of piles){ if(!P.g.visible) continue; const v=pileVal(P), c=P.capFn(); if(!(arg<0?v>=Math.max(20,c*0.85):v>=Math.min(c*0.5,150)||(v>=25&&v>=arg))) continue; const sc=v/c*100-Math.hypot(P.pos.x-p.x,P.pos.z-p.z)*0.3; if(sc>bv){ bv=sc; best=P; } } if(best){ GS.pile=best; GS.pileT=gameT; } }
-    const P=GS.pile; return P?{t:P.pos,text:(pileVal(P)>=P.capFn()-0.5?T('Yığın doldu — ','Pile full — '):'')+T('Altınları topla','Collect gold'),v:()=>P.g.visible&&pileVal(P)>=3}:null; }
+    const P=GS.pile; return P?{t:P.pos,text:(pileVal(P)>=P.capFn()-0.5?T('Yığın doldu — altınları topla','Pile full — collect gold'):T('Altınları topla','Collect gold')),v:()=>P.g.visible&&pileVal(P)>=3}:null; }
   if(mode==='idle'){ if(waveActive||waveT<8) return null; /* gece ve gün biterken uzak bölgeye yollama */ const id=newRegion(); const dg=j=>{ const g=j.g(); return g?Math.hypot(g.t.x-p.x,g.t.z-p.z):1e3; }; const js=J.filter(j=>!j.intro&&(j.pri||j.n<j.cap)&&(!j.ok||j.ok())).map(j=>(j.dd=dg(j),j)).sort((a,b)=>(b.pri||0)-(a.pri||0)||((b.rg===id)-(a.rg===id))||((a.load||0)+a.dd/150)-((b.load||0)+b.dd/150)); /* F6: yük eşitse yakın bölge */
     for(const j of js){ const g=j.g(); if(g) return g; } return null; }
   return null; }

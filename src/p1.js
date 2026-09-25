@@ -3,7 +3,12 @@ const CG={sdk:null,env:'none',playing:false,lastMid:0,mute:false};
 // platform ilk yayında (Basic Launch) reklamı yasaklar: reklam yalnız OB_ADS açıkken istenir
 const ADS=!!window.OB_ADS;
 function cgCall(fn){ try{ if(CG.sdk) return fn(CG.sdk); }catch(e){} }
-(async function boot(){ const s=window.CrazyGames&&window.CrazyGames.SDK; if(s){ try{ await Promise.race([s.init(),new Promise(r=>setTimeout(r,3000))]); CG.sdk=s; CG.env=s.environment||'unknown'; cgCall(k=>k.game.loadingStart()); cgCall(k=>{ CG.mute=!!(k.game.settings&&k.game.settings.muteAudio); k.game.addSettingsChangeListener(st=>{ CG.mute=!!(st&&st.muteAudio); }); }); }catch(e){} } startGame(); })();
+// FX1: SDK hazır olmadan (Data modülü okunmadan) oyun başlamaz ve buluta hiçbir şey yazılmaz: en çok 15 sn beklenir (Oyna düğmesi ⏳).
+// Süre dolarsa oyun yalnız localStorage ile açılır; SDK geç hazır olursa bulut kaydı okunur, daha ilerideyse o yüklenir (CG.onLate), değilse yereldeki buluta yazılır.
+function cgReady(s){ CG.sdk=s; CG.env=s.environment||'unknown'; cgCall(k=>{ CG.mute=!!(k.game.settings&&k.game.settings.muteAudio); k.game.addSettingsChangeListener(st=>{ CG.mute=!!(st&&st.muteAudio); }); }); }
+(async function boot(){ const s=window.CrazyGames&&window.CrazyGames.SDK; if(s){ const b=document.getElementById('startBtn'), bh=b&&b.innerHTML; if(b){ b.disabled=true; b.innerHTML='⏳'; } let ok=false; const ip=Promise.resolve().then(()=>s.init()).then(()=>{ ok=true; },()=>{});
+  await Promise.race([ip,new Promise(r=>setTimeout(r,15000))]); if(b){ b.disabled=false; b.innerHTML=bh; }
+  if(ok){ try{ cgReady(s); cgCall(k=>k.game.loadingStart()); }catch(e){} } else ip.then(()=>{ if(ok&&CG.onLate) try{ CG.onLate(s); }catch(e){} }); } startGame(); })();
 function startGame(){
 'use strict';
 const THREE = window.THREE;
@@ -17,6 +22,8 @@ const isMobile=isTouch||innerWidth<700;
 // ---------- Dil: cihaz Türkçe ise Türkçe, değilse İngilizce; oyuncu Krallık ekranından değiştirebilir ----------
 const LANG=(()=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem('ob-lang'); }catch(e){} if(v==null){ try{ v=localStorage.getItem('ob-lang'); }catch(e){} } if(v==='tr'||v==='en') return v; let si=null; try{ si=CG.sdk&&CG.sdk.user&&CG.sdk.user.systemInfo; }catch(e){} const l=String((si&&si.locale)||(navigator.languages&&navigator.languages[0])||navigator.language||'en').toLowerCase(); return l.startsWith('tr')?'tr':'en'; })();
 const T=(tr,en)=>(LANG==='tr'||en===undefined)?tr:en;
+/* FX3: büyük sayılar binlik ayraçla (80.809 / 80,809); HUD çipinde 100 binden sonrası kısa (123B / 123K) */
+const fmtN=n=>{ n=Math.floor(n||0); try{ return n.toLocaleString(LANG==='tr'?'tr-TR':'en-US'); }catch(e){ return String(n); } }, fmtC=n=>(n||0)>=1e5?fmtN((n||0)/1000)+T('B','K'):fmtN(n);
 function setLang(l){ try{ localStorage.setItem('ob-lang',l); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem('ob-lang',l); }catch(e){} }
 document.documentElement.lang=LANG; if(LANG==='en'){ document.title='Grovehold: Forest Siege'; document.querySelectorAll('[data-en]').forEach(el=>{ el.innerHTML=el.dataset.en; }); document.querySelectorAll('[data-en-aria]').forEach(el=>{ el.setAttribute('aria-label',el.dataset.enAria); }); }
 
@@ -31,15 +38,23 @@ const META0={unlocked:1,stars:{},crowns:0,up:{gold:0,wall:0,arrow:0},dailyDate:'
 function runState(level){ return { fish:0, meat:0, planks:0, iron:0, ore:0, herb:0, crystal:0, rg:{}, revealed:{forest:true}, book:{fish:{},hunt:{},boss:{},chest:{}}, lastSeen:0, coins:0, bank:0, logs:0, stones:0, stone:0, loot:0, wood:0, stall:0, wave:1, level:level||1, gateHp:150, treesCut:0, kills:0, lv:Object.assign({},LV0), towers:defaultTowers(), paid:{}, cards:{}, cardOffer:null, minGate:1, started:false }; }
 const S = Object.assign(runState(1), { muted:false, meta:JSON.parse(JSON.stringify(META0)) });
 const store={ get:k=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem(k); }catch(e){} if(v==null){ try{ v=localStorage.getItem(k); }catch(e){} } return v; }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem(k,v); }catch(e){} } };
-function load(){ try{ let j=JSON.parse(store.get(SAVE_KEY)); if(j){
+// FX1: bulut (Data modülü) ve yerel yedek (localStorage) ayrı okunur, daha ilerideki kayıt seçilir (sefer › gece › son görülme); boş/yeni kayıt dolu kaydı ezemez
+function saveRank(j){ return j&&typeof j==='object'&&j.started?[+j.level||0,+j.wave||0,+j.lastSeen||0]:null; }
+function betterSave(a,b){ const ra=saveRank(a), rb=saveRank(b); if(!rb) return ra?a:(a||b); if(!ra) return b; for(let i=0;i<3;i++){ if(ra[i]!==rb[i]) return ra[i]>rb[i]?a:b; } return a; }
+function readSave(){ let c=null, l=null; try{ if(CG.sdk&&CG.sdk.data) c=JSON.parse(CG.sdk.data.getItem(SAVE_KEY)); }catch(e){} try{ l=JSON.parse(localStorage.getItem(SAVE_KEY)); }catch(e){} return betterSave(c,l); }
+function load(){ try{ let j=readSave(); if(j){
   // F9a: gece ortasında kapatıldıysa kayıp gibi: AYNI gece baştan (kısa hazırlık gündüzüyle), eldekiler korunur; yıldız için sur o gecenin başındaki değere döner (p4 retryNight)
   const sn=j.nightSnap; if(j.nightOn&&!j.failed&&!j.won){ if(sn&&typeof sn==='object'&&sn.level===j.level&&sn.wave===j.wave&&typeof sn.minGate==='number') j.minGate=sn.minGate; j.nightOn=false; j.nightRe=1; }
   Object.assign(S,j); S.lv=Object.assign({},LV0, j.lv||{}); S.towers=Array.isArray(j.towers)&&j.towers.length>=9? j.towers : defaultTowers(); S.paid=j.paid||{}; S.cards=j.cards||{}; S.meta=Object.assign(JSON.parse(JSON.stringify(META0)),j.meta||{}); S.meta.up=Object.assign({gold:0,wall:0,arrow:0},S.meta.up||{}); S.book=Object.assign({fish:{},hunt:{},boss:{},chest:{}},j.book||{}); for(const k of ['fish','hunt','boss','chest']) if(!S.book[k]||typeof S.book[k]!=='object') S.book[k]={}; S.rg=(j.rg&&typeof j.rg==='object')?j.rg:{}; S.revealed=Object.assign({forest:true},j.revealed||{}); if(typeof S.snd!=='number') S.snd=S.muted?2:0; if(S.level>LEVELS&&!S.meta.best) S.meta.best=Math.max(0,(S.level-LEVELS-1)*WAVES+(S.wave|0)-1); /* F9a: eski sonsuz kayıtlarda rekor */ return; } }catch(e){}
   // eski kayıttan geçiş: taç ve kalıcı güçlendirmeler korunur, krallık 1. seferden kurulur
   try{ const o=JSON.parse(store.get(OLD_KEY)); if(o&&o.meta){ S.meta.crowns=o.meta.crowns||0; S.meta.up=Object.assign({gold:0,wall:0,arrow:0},o.meta.up||{}); S.muted=!!o.muted; S.snd=S.muted?2:0; S.meta.dailyDate=o.meta.dailyDate||''; S.meta.streak=o.meta.streak||0; } }catch(e){} }
 let saveHook=null; // p4: gün sayacı ve yerdeki altın her kayıtta güncel yazılır
-function save(){ if(saveHook) try{ saveHook(); }catch(e){} if(S.started) S.lastSeen=Date.now(); store.set(SAVE_KEY, JSON.stringify(S)); }
+let awayAt=0; // FX1: sekme gizliyken lastSeen ilerlemez (dönüşte çevrimdışı kazanç, p4)
+function save(){ if(CG.noSave) return; if(saveHook) try{ saveHook(); }catch(e){} if(S.started&&!awayAt) S.lastSeen=Date.now(); store.set(SAVE_KEY, JSON.stringify(S)); }
 load();
+{ const bootR=saveRank(S); CG.onLate=s=>{ let c=null; try{ c=JSON.parse(s.data.getItem(SAVE_KEY)); }catch(e){} const cr=saveRank(c); const cmp=(a,b)=>{ for(let i=0;i<a.length;i++){ if(a[i]!==b[i]) return a[i]>b[i]?1:-1; } return 0; };
+  if(cr&&(!bootR||cmp(cr,bootR)>0)&&(!S.started||cmp(cr.slice(0,2),[S.level,S.wave])>=0)){ CG.noSave=true; try{ localStorage.setItem(SAVE_KEY,JSON.stringify(c)); }catch(e){} location.reload(); return; }
+  cgReady(s); CG.playing=false; if(S.started) save(); }; }
 const gw=()=>(S.level-1)*WAVES+S.wave;
 // F9a: 10. seferden sonra Sonsuz Kuşatma: geceler tek sayaçla (Gece N), 5 gecede bir patron; istatistik sayaçları (meta.st) kalıcı
 const endless=L=>(L||S.level)>LEVELS; const eNight=(L,w)=>(L-LEVELS-1)*WAVES+w; const ENAME=()=>T('Sonsuz Kuşatma','Endless Siege');
@@ -67,9 +82,9 @@ const heroK=()=>1+1.5*Math.max(0,(S.level|0)-1);
 const hasPerk=k=>cc({arrows:'rate',mason:'mend',gold:'trade',lumber:'lumber',magnet:'magnet',cannon:'powder',trample:'trample'}[k]||k)>0;
 const D = {
   chopRate:()=>4.0*(1+0.3*cc('axe'))*(isWinter()?0.72:1), treeHits:()=>1, logsPerTree:()=>4+2*cc('lumber'),
-  cap:()=>40+15*S.lv.feet, speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>3.8*(1+0.6*cc('magnet')), lootPrice:()=>(8+gw()*1.5+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
+  cap:()=>40+15*S.lv.feet, speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>3.8*(1+0.6*cc('magnet')), lootPrice:()=>(8+gw()*1.0+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
   swordDmg:()=>9*heroK()*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'),
-  gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.1*mu('wall'))*(1+0.12*(S.lv.ironWall||0))), towerDmg:l=>(5+3*(l-1))*(1+0.25*cc('arrow'))*(1+0.08*mu('arrow'))*(1+0.1*(S.lv.ironArrow||0)), towerRange:()=>17+3*cc('range'), towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*(1+0.4*cc('powder')), soldierDmg:()=>8*(1+0.4*cc('drill')),
+  gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.05*mu('wall'))*(1+0.12*(S.lv.ironWall||0))), towerDmg:l=>(5+3*(l-1))*(1+0.25*cc('arrow'))*(1+0.04*mu('arrow'))*(1+0.1*(S.lv.ironArrow||0)), towerRange:()=>17+3*cc('range'), towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*(1+0.4*cc('powder')), soldierDmg:()=>8*(1+0.4*cc('drill')),
 };
 // Kapı sayısı: bölümün gecesine ve bölüm numarasına göre açılır
 // F7: kapılar seferler arasında yeniden kapanmaz: 1. sefer 1-1-2-3-3 (patron gecesinde yeni kapı yok), 2. sefer 1. seferin 3 kapısıyla başlar (4. kapı 3. gecede), sonra hep 4
@@ -78,34 +93,48 @@ const sidesShown=()=>Math.min(4,sidesActive()+1);
 
 // ---------- Ses ----------
 let AC=null;
-function audio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==='suspended') AC.resume(); if(AC) musicInit(); }
+function audio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&(AC.state==='suspended'||AC.state==='interrupted')) try{ AC.resume(); }catch(e){} if(AC) musicInit(); }
 let adMute=false;
+// FX1: ilk dokunuş/tık/tuş sesi açar (CrazyGames'te Oyna düğmesi atlanır; WASD ile oynayan da ses duysun; iOS touchend)
+{ const unlock=()=>{ if(adMute||document.hidden) return; audio(); }; for(const t of ['pointerdown','touchstart','touchend','mousedown','click','keydown']) addEventListener(t,unlock,{capture:true,passive:true}); }
 function sfxOff(){ return (S.snd|0)>=2||adMute||CG.mute; } function musOff(){ return (S.snd|0)>=1||adMute||CG.mute; }
-function tone(f0,f1,dur,type,vol){ if(sfxOff()||!AC) return; const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,AC.currentTime); o.frequency.exponentialRampToValueAtTime(f1,AC.currentTime+dur); g.gain.setValueAtTime(vol||0.08,AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+dur); }
-function noise(dur,vol){ if(sfxOff()||!AC) return; const n=AC.sampleRate*dur, b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.value=vol||0.25; s.connect(f).connect(g).connect(AC.destination); s.start(); }
+/* FX4: tüm efektler tek ana kanaldan (kompresör) çıkar: üst üste binen sesler patlamaz; aynı anda en çok VMAX efekt sesi; gürültü tamponu bir kez üretilir (her çağrıda yeni tampon yok); SFX_K: dünyadaki sesin oyuncuya uzaklık çarpanı (sfxAt) */
+let MASTER=null, NOISE_BUF=null, SFX_K=1, SFX_DET=0; const VMAX=24, VEND=[];
+function sfxBus(){ if(!MASTER&&AC){ try{ const c=AC.createDynamicsCompressor(); c.threshold.value=-12; c.knee.value=6; c.ratio.value=8; c.attack.value=0.003; c.release.value=0.15; MASTER=AC.createGain(); MASTER.gain.value=1; MASTER.connect(c).connect(AC.destination); }catch(e){ MASTER=AC.destination; } } return MASTER||AC.destination; }
+function voiceOk(t,dur){ if(VEND.length>=VMAX){ for(let i=VEND.length-1;i>=0;i--) if(VEND[i]<=t) VEND.splice(i,1); if(VEND.length>=VMAX) return false; } VEND.push(t+dur); return true; }
+function tone(f0,f1,dur,type,vol){ if(sfxOff()||!AC) return; const v=(vol||0.08)*SFX_K; if(v<0.003) return; const t=AC.currentTime; if(!voiceOk(t,dur)) return; const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine'; if(SFX_DET) o.detune.value=(Math.random()*2-1)*SFX_DET; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g).connect(sfxBus()); o.start(t); o.stop(t+dur); }
+function noise(dur,vol){ if(sfxOff()||!AC) return; const v=(vol||0.25)*SFX_K; if(v<0.01) return; const t=AC.currentTime; dur=Math.min(0.95,dur); if(!voiceOk(t,dur)) return; if(!NOISE_BUF){ const n=AC.sampleRate; NOISE_BUF=AC.createBuffer(1,n,AC.sampleRate); const d=NOISE_BUF.getChannelData(0); for(let i=0;i<n;i++) d[i]=Math.random()*2-1; } const s=AC.createBufferSource(); s.buffer=NOISE_BUF; const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; const g=AC.createGain(); g.gain.setValueAtTime(v,t); g.gain.linearRampToValueAtTime(0.0001,t+dur); s.connect(f).connect(g).connect(sfxBus()); s.start(t,Math.random()*(1-dur),dur); }
 const SFX = {
-  chop:()=>{ noise(0.08,0.35); tone(180,90,0.08,'square',0.04); }, fall:()=>{ noise(0.3,0.4); tone(120,50,0.3,'sawtooth',0.05); },
-  coin:()=>{ if(typeof coinChime==='function') coinChime(); else tone(880,1320,0.12,'sine',0.06); }, sell:()=>{ tone(660,990,0.08,'triangle',0.05); }, pay:(k)=>{ k=Math.max(0,Math.min(1,k||0)); const f=420+k*900; tone(f,f*1.12,0.05,'triangle',0.03+0.03*k); },
+  chop:()=>{ noise(0.08,0.2); tone(180,90,0.08,'square',0.035); }, fall:()=>{ noise(0.3,0.25); tone(120,50,0.3,'sawtooth',0.045); }, /* FX4: kesme/devrilme sesi kısıldı, para/ödeme sesi açıldı (oyuncunun kendi ödülü duyulsun) */
+  coin:()=>{ if(typeof coinChime==='function') coinChime(); else tone(880,1320,0.12,'sine',0.06); }, sell:(()=>{ let n=0,t0=0; const PS=[0,2,4,7,9,12,14,16,19,21]; return ()=>{ const now=performance.now(); n=now-t0<420?n+1:0; t0=now; const f=660*Math.pow(2,PS[n%PS.length]/12); tone(f,f*1.5,0.08,'triangle',0.05); }; })(), /* FX4: art arda bırakmada aynı bip yerine yükselen beşli dizi */ pay:(k)=>{ k=Math.max(0,Math.min(1,k||0)); const f=420+k*900; tone(f,f*1.12,0.05,'triangle',0.045+0.04*k); },
   build:()=>{ tone(300,600,0.15,'triangle',0.08); setTimeout(()=>tone(600,900,0.2,'triangle',0.08),120); setTimeout(()=>tone(900,1200,0.25,'sine',0.07),260); },
   slash:()=>{ noise(0.07,0.25); tone(900,300,0.09,'sawtooth',0.04); }, hit:()=>{ tone(300,120,0.1,'square',0.05); }, die:()=>{ tone(400,80,0.2,'sawtooth',0.05); },
   gate:()=>{ noise(0.12,0.3); tone(90,40,0.15,'square',0.06); }, wave:()=>{ tone(220,330,0.25,'triangle',0.08); setTimeout(()=>tone(330,440,0.3,'triangle',0.08),200); },
-  boom:()=>{ noise(0.35,0.5); tone(90,30,0.35,'sawtooth',0.08); },
+  boom:()=>{ noise(0.35,0.3); tone(90,30,0.35,'sawtooth',0.07); },
   // büyük satın alma: gümbürtü + yükselen üç nota + parıltı
   doom:()=>{ noise(0.7,0.3); tone(98,46,1.8,'sawtooth',0.1); tone(104,49,1.8,'sawtooth',0.06); setTimeout(()=>tone(73,34,2.0,'square',0.07),380); setTimeout(()=>tone(155,146,1.2,'triangle',0.05),900); }, /* F9b: Kara Kale açılışı: uğursuz vuruş */
   fanfare:()=>{ noise(0.25,0.35); tone(110,55,0.3,'sine',0.12); [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,f*1.01,0.22+i*0.05,'triangle',0.09),80+i*95)); setTimeout(()=>tone(2093,2637,0.3,'sine',0.04),480); },
   win:()=>{ [523,659,784,1047,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,f,0.28,'triangle',0.1),i*140)); setTimeout(()=>noise(0.4,0.2),900); },
-  lose:()=>{ [392,349,311,262].forEach((f,i)=>setTimeout(()=>tone(f,f*0.97,0.35,'sawtooth',0.06),i*220)); },
+  lose:()=>{ [392,349,311,262].forEach((f,i)=>setTimeout(()=>tone(f,f*0.97,0.35,'sawtooth',0.09),i*220)); },
   night:()=>{ tone(110,98,0.9,'sawtooth',0.06); setTimeout(()=>tone(147,131,0.9,'sawtooth',0.05),250); noise(0.6,0.12); },
   card:()=>{ tone(880,1760,0.15,'sine',0.07); setTimeout(()=>tone(1320,1760,0.2,'sine',0.06),110); },
 };
+/* FX4: aynı ses çok sık çalmaz (GAP: en kısa aralık, sn; daha yakındaki/yüksek ses sırayı alır), sık seslerde hafif perde oynaması (DET, cent);
+   dünya sesleri sfxAt(konum,taban) ile oyuncuya uzaklığa göre kısılır, uzaktakiler hiç çalmaz; büyük kutlama sesleri (build/fanfare/win/lose) aynı anda üst üste binmez: aynı karede en önemlisi çalar, 0.8 sn içinde eşit/düşük önemlisi atlanır */
+{ const GAP={hit:0.07,sell:0.11,boom:0.12,gate:0.2,chop:0.08,fall:0.12,die:0.06,slash:0.07,pay:0.045,coin:0.035,wave:0.5,night:1,card:0.3}, DET={hit:60,sell:35,boom:50,gate:50,chop:60,fall:40,die:50,slash:50}, PRI={build:1,fanfare:2,win:3,lose:3,doom:3}, lastT={}, lastK={}; let stQ=null, stT=-9, stP=0;
+  for(const k of Object.keys(SFX)){ const raw=SFX[k];
+    if(PRI[k]) SFX[k]=(...a)=>{ SFX_K=1; if(!AC||sfxOff()) return; const p=PRI[k]; if(stQ){ if(p>stQ.p) stQ={p,raw,a}; return; } stQ={p,raw,a}; setTimeout(()=>{ const q=stQ; stQ=null; if(!q||!AC) return; const t=AC.currentTime; if(t-stT<0.8&&q.p<=stP) return; stT=t; stP=q.p; q.raw(...q.a); },0); };
+    else SFX[k]=(...a)=>{ const K=SFX_K; SFX_K=1; if(!AC||sfxOff()||K<0.04) return; const t=AC.currentTime, g=GAP[k]||0; if(g&&t-(lastT[k]||-9)<g&&K<=(lastK[k]||0)*1.8) return; lastT[k]=t; lastK[k]=K; SFX_K=K; SFX_DET=DET[k]||0; try{ raw(...a); } finally { SFX_K=1; SFX_DET=0; } }; } }
+function wvol(pos,floor){ if(!pos) return 1; const p=player.g.position; const d=Math.hypot(pos.x-p.x,pos.z-p.z); const k=d<10?1:Math.max(0,1-(d-10)/30); return Math.max(floor||0,k); }
+function sfxAt(pos,floor){ SFX_K=wvol(pos,floor); return SFX; }
 // ---------- Müzik: gündüz sakin, gece gergin (tamamen kod ile üretilir, dosya yok) ----------
 const MUS={next:0,step:0,mel:4,vol:null,lp:null,mode:'day'};
 const NOTE=n=>440*Math.pow(2,(n-69)/12);
 const SCALES={day:[60,62,64,67,69,72,74,76],night:[57,60,62,64,67,69,72,74]};
 const ROOTS={day:[48,45,41,43],night:[45,41,43,40],doom:[40,41,40,38]}; SCALES.doom=[52,53,55,56,59,60,63,64];
-function musicInit(){ if(MUS.vol||!AC) return; MUS.vol=AC.createGain(); MUS.vol.gain.value=0; MUS.lp=AC.createBiquadFilter(); MUS.lp.type='lowpass'; MUS.lp.frequency.value=1800; MUS.lp.connect(MUS.vol).connect(AC.destination); MUS.next=AC.currentTime+0.1; }
+function musicInit(){ if(MUS.vol||!AC) return; MUS.vol=AC.createGain(); MUS.vol.gain.value=0; MUS.lp=AC.createBiquadFilter(); MUS.lp.type='lowpass'; MUS.lp.frequency.value=1800; MUS.lp.connect(MUS.vol).connect(sfxBus()); MUS.next=AC.currentTime+0.1; }
 function mnote(midi,t,dur,type,vol,det){ const o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.value=NOTE(midi); if(det) o.detune.value=det; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g).connect(MUS.lp); o.start(t); o.stop(t+dur+0.05); }
-function musicTick(night){ if(!AC||!MUS.vol) return; const target=musOff()?0:(night>0.5?0.09:0.07); MUS.vol.gain.setTargetAtTime(target,AC.currentTime,0.8); const mode=night>0.5?(DOOM>0.5?'doom':'night'):'day'; /* F9b: son seferde gece müziği karanlık (doom) */ if(mode!==MUS.mode){ MUS.mode=mode; MUS.lp.frequency.setTargetAtTime(mode==='doom'?850:mode!=='day'?1200:1800,AC.currentTime,0.5); }
+function musicTick(night){ if(!AC||!MUS.vol) return; const target=musOff()?0:(night>0.5?0.13:0.11); /* FX4: müzik efektlerin çok altındaydı */ MUS.vol.gain.setTargetAtTime(target,AC.currentTime,0.8); const mode=night>0.5?(DOOM>0.5?'doom':'night'):'day'; /* F9b: son seferde gece müziği karanlık (doom) */ if(mode!==MUS.mode){ MUS.mode=mode; MUS.lp.frequency.setTargetAtTime(mode==='doom'?850:mode!=='day'?1200:1800,AC.currentTime,0.5); }
   const bpm=mode==='doom'?116:mode!=='day'?132:96; const st=60/bpm/2; if(MUS.next<AC.currentTime) MUS.next=AC.currentTime+0.05; while(MUS.next<AC.currentTime+0.4){ const t=MUS.next; const i=MUS.step; const bar=Math.floor(i/16), beat=i%16; const root=ROOTS[mode][Math.floor(bar/2)%4]; const sc=SCALES[mode];
     if(beat===0){ mnote(root,t,st*16,'sine',0.5); mnote(root+7,t,st*16,'sine',0.25,6); mnote(root+12,t,st*16,'triangle',0.12,-5); }
     if(beat%4===0) mnote(root-12,t,st*3,mode!=='day'?'sawtooth':'triangle',mode!=='day'?0.28:0.2);
@@ -204,7 +233,10 @@ function placeBuildings(){ STALL.set(-(H-2.8),0,-(H-2.8)); DEPOT.set(H-2.8,0,H-2
   if(typeof camp!=='undefined') camp.position.copy(CAMP); if(typeof placeRopes==='function') placeRopes(); if(typeof depot!=='undefined') depot.position.copy(DEPOT); if(typeof stall!=='undefined') stall.position.copy(STALL); if(typeof treasury!=='undefined') treasury.position.copy(TREASURY); for(const L of (typeof labels!=='undefined'?labels:[])){ if(L.src) L.pos.copy(L.src); } }
 const ROADS={ N:[[0,-98],[-4,-84],[3,-68],[-3,-52],[2,-40],[0,-34]], E:[[98,0],[84,4],[68,-3],[52,3],[40,-2],[34,0]], S:[[0,98],[4,84],[-3,68],[3,52],[-2,40],[0,34]], W:[[-98,0],[-84,-4],[-68,3],[-52,-3],[-40,2],[-34,0]] };
 function roadPath(s){ return ROADS[s].concat([sidePos(s,0,0),[0,0]]); }
-function roadDist(x,z){ let best=1e9; for(const s of SIDES){ const P=roadPath(s); for(let i=0;i<P.length-1;i++){ const [ax,az]=P[i],[bx,bz]=P[i+1]; const dx=bx-ax,dz=bz-az; const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1); const d=Math.hypot(ax+dx*t-x,az+dz*t-z); if(d<best) best=d; } } return best; }
+/* FX4: yol parçaları düz dizide önbellekte (H değişince yenilenir): ağaç yerleştirme yüz binlerce kez çağırır, her çağrıda dizi kurmaz */
+let RSEG=null, RSEG_H=null;
+function roadSegs(){ if(RSEG_H!==H){ RSEG_H=H; RSEG=[]; for(const s of SIDES){ const P=roadPath(s); for(let i=0;i<P.length-1;i++){ const ax=P[i][0],az=P[i][1],dx=P[i+1][0]-ax,dz=P[i+1][1]-az; RSEG.push(ax,az,dx,dz,1/(dx*dx+dz*dz)); } } } return RSEG; }
+function roadDist(x,z){ const R=roadSegs(); let best=1e18; for(let i=0;i<R.length;i+=5){ let t=((x-R[i])*R[i+2]+(z-R[i+1])*R[i+3])*R[i+4]; t=t<0?0:t>1?1:t; const ex=R[i]+R[i+2]*t-x, ez=R[i+1]+R[i+3]*t-z, d=ex*ex+ez*ez; if(d<best) best=d; } return Math.sqrt(best); }
 function nearBase(x,z,m){ return Math.abs(x)<H+m&&Math.abs(z)<H+m; }
 // Bölgeler: her sefer kalenin çevresinde yeni bir bölge açar (merkez, yarıçap, ağaçsız alan)
 const REG={

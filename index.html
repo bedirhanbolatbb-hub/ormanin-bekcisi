@@ -1,5 +1,5 @@
 <title>Ormanın Bekçisi</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
+<style><!--FONTS--></style>
 <style>
 :root{
   --sky:#e8dcc0; --cream:#fff8e7; --ink:#2b3a2e; --ink-soft:#5d6b60;
@@ -72,6 +72,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .float{position:fixed;left:0;top:0;pointer-events:none;font-family:var(--font-display);font-weight:800;font-size:16px;color:var(--coin-ink);text-shadow:0 1px 0 #fff,0 0 6px #fff;transform:translate(-50%,-50%);z-index:4;white-space:nowrap}
 .float.red{color:var(--danger)}
 .float.green{color:var(--green)}
+.float.big{font-size:26px;z-index:6} /* FX4: patron zaferi başlığı */
 .joy{position:fixed;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.25);border:2px solid rgba(255,255,255,.6);transform:translate(-50%,-50%);pointer-events:none;z-index:4;display:none}
 .joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.85);transform:translate(-50%,-50%);box-shadow:var(--shadow)}
 .toast{position:fixed;left:50%;top:calc(150px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:max-content;max-width:min(88vw,460px);box-sizing:border-box;background:var(--danger);color:#fff;padding:10px 18px;border-radius:14px;font-family:var(--font-display);font-weight:800;font-size:18px;z-index:7;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center}
@@ -168,6 +169,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .card.map h1{margin:0}.card.map h2{font-family:var(--font-display);font-size:20px;margin:14px 0 6px}
 .crowns.big{font-family:var(--font-display);font-weight:800;font-size:24px;color:var(--coin-ink);background:#fff3cf;border-radius:14px;padding:4px 12px}
 .gift{background:var(--green-soft);color:var(--green);font-weight:800;border-radius:12px;padding:8px 10px;margin:8px 0}
+.awayGold{font-family:var(--font-display);font-weight:800;font-size:30px;color:var(--coin-ink);background:#fff3cf;border-radius:14px;padding:4px 14px;margin:6px auto;width:max-content}
+.dgift b{font-family:var(--font-display);color:var(--coin-ink)}.dgift small{display:block;font-weight:700;opacity:.85;margin-top:4px}
+.streak{display:flex;gap:5px;justify-content:center;margin-top:6px}.streak i{font-style:normal;width:26px;height:26px;line-height:26px;border-radius:50%;background:#fff;color:var(--green);font-size:13px;border:2px solid var(--green-soft);opacity:.55}.streak i.on{background:var(--green);color:#fff;opacity:1}.streak i.now{box-shadow:0 0 0 3px #ffd34d}
 .levels{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
 .intro .levels .lv{padding:8px 0 6px;border-radius:14px;background:var(--green);display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 4px 0 #1d4a26;margin:0}
 .intro .levels .lv b{font-size:22px;line-height:1}.intro .levels .lv small{font-size:12px;color:#ffd23f;letter-spacing:1px;min-height:14px}
@@ -361,6 +365,63 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .recenter span{white-space:nowrap}
 @media (max-width:380px){ .recenter span{display:none} .recenter{padding:9px 12px} }
 .plank-dot{width:18px;height:12px;border-radius:2px;background:repeating-linear-gradient(180deg,#e8b86a 0 3px,#a8742e 3px 4px);box-shadow:inset 0 0 0 2px rgba(90,55,20,.35)}
+/* FX1: ilk dakika yardımcısı (yeni kayıt, başlangıç kartı atlanınca): Kes › Kur › Savun › Patron, tıklanmaz (yalnız ✕) */
+#loopHelp{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:2px;padding:3px 4px 3px 10px;border-radius:999px;background:rgba(255,250,236,.93);box-shadow:var(--shadow);pointer-events:none;font-family:var(--font-display);transition:opacity .5s}
+#loopHelp span{display:flex;flex-direction:column;align-items:center;min-width:38px;font-size:11px;font-weight:800;line-height:1.1;color:var(--ink-soft);opacity:.42;transition:opacity .3s,transform .3s}
+#loopHelp span i{font-style:normal;font-size:21px;line-height:1.15}
+#loopHelp span.on{opacity:1;color:var(--green);transform:scale(1.14)}
+#loopHelp b{color:#c9bb98;font-size:15px}
+#loopHelp button{pointer-events:auto;border:0;background:transparent;color:var(--ink-soft);font-size:15px;width:30px;height:30px;border-radius:50%;cursor:pointer;margin-left:2px}
+#loopHelp.out{opacity:0}
+@media (max-width:600px){ #loopHelp{top:calc(62px + env(safe-area-inset-top,0px))} #loopHelp span{min-width:34px} }
+/* ===== FX3: arayüz · metin · erişilebilirlik (S03/S04/S10) ===== */
+.banner{width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box}
+.banner b{font-size:clamp(28px,8vw,76px);letter-spacing:1px}
+.banner.boss b{font-size:clamp(26px,7vw,70px)}
+.banner small{max-width:100%;box-sizing:border-box;white-space:normal;line-height:1.25}
+@media (orientation:portrait){.banner{top:34%}}
+@media (orientation:landscape) and (max-height:520px){.banner{top:44%}.banner b{font-size:clamp(24px,9vh,46px)}.banner.boss b{font-size:clamp(22px,8.5vh,42px)}}
+.toast{background:#c0392b}
+.toast span{display:inline-block;vertical-align:-2px;margin-right:2px}
+.guide{width:max-content;max-width:calc(100vw - 16px);box-sizing:border-box;white-space:normal;text-align:center;z-index:5}
+.float{color:#ffe27a;z-index:5;text-shadow:-2px 0 #1b2230,2px 0 #1b2230,0 -2px #1b2230,0 2px #1b2230,-1.5px -1.5px #1b2230,1.5px 1.5px #1b2230,-1.5px 1.5px #1b2230,1.5px -1.5px #1b2230,0 3px 5px rgba(0,0,0,.45)}
+.float.red{color:#ff8a7f}.float.green{color:#8ee38f}
+.bubble{max-width:min(300px,86vw)}
+.bubble button{white-space:nowrap;background:#23803d;box-shadow:0 3px 0 #17592a;min-height:40px;padding:9px 14px}
+.bubble button[data-act=no]{background:#c0392b;box-shadow:0 3px 0 #8e2a20}
+.intro #cont,.sn.cur,.sn.cur small{color:#3a2600}
+.chip.quest.done{color:#3d2a00}
+.wl .full,.away .full{color:#b3261e}
+.wl.machLbl .full,.wl.pad .full,.wl.threat .full,.wl.fogLbl .full,.wl.lockLbl .full{color:#ff8a7f}
+.sn{color:#5d5545}.sn span{font-size:12px}.sn small{font-size:12px}
+button:focus-visible,.chip:focus-visible{outline:3px solid #ffd23f;outline-offset:2px}
+.intro button:focus-visible{outline:3px solid #2b3a2e;box-shadow:0 0 0 6px #ffd23f}
+.chip.quest{position:relative}.chip.quest::after,.kingTip::after{content:'';position:absolute;inset:-8px}
+.intro .upr button{min-height:44px}
+.upr b{display:flex;gap:6px;align-items:baseline}.upr b span{margin-left:auto;white-space:nowrap}
+.iron-dot{height:11px;border-radius:1px;clip-path:polygon(16% 0,84% 0,100% 100%,0 100%);background:linear-gradient(#e6f0fa 0 28%,#8fa9c4 28%,#5f7890)}
+.hpbar.tw i{background:#8fd0ff}
+.bossPtr{z-index:5}
+.away b{white-space:normal;min-width:0}.away b small{display:block;font-family:var(--font-body);font-size:12px;color:var(--ink-soft)}
+body:has(.recenter.show) .kingTip{visibility:hidden}
+body:has(#intro) .hud,body:has(#intro) #mini,body:has(#intro) #kingBtn,body:has(#intro) #muteBtn{visibility:hidden}
+@media (orientation:portrait) and (max-width:600px){.kingTip{max-width:calc(100vw - 66px - 124px);white-space:normal;line-height:1.2}}
+.intro button.prim small{display:block;font-family:var(--font-body);font-size:13px;font-weight:700;opacity:.85;margin-top:1px}
+.intro button.gold.prim{animation:pulse 1.6s ease-in-out infinite}
+.intro button.sec{background:#fff;color:var(--green);box-shadow:inset 0 0 0 3px var(--green)}
+#failCard .brow{margin-top:8px}#failCard #failMap{border:2px solid var(--line)}
+.intro h3.bkh{margin:10px 0 4px;font-family:var(--font-display);font-size:14px;color:var(--ink-soft);text-align:left}
+.setrow{display:flex;gap:8px;margin-top:8px}.intro .setrow button{flex:1;margin-top:0;font-size:15px;border:2px solid var(--line)}
+.wdisc span b span{position:static;display:inline-block;vertical-align:middle;width:26px;height:26px}.wdisc span b .plank-dot{width:28px;height:18px}.wdisc span b .stone-dot{height:20px}
+.wdisc span i{font-size:13px;background:rgba(0,0,0,.45);border-radius:6px;padding:1px 0}
+.wres span{display:inline-block;vertical-align:-3px}
+@media (orientation:landscape) and (max-height:520px){.mute{width:44px;height:44px}.intro button{min-height:42px}.wdisc span i{font-size:12px}}
+body.calm .kingBtn.ready,body.calm .kingTip,body.calm .chip.quest.done,body.calm .chip.pready,body.calm .chip.quest.pop,body.calm .wv.danger,body.calm .gatePtr.hot,body.calm .wv.night .nights i.now,body.calm .sn.cur,body.calm .banner,body.calm .banner.out,body.calm .intro .cards button,body.calm .intro button.kpulse,body.calm .intro button.prim,body.calm .btn.has,body.calm .nightBtn,body.calm .intro .levels .lv.next,body.calm .result .bigstars span{animation:none!important;transition:none!important}
+body.calm .banner.out{opacity:0}body.calm .confetti{display:none}
+
+/* dönüş kartı: kısa ekranda düğme her zaman görünür, ayrıntı satırları gizlenir */
+#awayCard #awayOk{position:sticky;bottom:0;z-index:2;box-shadow:0 -6px 14px rgba(0,0,0,.12)}
+@media (max-height:480px){#awayCard .away{display:none}#awayCard p.sub{display:none}}
 </style>
 
 <canvas id="c"></canvas>

@@ -24,36 +24,39 @@ function clearBossChests(){ for(const c of bossChests){ scene.remove(c.g); freeO
 // Dilimler seferin açık bölgelerine göre kurulur: dilimde görünen ödül (simge + miktar) ödenen ödülün aynısıdır
 function wheelSlices(){ const w=gw(), L=S.level, g=Math.round(120+25*w), gb=Math.round(180+30*w), gr=g*3, ns=20+3*L, np=12+2*L, ni=6+L;
   const gold=n=>()=>{ S.coins+=n; return T(`+${n} altın`,`+${n} gold`); }, crowns=n=>()=>{ S.meta.crowns+=n; return n>=6?T(`+${n} taç — büyük ödül!`,`+${n} crowns — jackpot!`):T(`+${n} taç`,`+${n} crowns`); };
-  return [{i:'🪙',n:T('Altın','Gold'),a:'+'+g,w:28,c:'#f2b43c',pay:gold(g)},
-    revealed('river')?{i:'🪵',n:T('Kereste','Planks'),a:'+'+np,w:14,c:'#c98d4e',pay:()=>{ S.planks=(S.planks||0)+np; return T(`+${np} kereste`,`+${np} planks`); }}
-      :{i:'🪨',n:T('Taş','Stone'),a:'+'+ns,w:14,c:'#a39e93',pay:()=>{ S.stone+=ns; setStonePile(Math.min(18,S.stone)); return T(`+${ns} taş`,`+${ns} stone`); }},
+  return [{i:'<span class="coin-dot"></span>',n:T('Altın','Gold'),a:'+'+g,w:28,c:'#f2b43c',pay:gold(g)},
+    revealed('river')?{i:'<span class="plank-dot"></span>',n:T('Kereste','Planks'),a:'+'+np,w:14,c:'#c98d4e',pay:()=>{ S.planks=(S.planks||0)+np; return T(`+${np} kereste`,`+${np} planks`); }}
+      :{i:'<span class="stone-dot"></span>',n:T('Taş','Stone'),a:'+'+ns,w:14,c:'#a39e93',pay:()=>{ S.stone+=ns; setStonePile(Math.min(18,S.stone)); return T(`+${ns} taş`,`+${ns} stone`); }},
     {i:'👑',n:T('+2 taç','+2 crowns'),a:'+2',w:14,c:'#e8961a',pay:crowns(2)},
     {i:'💰',n:T('Altın yağmuru','Gold rain'),a:'+'+gr,w:10,c:'#ffd23f',pay:gold(gr)},
     revealed('iron')?{i:'⛓️',n:T('Demir','Iron'),a:'+'+ni,w:12,c:'#9aa3ad',pay:()=>{ S.iron=(S.iron||0)+ni; return T(`+${ni} demir`,`+${ni} iron`); }}
       :{i:'👛',n:T('Altın kesesi','Gold pouch'),a:'+'+gb,w:12,c:'#8fb8de',pay:gold(gb)},
     {i:'🏆',n:T('+6 taç','+6 crowns'),a:'+6👑',w:4,c:'#d9534f',jack:true,pay:crowns(6)},
-    {i:'🎁',n:T('Hediye','Gift'),a:'+'+g,w:14,c:'#7cc47f',pay:gold(g)},
+    {i:'🎁',n:T('Hediye','Gift'),a:'?',w:14,c:'#7cc47f',pay:gold(g)},
     {i:'🃏',n:T('Hazır güç kartı','Free power card'),a:'',w:4,c:'#3d63c9',pay:()=>{ S.meta.nextCard=(S.meta.nextCard||0)+1; return endless()?T('Sonraki geceye bir güç kartıyla başlarsın','Power card for the next night!'):T('Sonraki sefere bir güç kartıyla başlarsın','Power card for next chapter!'); }}]; }
 function wheelReward(k,W){ W=W||wheelSlices()[k]||wheelSlices()[0]; const at=player.g.position.clone(); const txt=W.pay();
   coinPop(); celebrate(at,W.jack?2:1.1); if(W.jack) confetti(); if(S.post) S.post.wheel=1; save(); return W.i+' '+txt; }
 function showBossWheel(done){ if($('wheelCard')){ done&&done(); return; } const card=document.createElement('div'); card.className='intro'; card.id='wheelCard';
-  const WHEEL=wheelSlices(); const lbl=WHEEL.map((s,i)=>`<span style="transform:rotate(${i*45+22.5}deg)"><b>${s.i}</b><i>${s.a}</i></span>`).join(''); const grad=WHEEL.map((s,i)=>`${s.c} ${i*45}deg ${(i+1)*45}deg`).join(',');
+  const WHEEL=wheelSlices(); const lbl=WHEEL.map((s,i)=>{ const a=i*45+22.5; return `<span style="transform:rotate(${a}deg)"><b style="transform:rotate(${-a}deg)">${s.i}</b><i style="transform:rotate(${-a}deg)">${s.a}</i></span>`; }).join(''); /* FX3: simge ve miktar dik durur */ const grad=WHEEL.map((s,i)=>`${s.c} ${i*45}deg ${(i+1)*45}deg`).join(',');
   card.innerHTML=`<div class="card wheelCard"><h1>${T('Patron sandığı!','Boss Chest!')}</h1><p>${T(`${bossName()} yenildi. Çarkı çevir, ödülünü al.`,`${bossName()} defeated. Spin for your prize!`)}</p><div class="wheel"><i class="wpin"></i><div class="wdisc" id="wdisc" style="background:conic-gradient(${grad})">${lbl}<em></em></div></div><p class="wres" id="wres">&nbsp;</p><button id="wheelSpin" class="gold">${T('ÇEVİR!','SPIN!')}</button><button id="wheelOk" style="display:none">${T('Devam →','Continue →')}</button></div>`;
   document.body.appendChild(card); SFX.card();
   $('wheelSpin').addEventListener('click',()=>{ audio(); const b=$('wheelSpin'); if(b.disabled) return; b.disabled=true; b.textContent=T('Dönüyor…','Spinning…');
     let k=S.post&&S.post.k>=0?S.post.k:-1; if(k<0){ let tot=0; for(const s of WHEEL) tot+=s.w; let r=Math.random()*tot; k=0; for(let i=0;i<WHEEL.length;i++){ r-=WHEEL[i].w; if(r<=0){ k=i; break; } } if(S.post){ S.post.k=k; save(); } } // sonuç kaydedilir: yeniden yüklemek çarkı yeniden çevirtmez
     const J=5; let off=rand(8,37); if(k===J-1) off=rand(40,43.5); else if(k===J+1) off=rand(1.5,5); const rot=360*6-(k*45+off);
     const disc=$('wdisc'); disc.style.transition='transform 3.6s cubic-bezier(.12,.72,.18,1)'; disc.style.transform=`rotate(${rot}deg)`;
-    let tt=0; for(let n=0;n<22;n++){ tt+=40+n*n*0.55; setTimeout(()=>tone(1200,900,0.03,'square',0.03),tt); }
+    /* FX4: tıklar çarkın gerçek açısından: her dilim sınırı iğneden geçerken bir tık (hızlıyken sık, yavaşlarken seyrek; son yavaş geçişler de duyulur), iğne her tıkta seker; durunca kazanan dilim parlar */
+    { const bz=(x1,y1,x2,y2,x)=>{ let lo=0,hi=1,t=x; for(let i=0;i<22;i++){ t=(lo+hi)/2; const xx=3*x1*t*(1-t)*(1-t)+3*x2*t*t*(1-t)+t*t*t; if(xx<x) lo=t; else hi=t; } return 3*y1*t*(1-t)*(1-t)+3*y2*t*t*(1-t)+t*t*t; }; const t0=performance.now(), pin=card.querySelector('.wpin'); let lastS=0, lastTick=0;
+      const step=()=>{ if(!document.body.contains(card)) return; const x=Math.min(1,(performance.now()-t0)/3600), sl=Math.floor(bz(.12,.72,.18,1,x)*rot/45); if(sl!==lastS){ lastS=sl; const now=performance.now(); if(now-lastTick>28){ lastTick=now; tone(900+500*x,700+300*x,0.03,'square',0.035); if(pin&&pin.animate&&!document.body.classList.contains('calm')) try{ pin.animate([{transform:'translateX(-50%) rotate(-20deg)'},{transform:'translateX(-50%) rotate(0deg)'}],{duration:90}); }catch(e){} } }
+        if(x<1){ setTimeout(step,16); return; } const sp=card.querySelectorAll('.wdisc span')[k], bb=sp&&sp.querySelector('b'); if(bb){ bb.style.transition='transform .25s cubic-bezier(.2,1.6,.4,1)'; bb.style.transform='scale(1.35)'; bb.style.filter='drop-shadow(0 0 5px #fff) drop-shadow(0 0 3px #ffd23f)'; } tone(520,390,0.09,'triangle',0.06); }; step(); }
     setTimeout(()=>{ const txt=wheelReward(k,WHEEL[k]); const res=$('wres'); if(res) res.innerHTML=`<b>${txt}</b>${(k===J-1||k===J+1)?'<small>'+T('Büyük ödüle kıl payı!','So close to the jackpot!')+'</small>':''}`; if(WHEEL[k].jack) SFX.win(); else SFX.fanfare(); b.style.display='none'; const ok=$('wheelOk'); if(ok) ok.style.display=''; },3800); });
   $('wheelOk').addEventListener('click',()=>{ audio(); card.remove(); clearBossChests(); done&&done(); }); }
 function applyNextCard(){ S.wheelCards={}; const n=(S.meta&&S.meta.nextCard)||0; if(!n) return; S.meta.nextCard=0; const ks=['arrow','rate','range','powder','wall','drill'].filter(cardUseful); for(let i=0;i<n;i++){ const k=ks[Math.floor(Math.random()*ks.length)]; S.cards[k]=(S.cards[k]||0)+1; S.wheelCards[k]=(S.wheelCards[k]||0)+1; if(k==='wall') S.gateHp=D.gateMax(); setTimeout(()=>toast('🃏 '+CARDS[k].i+' '+CARDS[k].n,'good'),2600+i*2600); } }
 
 // ----- günlük görevler: her gün 3 görev, bitince taç + altın -----
 const QPOOL=[
-  {k:'chop',t:n=>T(`${n} ağaç kes`,`Chop ${n} trees`),b:25,s:10},{k:'kill',t:n=>T(`${n} düşman yen`,`Defeat ${n} enemies`),b:40,s:25},{k:'night',t:n=>T(`${n} gece atlat`,`Survive ${n} nights`),b:3,s:1},{k:'buy',t:n=>T(`${n} kez bir şey yükselt`,`Upgrade ${n} times`),b:8,s:3},
+  {k:'chop',t:n=>T(`${n} ağaç kes`,`Chop ${n} trees`),b:25,s:10},{k:'kill',t:n=>T(`${n} düşman yen`,`Defeat ${n} enemies`),b:40,s:25},{k:'night',t:n=>T(`${n} gece atlat`,`Survive ${n} nights`),b:3,s:1},{k:'buy',t:n=>T(`${n} geliştirme yap`,`Upgrade ${n} times`),b:8,s:3},
   {k:'pile',t:n=>T(`Yığınlardan ${n} altın topla`,`Collect ${n} gold from piles`),b:250,s:300,need:()=>revealed('lake')||revealed('meadow')},{k:'fish',t:n=>T(`${n} balık tut`,`Catch ${n} fish`),b:8,s:3,g:1,need:()=>qRegion('fish',['lake','coast'])},{k:'hunt',t:n=>T(`${n} hayvan avla`,`Hunt ${n} animals`),b:8,s:3,g:1,need:()=>qRegion('hunt',['meadow'])},
-  {k:'herb',t:n=>T(`${n} mantar topla`,`Gather ${n} mushrooms`),b:12,s:4,g:1,need:()=>qRegion('herb',['swamp'])},{k:'mine',t:n=>T(`${n} cevher ya da kristal kaz`,`Mine ${n} ore or crystal`),b:12,s:4,g:1,need:()=>qRegion('mine',['iron','snow'])},{k:'chest',t:n=>T(`Sahilde ${n} sandık aç`,`Open ${n} beach chests`),b:2,s:1,mx:4,need:()=>revealed('coast')},
+  {k:'herb',t:n=>T(`${n} mantar topla`,`Gather ${n} mushrooms`),b:12,s:4,g:1,need:()=>qRegion('herb',['swamp'])},{k:'mine',t:n=>T(`${n} cevher ya da kristal kaz`,`Mine ${n} ore or crystals`),b:12,s:4,g:1,need:()=>qRegion('mine',['iron','snow'])},{k:'chest',t:n=>T(`Sahilde ${n} sandık aç`,`Open ${n} beach chests`),b:2,s:1,mx:4,need:()=>revealed('coast')},
 ];
 // F8: görevler bugün yapılabilecek olandan üretilir: elle toplama yalnız bu/önceki seferin bölgesinde ya da oyuncunun son seferlerde yaptığı işte; "yükselt" kalan seviye kadar; yapılamaz hale gelen görev değiştirilir; alınmamış biten görevin ödülü ertesi gün verilir
 function qRegion(k,ids){ const u=(S.meta&&S.meta.qUse)||{}; return ids.some(id=>revealed(id)&&(REG[id].sefer>=S.level-1||(u[k]||0)>=S.level-1)); }
@@ -86,7 +89,7 @@ function towerDownTick(t,dt){ const dmg=t.dmg||0; if(dmg<=0){ if(t.bar) t.bar.st
   if(Math.hypot(p.x-t.g.position.x,p.z-t.g.position.z)<3.4){ t.dmg=Math.max(0,dmg-mx*0.35*dt); t.repT=(t.repT||0)-dt; if(t.repT<=0){ t.repT=0.25; tone(1500,1300,0.04,'triangle',0.03); burst(t.top.clone(),3,M.plank,0.6); } if(t.dmg<=0&&t.down){ t.down=false; t.g.rotation.z=0; floatText(t.g.position,T('Kule onarıldı!','Tower repaired!'),'green'); SFX.build(); } }
   if(!t.bar){ t.bar=document.createElement('div'); t.bar.className='hpbar tw'; t.bar.innerHTML='<i></i>'; document.body.appendChild(t.bar); }
   const k=clamp(1-t.dmg/mx,0,1); v3.copy(t.top); v3.y+=1.6; v3.project(camera); t.bar.style.display=''; t.bar.style.left=((v3.x+1)/2*innerWidth)+'px'; t.bar.style.top=((1-v3.y)/2*innerHeight)+'px'; t.bar.firstElementChild.style.width=(k*100)+'%';
-  if(!t.down&&t.dmg>=mx){ t.down=true; floatText(t.g.position,T('🔧 Onar!','🔧 Repair!'),'red'); SFX.boom(); burst(t.top.clone(),16,M.stoneDark,1.2); camShake=Math.max(camShake,0.3); }
+  if(!t.down&&t.dmg>=mx){ t.down=true; floatText(t.g.position,T('🔧 Onar!','🔧 Repair!'),'red'); toast(T('🔧 Kule yıkıldı — gündüz onar!','🔧 Tower down — repair it by day!')); SFX.boom(); burst(t.top.clone(),16,M.stoneDark,1.2); camShake=Math.max(camShake,0.3); }
   if(t.down){ t.g.rotation.z=lerp(t.g.rotation.z,0.08,Math.min(1,dt*3)); if(Math.random()<dt*5) burst(t.top.clone(),1,M.smoke,0.5,1.4); for(const a of t.archers){ if(a.aim!==undefined) a.aim=false; } return true; } return false; }
 // menzilli düşman (okçu, Usta Okçu): menzile girince durur, en yakın kuleye; kule yoksa kapıdaki oyuncuya ya da sura ok atar (en çok shootLeft sn), sonra yürür. Oklar görünür, hasar ölçülü
 function shooterTick(e,dt){ if(e.shootLeft<=0) return false; const R=e.boss?15:13.5, x=e.g.position.x, z=e.g.position.z; let best=null,bd=R,to=null;
