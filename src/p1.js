@@ -1,5 +1,7 @@
 // CrazyGames köprüsü: site dışında sessizce çalışmaz, oyunu etkilemez
 const CG={sdk:null,env:'none',playing:false,lastMid:0,mute:false};
+// platform ilk yayında (Basic Launch) reklamı yasaklar: reklam yalnız OB_ADS açıkken istenir
+const ADS=!!window.OB_ADS;
 function cgCall(fn){ try{ if(CG.sdk) return fn(CG.sdk); }catch(e){} }
 (async function boot(){ const s=window.CrazyGames&&window.CrazyGames.SDK; if(s){ try{ await Promise.race([s.init(),new Promise(r=>setTimeout(r,3000))]); CG.sdk=s; CG.env=s.environment||'unknown'; cgCall(k=>k.game.loadingStart()); cgCall(k=>{ CG.mute=!!(k.game.settings&&k.game.settings.muteAudio); k.game.addSettingsChangeListener(st=>{ CG.mute=!!(st&&st.muteAudio); }); }); }catch(e){} } startGame(); })();
 function startGame(){
@@ -13,10 +15,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 const isTouch=matchMedia('(pointer:coarse)').matches;
 const isMobile=isTouch||innerWidth<700;
 // ---------- Dil: cihaz Türkçe ise Türkçe, değilse İngilizce; oyuncu Krallık ekranından değiştirebilir ----------
-const LANG=(()=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem('ob-lang'); }catch(e){} if(v==null){ try{ v=localStorage.getItem('ob-lang'); }catch(e){} } if(v==='tr'||v==='en') return v; const l=((navigator.languages&&navigator.languages[0])||navigator.language||'en').toLowerCase(); return l.startsWith('tr')?'tr':'en'; })();
+const LANG=(()=>{ let v=null; try{ if(CG.sdk&&CG.sdk.data) v=CG.sdk.data.getItem('ob-lang'); }catch(e){} if(v==null){ try{ v=localStorage.getItem('ob-lang'); }catch(e){} } if(v==='tr'||v==='en') return v; let si=null; try{ si=CG.sdk&&CG.sdk.user&&CG.sdk.user.systemInfo; }catch(e){} const l=String((si&&si.locale)||(navigator.languages&&navigator.languages[0])||navigator.language||'en').toLowerCase(); return l.startsWith('tr')?'tr':'en'; })();
 const T=(tr,en)=>(LANG==='tr'||en===undefined)?tr:en;
 function setLang(l){ try{ localStorage.setItem('ob-lang',l); }catch(e){} try{ if(CG.sdk&&CG.sdk.data) CG.sdk.data.setItem('ob-lang',l); }catch(e){} }
-document.documentElement.lang=LANG; if(LANG==='en'){ document.title='Forest Keeper'; document.querySelectorAll('[data-en]').forEach(el=>{ el.innerHTML=el.dataset.en; }); document.querySelectorAll('[data-en-aria]').forEach(el=>{ el.setAttribute('aria-label',el.dataset.enAria); }); }
+document.documentElement.lang=LANG; if(LANG==='en'){ document.title='Grovehold: Forest Siege'; document.querySelectorAll('[data-en]').forEach(el=>{ el.innerHTML=el.dataset.en; }); document.querySelectorAll('[data-en-aria]').forEach(el=>{ el.setAttribute('aria-label',el.dataset.enAria); }); }
 
 // ---------- Kalıcı durum ----------
 const SAVE_KEY='ormanin-bekcisi-v8'; const OLD_KEY='ormanin-bekcisi-v7';
