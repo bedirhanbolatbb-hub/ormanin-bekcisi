@@ -158,6 +158,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .result .prog span{position:relative;font-family:var(--font-display);font-weight:800;font-size:14px;line-height:24px;color:var(--ink)}
 .result .hint{background:#f1fae9;border-radius:12px;padding:8px 10px;color:var(--green);font-size:14px}
 .result .hint.kh{background:#fff6d6;color:#8a5a00}
+.kingTip{position:fixed;left:calc(66px + env(safe-area-inset-left,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;background:#2a2238;color:#ffd96a;font-family:var(--font-display);font-weight:800;font-size:13px;padding:6px 10px;border-radius:12px;box-shadow:var(--shadow);cursor:pointer;max-width:calc(100vw - 150px);animation:kpulse 1.4s ease-in-out infinite}.kingTip::before{content:'';position:absolute;left:-7px;top:50%;margin-top:-7px;border-top:7px solid transparent;border-bottom:7px solid transparent;border-right:8px solid #2a2238}
 .kingBtn.ready{animation:kpulse 1.4s ease-in-out infinite}.kingBtn.ready::after{content:'';position:absolute;top:3px;right:3px;width:11px;height:11px;border-radius:50%;background:#e2483d;box-shadow:0 0 0 2px #fff}
 .chip.pready{animation:kpulse 1.2s ease-in-out infinite;box-shadow:0 0 0 3px rgba(190,120,240,.75),var(--shadow)}
 @keyframes kpulse{0%,100%{transform:scale(1);box-shadow:var(--shadow)}50%{transform:scale(1.1);box-shadow:0 0 0 4px rgba(255,210,63,.55),var(--shadow)}}
@@ -275,6 +276,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
   .bossBar{font-size:13px;padding:4px 9px 6px}.bossBar .bar{height:7px;margin-top:3px}
   .mute{bottom:calc(10px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
   .kingBtn{bottom:calc(56px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
+  .kingTip{left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px))}.kingTip::before{left:13px;top:auto;bottom:-7px;margin:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #2a2238;border-bottom:0}
   .nightBtn{bottom:calc(10px + env(safe-area-inset-bottom,0px));font-size:16px;padding:9px 16px}
   .nightBtn span{font-size:13px}
   .fishUI{bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:8px 12px;gap:6px}
@@ -322,11 +324,36 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
   .chip small{font-size:11px}
   .toast{font-size:16px;padding:8px 14px}
 }
+/* F9a: sonsuz kuşatma (HUD satırı, rekor, harita kutusu, tanıtım), kayıp kartı düğme satırı; kartlar 844×390 ve 390×780'e sığar */
+.wv .endl{font-family:var(--font-display);font-weight:800;font-size:12px;line-height:1;white-space:nowrap;color:#8a5a00;margin:-2px 0 -1px}
+.wv.night .endl{color:#ffd23f}
+.result .rec{font-family:var(--font-display);font-weight:800;font-size:16px;color:var(--ink);background:#f3ecdc;border-radius:12px;padding:5px 10px;margin:2px 0 10px}
+.result .rec.new{background:#fff3cf;color:#b36b00;box-shadow:0 0 0 2px #f5b921}
+.sn.endl{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:8px}
+.sn.endl span{font-size:13px}
+.card.endless{text-align:left}.card.endless h1,.card.endless p.boss{text-align:center}
+.egoal{list-style:none;margin:6px 0 14px;padding:0;display:flex;flex-direction:column;gap:6px}
+.egoal li{display:flex;gap:10px;align-items:flex-start;background:#f7f1e3;border-radius:12px;padding:7px 10px;font-weight:700;font-size:14px;line-height:1.3;color:var(--ink-soft)}
+.egoal li i{font-style:normal;font-size:18px;line-height:1.1}.egoal li b{color:var(--ink)}
+@media (orientation:landscape) and (max-height:520px){
+  .brow{display:flex;gap:8px;align-items:stretch}.brow button{flex:1;margin-top:0!important}.brow button.ghost{border:2px solid var(--line)}
+  .result .hint{padding:5px 10px;font-size:13px;margin-bottom:6px}
+  .result p.boss{margin-bottom:4px}.result .near{margin-bottom:6px}
+  .result .rec{margin:0 0 6px;padding:3px 10px;font-size:14px}
+  .intro button.gold{margin-bottom:6px}
+  .card.endless{max-width:640px}.egoal{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:4px 0 8px}.egoal li{padding:5px 8px;font-size:13px}
+  #failCard .card{max-width:620px}
+  #cardPick .card>p{margin-bottom:6px}#cardPick h1{margin-bottom:2px}.intro p.bosswarn{padding:4px 10px}
+}
 .bossBar{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:5;pointer-events:none;background:rgba(40,16,20,.9);color:#fff;border-radius:12px;padding:5px 10px 7px;box-shadow:var(--shadow);font-family:var(--font-display);font-weight:800;font-size:14px;box-sizing:border-box;flex-direction:column}
 .bossBar b{display:flex;justify-content:space-between;gap:8px;white-space:nowrap;overflow:hidden;line-height:1.1}.bossBar b span:first-child{overflow:hidden;text-overflow:ellipsis}
 .bossBar .bar{height:9px;border-radius:5px;background:#5a2a2a;overflow:hidden;margin-top:4px}.bossBar .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff8a5f,#d63a3a)}
+.bossBar.ward{box-shadow:0 0 0 3px #b040ff,var(--shadow)}.bossBar.ward .bar i{background:linear-gradient(90deg,#c58bff,#7a2ad6)}
 .bossBar.roar{box-shadow:0 0 0 3px #ff9f1c,var(--shadow)}.bossBar.roar b span:first-child::after{content:" 📣"}
 .bossPtr{position:fixed;left:0;top:0;width:36px;height:36px;margin:-18px 0 0 -18px;z-index:4;pointer-events:none;border-radius:50%;background:#d63a3a;box-shadow:0 0 0 3px #fff,var(--shadow);align-items:center;justify-content:center;font-size:18px;font-style:normal}
+.gatePtr{position:fixed;left:0;top:0;width:30px;height:30px;margin:-15px 0 0 -15px;z-index:4;pointer-events:none;border-radius:50%;background:#7a2f2f;box-shadow:0 0 0 2px #fff,var(--shadow);align-items:center;justify-content:center;font:800 13px var(--font-display);color:#fff}
+.gatePtr i{font-style:normal}.gatePtr span{position:absolute;left:50%;top:50%;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:11px solid #7a2f2f;filter:drop-shadow(0 -2px 0 #fff)}
+.gatePtr.hot{background:#d63a3a;animation:gpulse .7s ease-in-out infinite}.gatePtr.hot span{border-bottom-color:#d63a3a}@keyframes gpulse{50%{transform:scale(1.18)}}
 .bossPtr i{font-style:normal}.bossPtr span{position:absolute;left:50%;top:50%;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:15px solid #d63a3a;filter:drop-shadow(0 -2px 0 #fff) drop-shadow(0 1px 1px rgba(0,0,0,.4))}
 .hpbar.rage i{background:#ff9f1c}
 .intro p.bosswarn{background:#3a1a1e;color:#fff;border-radius:12px;padding:6px 10px;font-weight:800}.intro p.bosswarn b{color:#ff8a7f}
@@ -342,13 +369,13 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 <div class="hud">
   <div class="left"><div class="chip" id="coinChip"><span class="coin-dot"></span><span id="coins">0</span></div><div class="chip enemy" id="enemyChip" style="display:none"><span class="shield"></span><span id="enemyCount">0</span></div><div class="chip loot" id="lootChip" style="display:none"><span class="helm"></span><span id="lootCount">0</span></div><div class="chip perk" id="perkChip" style="display:none"><span id="perkTxt"></span></div><div class="chip quest" id="questChip" style="display:none"><span id="questTxt">📜 0/3</span></div></div>
   <div class="right">
-    <div class="wv" id="waveBox"><div class="top"><span class="nights" id="nights"></span><span class="wt" id="waveT"></span></div><div class="hp"><span class="wall-ic"></span><div class="bar" id="gateBar"><i></i></div></div></div>
+    <div class="wv" id="waveBox"><div class="top"><span class="nights" id="nights"></span><span class="wt" id="waveT"></span></div><div class="endl" id="endl" style="display:none"></div><div class="hp"><span class="wall-ic"></span><div class="bar" id="gateBar"><i></i></div></div></div>
     <div class="res"><div class="chip sm" id="woodChip"><span class="log-dot"></span><span id="woodStock">0</span></div><div class="chip sm" id="stoneChip" style="display:none"><span class="stone-dot"></span><span id="stoneStock">0</span></div><div class="chip sm" id="plankChip" style="display:none"><span class="plank-dot"></span><span id="plankStock">0</span></div><div class="chip sm" id="ironChip" style="display:none"><span class="iron-dot"></span><span id="ironStock">0</span></div><div class="chip sm" id="potionChip" style="display:none"><span class="potion-dot"></span><span id="potionStock">0</span></div></div>
   </div>
 </div>
 
 <button class="mute" id="muteBtn" aria-label="Sesi aç/kapat" data-en-aria="Sound on/off">🔊</button>
-<button class="kingBtn" id="kingBtn" aria-label="Krallık" data-en-aria="Kingdom">👑</button>
+<button class="kingBtn" id="kingBtn" aria-label="Krallık" data-en-aria="Kingdom">👑</button><div class="kingTip" id="kingTip" style="display:none"></div>
 <div class="tip hide" id="tip" data-en="👆 Drag to walk">👆 Sürükle, yürü</div>
 <div class="toast" id="toast"></div>
 <div class="bossBar" id="bossBar" style="display:none"><b><span id="bossNm"></span><span id="bossPct"></span></b><div class="bar"><i></i></div></div>

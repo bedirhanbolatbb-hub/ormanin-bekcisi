@@ -33,7 +33,7 @@ function wheelSlices(){ const w=gw(), L=S.level, g=Math.round(120+25*w), gb=Math
       :{i:'👛',n:T('Altın kesesi','Gold pouch'),a:'+'+gb,w:12,c:'#8fb8de',pay:gold(gb)},
     {i:'🏆',n:T('+6 taç','+6 crowns'),a:'+6👑',w:4,c:'#d9534f',jack:true,pay:crowns(6)},
     {i:'🎁',n:T('Hediye','Gift'),a:'+'+g,w:14,c:'#7cc47f',pay:gold(g)},
-    {i:'🃏',n:T('Hazır güç kartı','Free power card'),a:'',w:4,c:'#3d63c9',pay:()=>{ S.meta.nextCard=(S.meta.nextCard||0)+1; return T('Sonraki sefere bir güç kartıyla başlarsın','Power card for next chapter!'); }}]; }
+    {i:'🃏',n:T('Hazır güç kartı','Free power card'),a:'',w:4,c:'#3d63c9',pay:()=>{ S.meta.nextCard=(S.meta.nextCard||0)+1; return endless()?T('Sonraki geceye bir güç kartıyla başlarsın','Power card for the next night!'):T('Sonraki sefere bir güç kartıyla başlarsın','Power card for next chapter!'); }}]; }
 function wheelReward(k,W){ W=W||wheelSlices()[k]||wheelSlices()[0]; const at=player.g.position.clone(); const txt=W.pay();
   coinPop(); celebrate(at,W.jack?2:1.1); if(W.jack) confetti(); if(S.post) S.post.wheel=1; save(); return W.i+' '+txt; }
 function showBossWheel(done){ if($('wheelCard')){ done&&done(); return; } const card=document.createElement('div'); card.className='intro'; card.id='wheelCard';

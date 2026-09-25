@@ -12,13 +12,13 @@ function buildWalls(level){
     add(instanced(G.cyl,mat(0xffffff),logs)); add(instanced(G.cone,mat(0xffffff),tips));
     if(level>=1){ const rails=[]; for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz); const ry=-Math.atan2(dz,dx); rails.push({x:(x0+x1)/2,y:h0*0.55,z:(z0+z1)/2,ry,sx:len,sy:.14,sz:.36,c:0x7d5124}); if(level>=3) rails.push({x:(x0+x1)/2,y:h0*0.85,z:(z0+z1)/2,ry,sx:len,sy:.14,sz:.36,c:0x5a3a1e}); } add(instanced(G.box,mat(0xffffff),rails)); }
   } else {
-    const tier=level<=6?0:1; const Hh=[2.6,3.0,3.4,3.6,3.9,4.2,4.6][level-4]; const col=tier?0x8d94a4:0xa8a49c, col2=tier?0x6f7686:0x9c9890;
+    const tier=level<=6?0:level<=10?1:2; /* F9a: her seviye (11+ sonsuz kuşatmada): boy 10'dan sonra yavaş artar, 11+ koyu taş + çift altın bant */ const Hh=level<=10?[2.6,3.0,3.4,3.6,3.9,4.2,4.6][level-4]:Math.min(5.6,4.6+0.2*(level-10)); const col=tier===2?0x6c7386:tier?0x8d94a4:0xa8a49c, col2=tier===2?0x545a6b:tier?0x6f7686:0x9c9890;
     const blocks=[], crens=[];
     for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz); const ry=-Math.atan2(dz,dx); blocks.push({x:(x0+x1)/2,y:Hh/2,z:(z0+z1)/2,ry,sx:len+0.6,sy:Hh,sz:0.9+0.15*tier,c:col}); const n=Math.round(len/1.2); if(level>=5) for(let i=0;i<=n;i++){ crens.push({x:x0+dx*i/n,y:Hh+0.3,z:z0+dz*i/n,ry,sx:.6,sy:.6,sz:1.0+0.15*tier,c:col2}); }
       const m=Math.max(1,Math.round(len)); for(let i=0;i<m;i++){ blocks.push({x:x0+dx*(i+0.5)/m,y:rand(0.4,Hh-0.4),z:z0+dz*(i+0.5)/m,ry,sx:rand(.5,1.1),sy:.35,sz:0.94+0.15*tier,c:Math.random()<.5?col2:col}); }
-      if(level>=9){ blocks.push({x:(x0+x1)/2,y:Hh-0.15,z:(z0+z1)/2,ry,sx:len+0.6,sy:0.14,sz:1.0+0.15*tier,c:0xf2b43c}); } }
+      if(level>=9){ blocks.push({x:(x0+x1)/2,y:Hh-0.15,z:(z0+z1)/2,ry,sx:len+0.6,sy:0.14,sz:1.0+0.15*tier,c:0xf2b43c}); } if(level>=11){ blocks.push({x:(x0+x1)/2,y:Hh*0.45,z:(z0+z1)/2,ry,sx:len+0.6,sy:0.12,sz:1.0+0.15*tier,c:0xf2b43c}); } }
     add(instanced(G.box,mat(0xffffff),blocks)); if(crens.length) add(instanced(G.box,mat(0xffffff),crens));
-    if(level>=7){ for(const [x,z] of [[-H,-H],[H,-H],[-H,H],[H,H]]){ const t=mesh(G.cyl,tier?M.stoneBlue:M.stone,1.1,Hh+2,1.1); t.position.set(x,(Hh+2)/2,z); const cap=mesh(G.cone,level>=10?M.flag:M.banner,1.5,1.5,1.5); cap.position.set(x,Hh+2.7,z); const fl=mesh(G.box,M.flag,0.7,0.5,0.05); fl.position.set(x+0.35,Hh+3.6,z); const pole=mesh(G.cyl,M.handle,0.05,1.6,0.05); pole.position.set(x,Hh+3.7,z); wallGroup.add(t,cap,fl,pole); } }
+    if(level>=7){ for(const [x,z] of [[-H,-H],[H,-H],[-H,H],[H,H]]){ const t=mesh(G.cyl,tier?M.stoneBlue:M.stone,1.1+0.1*(tier===2),Hh+2,1.1+0.1*(tier===2)); t.position.set(x,(Hh+2)/2,z); const cap=mesh(G.cone,level>=10?M.flag:M.banner,1.5,1.5,1.5); cap.position.set(x,Hh+2.7,z); const fl=mesh(G.box,M.flag,0.7,0.5,0.05); fl.position.set(x+0.35,Hh+3.6,z); const pole=mesh(G.cyl,M.handle,0.05,1.6,0.05); pole.position.set(x,Hh+3.7,z); wallGroup.add(t,cap,fl,pole); } }
   }
   for(const s of SIDES){ for(const a of [-3.6,3.6]){ const [x,z]=sidePos(s,a,0.4); const p=mesh(G.cyl,M.woodDark,0.08,1.6,0.08); p.position.set(x,0.8,z); const f=mesh(G.sph,M.gold,0.18,0.26,0.18,false); f.position.set(x,1.75,z); wallGroup.add(p,f); } }
   bakeStatic(wallGroup); /* F6 */
@@ -83,6 +83,7 @@ const trees=[]; let treeTrunk, treeCrown; const TRUNK_H=1.7;
     const t={x,z,s:rand(0.85,1.3),ry:rand(0,6.28),ci:Math.floor(Math.random()*3),hp:D.treeHits(),alive:true,gone:false,shake:0,falling:0,regrow:0,claimed:null,dirty:true};
     trees.push(t); const k=ck(x,z); if(!cell.has(k)) cell.set(k,[]); cell.get(k).push(t);
   }
+  const CH=50, chOf=t=>Math.floor((t.x+WORLD)/CH)*16+Math.floor((t.z+WORLD)/CH); trees.sort((a,b)=>chOf(a)-chOf(b)); /* F9b: ağaçlar parça parça (40×40) sıralı: her parça ayrı çizilir, ekran/gölge dışındaysa atlanır */
   const trunkGeo=new THREE.CylinderGeometry(0.24,0.34,TRUNK_H,9).translate(0,TRUNK_H/2,0);
   const crownGeo=mergeGeos([new THREE.ConeGeometry(1.35,2.4,8).translate(0,2.3,0),new THREE.ConeGeometry(1.05,2.1,8).translate(0,3.5,0),new THREE.ConeGeometry(0.7,1.8,8).translate(0,4.6,0)]);
   treeTrunk=new THREE.InstancedMesh(trunkGeo,M.trunk,trees.length); treeCrown=new THREE.InstancedMesh(crownGeo,M.leaf,trees.length);
@@ -90,7 +91,14 @@ const trees=[]; let treeTrunk, treeCrown; const TRUNK_H=1.7;
   const leafCols=[new THREE.Color(0x2f7d47),new THREE.Color(0x3a8c4e),new THREE.Color(0x256b3c)];
   trees.forEach((t,i)=>{ treeCrown.setColorAt(i,leafCols[t.ci]); });
   treeTrunk.instanceMatrix.setUsage(THREE.DynamicDrawUsage); treeCrown.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  scene.add(treeTrunk,treeCrown);
+  /* F9b: ana InstancedMesh'ler yalnız veri tutar (sahnede değil). Her 40×40 parça aynı dizinin bir dilimini (subarray) paylaşan kendi InstancedMesh'iyle çizilir;
+     kendi sınır küresi olduğu için kamera ve gölge kamerası dışındaki parçalar iki geçişte de çizilmez. Ana dizideki needsUpdate tüm parçalara iletilir (eski kodlar değişmeden çalışır) */
+  const chunks=[]; const shareGeo=g0=>{ const g=new THREE.BufferGeometry(); g.setIndex(g0.index); for(const k in g0.attributes) g.setAttribute(k,g0.attributes[k]); return g; };
+  for(let s=0;s<trees.length;){ let e=s; const c=chOf(trees[s]); while(e<trees.length&&chOf(trees[e])===c) e++; const n=e-s; let cx=0,cz=0; for(let i=s;i<e;i++){ cx+=trees[i].x; cz+=trees[i].z; } cx/=n; cz/=n; let r=0; for(let i=s;i<e;i++) r=Math.max(r,Math.hypot(trees[i].x-cx,trees[i].z-cz)); const bs=new THREE.Sphere(new THREE.Vector3(cx,3,cz),r+5);
+    const mk=(g0,M0,src,col)=>{ const g=shareGeo(g0); g.boundingSphere=bs; const im=new THREE.InstancedMesh(g,M0,n); im.instanceMatrix=new THREE.InstancedBufferAttribute(src.instanceMatrix.array.subarray(s*16,e*16),16); im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); if(col) im.instanceColor=new THREE.InstancedBufferAttribute(src.instanceColor.array.subarray(s*3,e*3),3); im.castShadow=im.receiveShadow=true; im.frustumCulled=true; scene.add(im); return im; };
+    const tk=mk(trunkGeo,M.trunk,treeTrunk,false); tk.castShadow=false; /* gövdenin gölgesi tacın gölgesinin altında kalır: gölge geçişinde çizilmez */ chunks.push({t:tk,c:mk(crownGeo,M.leaf,treeCrown,true)}); s=e; }
+  const relay=(a,get)=>Object.defineProperty(a,'needsUpdate',{configurable:true,set(v){ if(v){ this.version++; for(const c of chunks) get(c).needsUpdate=true; } }});
+  relay(treeTrunk.instanceMatrix,c=>c.t.instanceMatrix); relay(treeCrown.instanceMatrix,c=>c.c.instanceMatrix); relay(treeCrown.instanceColor,c=>c.c.instanceColor); treeTrunk.chunks=chunks;
 })();
 function writeTree(i){ const t=trees[i]; let fall=0, sc=1, trunkY=1, crownVis=1, shakeZ=0;
   if(t.gone){ vp.set(t.x,-3,t.z); vs.set(0.0001,0.0001,0.0001); q.identity(); m4.compose(vp,q,vs); treeTrunk.setMatrixAt(i,m4); treeCrown.setMatrixAt(i,m4); return; }
