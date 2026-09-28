@@ -515,7 +515,7 @@ function sinkLeft(res){ let t=0; for(const pd of pads){ const d=pd.def; if(d.grp
 function offCap(res,sec){ return Math.floor(0.25*sinkLeft(res)*sec/3600); }
 // FX2: sen yokken altın GERÇEK üretim hızından ödenir (yalnız yığın kabından değil). Her zincir: canlı hız (üretim ile satış hızının küçüğü × fiyat),
 // ama bir yığın saatte en çok OFF_TURN kez dolar (dikkatli bir oyuncunun toplama sıklığı) + köy vergisi. En çok OFF_H saat sayılır; yığına düşen altın bu toplamın içindedir, kalanı kesene girer.
-const OFF_TURN=0.5, OFF_H=3;
+const OFF_TURN=0.5, OFF_H=8; /* v39: ertesi gün dönen oyuncu gece boyunca biriken altını bulur (eski 3 sa) */
 function offParts(){ const P=[]; const add=(l,r,P0)=>{ r=Math.min(r,P0?P0.capFn()*OFF_TURN/3600:r); if(r>0.0001) P.push({l,r}); };
   add(T('Köy vergisi','Village taxes'),(60+30*gw())/3600);
   if(revealed('lake')) add(T('Balıkçılar ve ağlar','Fishers & nets'),Math.min(fishers.length/7+netRate(),1/hutSellT())*fishPrice(),fishPile);

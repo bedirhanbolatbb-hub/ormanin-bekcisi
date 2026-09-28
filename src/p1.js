@@ -148,6 +148,9 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'h
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,isMobile?1.75:2));
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputEncoding=THREE.sRGBEncoding;
+// v39: telefonda ekran belleği tükenince (çizim bağlamı kaybolur) oyun donup kalmasın: kayıt alınır, 3 sn içinde geri gelmezse sayfa yeniden açılır ve oyun kaldığı yerden sürer
+canvas.addEventListener('webglcontextlost',e=>{ e.preventDefault(); try{ save(); }catch(_){} clearTimeout(canvas._rl); canvas._rl=setTimeout(()=>{ try{ save(); }catch(_){} location.reload(); },3000); },false);
+canvas.addEventListener('webglcontextrestored',()=>{ clearTimeout(canvas._rl); try{ renderer.shadowMap.needsUpdate=true; }catch(_){} },false);
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xe8dcc0);
