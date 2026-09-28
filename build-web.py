@@ -8,6 +8,13 @@ stamp=datetime.date.today().strftime('%-d %b %Y').replace('Sep','Eyl').replace('
 stamp_en=datetime.date.today().strftime('%-d %b %Y')
 t=t.replace('<div class="sub">','<div class="sub"><span data-en="Version '+ver+' · '+stamp_en+'">Sürüm '+ver+' · '+stamp+'</span> · ')
 t=t.replace('<!--FONTS-->',open('vendor/fonts.css').read().strip()) if os.path.exists('vendor/fonts.css') else t  # FX3: gömülü yazı tipleri
+# v40: oyun kodu küçültülür (telefonda daha hızlı iner ve açılır); araç yoksa küçültmeden devam
+_es=os.environ.get('ESBUILD') or next((x for x in ['/home/claude/.npm-global/lib/node_modules/tsx/node_modules/@esbuild/linux-x64/bin/esbuild'] if os.path.exists(x)),None)
+if _es:
+    import subprocess
+    _r=subprocess.run([_es,'--minify','--charset=utf8','--target=es2019','--loader=js'],input=s.encode(),capture_output=True)
+    if _r.returncode==0: s=_r.stdout.decode()
+    else: sys.exit('esbuild: '+_r.stderr.decode()[:500])
 page=t.replace('// GAME_SCRIPT',s)
 full='<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#e8dcc0">'+page.replace('<canvas','</head><body><canvas',1)+'</body></html>'
 import os; os.makedirs('docs',exist_ok=True); open('docs/index.html','w').write(full)

@@ -110,7 +110,8 @@ function gateAttack(){ if(!waveActive||runOver){ gAtk=null; return null; } const
 function updateGuide(target,text,dt){
   const p=player.g.position;
   if(!target||Object.keys(regionFx).some(k=>regionFx[k].rev)){ guide.arrow.visible=guide.ring.visible=guide.pin.visible=false; /* F9b: bölge açılış gösterisinde rehber gizli */ guide.el.style.display='none'; guide.lastText=''; return; }
-  const dx=target.x-p.x, dz=target.z-p.z, dist=Math.hypot(dx,dz), ang=Math.atan2(dx,dz);
+  const dx=target.x-p.x, dz=target.z-p.z, dist=Math.hypot(dx,dz); let ang=Math.atan2(dx,dz);
+  { let w=null; try{ w=routeGoal(p,target.x,target.z); }catch(e){} if(w&&Math.hypot(w[0]-p.x,w[1]-p.z)>0.5&&(Math.abs(w[0]-target.x)>0.3||Math.abs(w[1]-target.z)>0.3)) ang=Math.atan2(w[0]-p.x,w[1]-p.z); } /* v40: ok duvarın içinden değil kapıdan geçen yolu gösterir */
   const near=dist<3.2;
   guide.arrow.visible=!near; guide.arrow.rotation.z=ang+Math.PI; guide.arrow.position.set(p.x+Math.sin(ang)*2.1,0.07,p.z+Math.cos(ang)*2.1);
   const pulse=1+Math.sin(performance.now()/160)*0.08; guide.arrow.scale.set(pulse,pulse,1);
@@ -128,7 +129,7 @@ function updateGuide(target,text,dt){
 }
 let hudRects=[], hudRectT=-1;
 function hudObstacles(){ const now=performance.now(); if(now-hudRectT<250) return hudRects; hudRectT=now; hudRects=[];
-  for(const el of document.querySelectorAll('.hud .chip,.hud .wv,#bossBar,#toast.show,#mini,#muteBtn,#kingBtn,#nightBtn,#placeBar,#recenter,.fishUI')){ const r=el.getBoundingClientRect(); if(r.width>1&&r.height>1) hudRects.push(r); }
+  for(const el of document.querySelectorAll('.hud .chip,.hud .wv,#bossBar,#toast.show,#mini,#muteBtn,#kingBtn,#nightBtn,#placeBar,#recenter,.fishUI,#loopHelp')){ const r=el.getBoundingClientRect(); if(r.width>1&&r.height>1) hudRects.push(r); }
   return hudRects; }
 
 // ---------- Kapılar ----------
@@ -178,7 +179,7 @@ function renderHud(){ for(const L of quarryLabels) L.hide=!revealed('quarry'); c
   waveBoxEl.classList.toggle('night',waveActive&&!runOver);
   setTxt(waveTEl, waveActive? (shieldT>0?'🛡️ '+Math.ceil(shieldT):S.wave===WAVES?'⚔️':'🌙') : tutHold()? '☀️' : (S.wave===WAVES?'💀 ':'☀️ ')+Math.ceil(Math.max(0,waveT)));
   const r=clamp(S.gateHp/D.gateMax(),0,1); gateBar.firstElementChild.style.width=(r*100)+'%'; gateBar.classList.toggle('danger',r<0.35); waveBoxEl.classList.toggle('danger',waveActive&&r<0.35);
-  const nb=$('nightBtn'); const showNb=started&&!placing&&!S.cardPending&&!S.pendingReveal&&fishUI.style.display==='none'&&!waveActive&&!runOver&&!tutHold()&&!document.querySelector('.intro')&&waveT>3&&(S.wave!==WAVES||bossReady()); nb.style.display=showNb?'flex':'none'; if(showNb){ const b=nightBonus(); const t=S.wave===WAVES?T(`💀 Patron gecesi ${b>0?`<span>+${b}</span>`:''}`,`💀 Boss Night ${b>0?`<span>+${b}</span>`:''}`):T(`🌙 Geceyi başlat ${b>0?`<span>+${b}</span>`:''}`,`🌙 Start Night ${b>0?`<span>+${b}</span>`:''}`); if(nb._t!==t){ nb._t=t; nb.innerHTML=t; } }
+  const nb=$('nightBtn'); const showNb=started&&!placing&&!S.cardPending&&!S.pendingReveal&&fishUI.style.display==='none'&&!waveActive&&!runOver&&!tutHold()&&!document.querySelector('.intro')&&waveT>3&&(S.wave!==WAVES||bossReady()); if(showNb&&nb.style.display==='none') nb._shownAt=performance.now(); nb.style.display=showNb?'flex':'none'; if(showNb){ const b=nightBonus(); const t=S.wave===WAVES?T(`💀 Patron gecesi ${b>0?`<span>+${b}</span>`:''}`,`💀 Boss Night ${b>0?`<span>+${b}</span>`:''}`):T(`🌙 Geceyi başlat ${b>0?`<span>+${b}</span>`:''}`,`🌙 Start Night ${b>0?`<span>+${b}</span>`:''}`); if(nb._t!==t){ nb._t=t; nb.innerHTML=t; } }
   { const kb=$('kingBtn'), ku=started&&kingUp(); if(kb._u!==ku){ kb._u=ku; kb.classList.toggle('ready',ku); } { const kv=started&&(S.level>1||(S.meta.crowns||0)>0||Object.values(S.meta.up||{}).some(v=>v>0)); if(kb._v!==kv){ kb._v=kv; kb.style.visibility=kv?'':'hidden'; } } /* FX3: 0 taçlı yeni oyuncuya Krallık düğmesi gösterilmez */
     /* F9b: gece yaklaşırken / patron gününde harcanmamış taçlar için 👑 düğmesinin yanında çağrı (dokununca Krallık açılır) */
     const kt=$('kingTip'), c=S.meta.crowns||0, kon=ku&&!placing&&!document.querySelector('.intro')&&defUrg()>0&&(S.wave>=WAVES||c>=12); const ktx=kon?(S.wave>=WAVES?T(`👑 ${c} taç: patrondan önce harca!`,`👑 ${c} crowns: spend before the boss!`):T(`👑 ${c} taç harcanmadı`,`👑 ${c} crowns unspent`)):''; if(kt._t!==ktx){ kt._t=ktx; kt.textContent=ktx; kt.style.display=kon?'block':'none'; } } /* taç bir güçlendirmeye yetince 👑 düğmesi nabız atar */
@@ -236,9 +237,9 @@ $('muteBtn').addEventListener('click',()=>{ audio(); S.snd=((S.snd|0)+1)%3; S.mu
 drawMute();
 $('kingTip').addEventListener('click',e=>{ e.stopPropagation(); audio(); if(!waveActive&&!runOver) showMap(); });
 $('kingBtn').addEventListener('click',e=>{ e.stopPropagation(); audio(); if(!waveActive&&!runOver) showMap(); else toast(T('🌙 Gece bitince','🌙 When night ends')); });
-$('nightBtn').addEventListener('click',e=>{ e.stopPropagation(); audio(); if(waveActive||runOver) return; const b=nightBonus(); if(b>0){ dropCoins(player.g.position.clone().setY(3),Math.min(16,b),b/Math.min(16,b),2,1.1); } waveT=0; startWave(); });
+$('nightBtn').addEventListener('click',e=>{ e.stopPropagation(); audio(); if(waveActive||runOver) return; if(isTouch&&performance.now()-($('nightBtn')._shownAt||0)<1500) return; /* v40: yürürken yanlışlıkla dokunulmaz */ const b=nightBonus(); if(b>0){ dropCoins(player.g.position.clone().setY(3),Math.min(16,b),b/Math.min(16,b),2,1.1); } waveT=0; startWave(); });
 let started=false, noRegen=false;
-cgCall(k=>k.game.loadingStop());
+pruneCasters(scene); requestAnimationFrame(()=>setTimeout(()=>cgCall(k=>k.game.loadingStop()),0)); /* v40: yükleme bitti bilgisi ilk kare çizildikten sonra */
 // F8: afiş sırası: patron afişi ekrandayken başka afiş onu silmez, sıraya girer; queue=true olan afiş de ekrandakini beklemeye alır
 const banQ=[]; let banQT=0;
 function flushBanner(){ const old=$('banner'); if(old&&!old.classList.contains('out')){ clearTimeout(banQT); banQT=setTimeout(flushBanner,400); return; } const b=banQ.shift(); if(b) banner(b[0],b[1],b[2]); if(banQ.length){ clearTimeout(banQT); banQT=setTimeout(flushBanner,2200); } }
@@ -249,7 +250,7 @@ function nightBanner(){ const sides=SIDES.filter(s=>plan&&plan.cnt[s]>0).map(s=>
 let lastSides=sidesActive(), newGate=null;
 function nightCleared(){ S.nightOn=false; const n=S.wave; if(n>=WAVES){ levelWon(); return; } stat('nights'); const en=endless()?eNight(S.level,n):0; if(en>(S.meta.best||0)) S.meta.best=en; /* F9a */
   const bonus=12+6*n+4*S.level; const cnt=Math.min(24,bonus); dropCoins(player.g.position.clone().setY(3),cnt,bonus/cnt,3,1.3); celebrate(player.g.position.clone(),0.7);
-  S.wave++; plan=null; planWave(); waveT=dayLen(); dawnRepair(); questEvent('night',1); tmrwHint(); banner(T(`Gece ${en||n} atlatıldı!`,`Night ${en||n} cleared!`),`+${bonus} 💰`+(S.wave===WAVES?T(' · 💀 Sıradaki gece patron!',' · 💀 Boss next night!'):''),'day');
+  S.wave++; plan=null; planWave(); waveT=dayLen(); dawnRepair(); questEvent('night',1); const th=tmrwHint(); banner(T(`Gece ${en||n} atlatıldı!`,`Night ${en||n} cleared!`),`+${bonus} 💰`+(S.wave===WAVES?T(' · 💀 Sıradaki gece patron!',' · 💀 Boss next night!'):'')+(th?'<br>'+th:''),'day');
   const ns=sidesActive(); if(ns>lastSides){ const s=SIDES[ns-1]; newGate=s; toast(T(`🚪 ${SIDE_TR[s]} kapısı açıldı`,`🚪 ${SIDE_TR[s]} Gate opened`),'good',true); } else newGate=null; lastSides=ns;
   S.dayGrace=0; S.nightSnap=null; S.cardPending=true; save(); setTimeout(showCardPick,1500); }
 // ---------- Gece arası güç kartı ----------
@@ -307,7 +308,7 @@ function kingUp(){ const m=S.meta; if(!m||!m.up) return false; return Object.key
 const dayKey=()=>{ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); };
 function dailyGift(){ const k=dayKey(); if(S.meta.dailyDate===k) return 0; const y=new Date(); y.setDate(y.getDate()-1); const yk=y.getFullYear()+'-'+(y.getMonth()+1)+'-'+y.getDate(); S.meta.streak=(S.meta.dailyDate===yk)?(S.meta.streak||0)+1:1; S.meta.dailyDate=k; const g=giftOf(S.meta.streak); S.meta.crowns+=g; save(); return g; }
 // v39: yarına sebep: günde bir kez, ~8 dk oynayan oyuncuya gece bitince yarınki hediye ve yeni görevler hatırlatılır (engellemez, sıraya girer)
-function tmrwHint(){ try{ if(!S.meta||(CG.playSec||0)<480) return; const k=dayKey(); if(S.meta.tmrwDate===k) return; S.meta.tmrwDate=k; const nx=S.meta.dailyDate===k?(S.meta.streak||0)+1:1, g=giftOf(nx); setTimeout(()=>toast(T(`🎁 Yarın gel: ${nx}. gün hediyesi +${g} 👑 · yeni görevler · köyün sen yokken de kazanır`,`🎁 Come back tomorrow: day ${nx} gift +${g} 👑 · new quests · your village earns while you're away`),'good'),3200); save(); }catch(e){} }
+function tmrwHint(){ try{ if(!S.meta||((CG.playSec||0)<240&&S.wave<3)) return ''; const k=dayKey(); if(S.meta.tmrwDate===k) return ''; S.meta.tmrwDate=k; const nx=S.meta.dailyDate===k?(S.meta.streak||0)+1:1, g=giftOf(nx); save(); return T(`🎁 Yarın gel: +${g} 👑 hediye · yeni görevler`,`🎁 Come back tomorrow: +${g} 👑 gift · new quests`); }catch(e){ return ''; } } /* v40: 4 dk ya da 2 gece sonra; gece bitti afişinin altına yazılır (bildirim sırasında kaybolmaz) */
 const GIFT=[2,3,4,5,6,8,10]; function giftOf(n){ return GIFT[Math.max(0,Math.min(GIFT.length-1,(n||1)-1))]; } /* FX2: 7 günlük seri (eski 2-4 taç); dönüşte kartla verilir */
 function showMap(){ if($('mapCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='mapCard'; document.body.appendChild(card); const gift=dailyGift();
   const render=()=>{ const m=S.meta; const regs=Object.keys(REG).map(k=>REG[k]); const nodes=[]; /* F9a: sonsuz kuşatma tek kutu (gece + rekor) */ const endTile=()=>S.level>LEVELS?`<div class="sn cur endl"><b>♾</b><span>${ENAME()}</span><small>${T(`Gece ${eNight(S.level,S.wave)}`,`Night ${eNight(S.level,S.wave)}`)}${m.best?` · 🏆 ${m.best}`:''}</small></div>`:''; for(let L=1;L<=LEVELS;L++){ const st=m.stars[L]||0; const done=L<S.level; const cur=L===S.level; const R=regs.find(r=>r.sefer===L); nodes.push(`<div class="sn${done?' done':''}${cur?' cur':''}"><b>${L}</b><span>${R?R.name:(L===1?T('Orman Kapısı','Forest Gate'):T('Sonsuz Kuşatma','Endless Siege'))}</span><small>${done?'★'.repeat(st)+'☆'.repeat(3-st):cur?T('şu an','now'):'🔒'}</small></div>`); }
@@ -348,7 +349,7 @@ function resetRun(level){ const meta=S.meta, muted=S.muted, snd=S.snd;
   S.gateHp=D.gateMax(); setPile(0); setStonePile(0); stallPile.count=0; player.g.position.set(0,0,5.5); moveTarget=null; moveMark.visible=false; setBack(player); recenter();
   for(const pd of pads){ pd.last=''; pd.shown=0; pd.wasLocked=false; S.paid[pd.def.id]=0; }
   for(const id in REG) if(REG[id].sefer<=level) S.revealed[id]=true; waveActive=false; spawnQueue=0; runOver=false; plan=null; planWave(); waveT=S.level===1?30:25; buildNets(); buildTraps(); applyCaps(); syncClouds(); nightKills=0; lastSides=sidesActive(); introT=0; save(); }
-function startPlay(){ if(started) return; const it=$('intro'); if(it) it.remove(); const gg=S.groundGold||0; S.groundGold=0; started=true; renderHud();
+function startPlay(){ if(started) return; document.body.classList.add('fresh'); setTimeout(()=>document.body.classList.remove('fresh'),3000); const it=$('intro'); if(it) it.remove(); const gg=S.groundGold||0; S.groundGold=0; started=true; renderHud();
   if(!S.started){ resetRun(1); initRegions(); startBanner(); return; }
   const post=S.won&&!S.failed&&S.post; const re=!!S.nightRe; delete S.nightRe; if(!S.nightOn&&!S.won&&!S.failed) restoreDay(); if(gg>0){ const n=Math.min(20,Math.max(3,Math.round(gg/15))); dropCoins(STALL_FRONT.clone().setY(1),n,gg/n,2.2,1); }
   if(S.won&&!S.failed&&!post) nextSefer(true); S.revealed=S.revealed||{}; for(const id in REG) if(REG[id].sefer<=S.level&&id!==S.pendingReveal) S.revealed[id]=true;
@@ -361,7 +362,7 @@ if(CG.sdk&&CG.env!=='disabled'){ setTimeout(()=>{ const fresh=!S.started; startP
 function loopHelp(){ if($('loopHelp')) return; const el=document.createElement('div'); el.id='loopHelp'; el.setAttribute('role','status'); const st=[['🪓',T('Kes','Chop')],['🏹',T('Kur','Build')],['🌙',T('Savun','Defend')],['💀',T('Patron','Boss')]];
   el.innerHTML=st.map(([i,n])=>`<span><i>${i}</i>${n}</span>`).join('<b>›</b>')+`<button aria-label="${T('Kapat','Close')}">✕</button>`; document.body.appendChild(el); const sp=[...el.querySelectorAll('span')]; let doneT=0;
   const bye=()=>{ clearInterval(iv); el.classList.add('out'); setTimeout(()=>el.remove(),600); }; el.querySelector('button').addEventListener('click',e=>{ e.stopPropagation(); bye(); });
-  const iv=setInterval(()=>{ if(!document.body.contains(el)){ clearInterval(iv); return; } if(S.level>1||S.wave>2){ bye(); return; } const built=S.towers.some(t=>t.lvl>=1); const k=waveActive?2:S.wave>=2?3:built?2:(S.logs>0||S.wood>0)?1:0; sp.forEach((x,i)=>x.classList.toggle('on',i===k)); el.style.display=document.querySelector('.intro')?'none':''; if(k===3){ doneT+=0.5; if(doneT>8) bye(); } },500); }
+  const iv=setInterval(()=>{ if(!document.body.contains(el)){ clearInterval(iv); return; } if(S.level>1||S.wave>2){ bye(); return; } let canBuy=false; try{ canBuy=pads.some(pd=>padVisible(pd)&&padAvail(pd)&&!pd.locked); }catch(e){} const k=waveActive?2:S.wave>=WAVES?3:canBuy?1:0; /* v40: adım gerçek duruma göre: odun yetiyorsa Kur, gece Savun, patron gecesi Patron */ sp.forEach((x,i)=>x.classList.toggle('on',i===k)); el.style.display=document.querySelector('.intro')?'none':''; if(k===3){ doneT+=0.5; if(doneT>8) bye(); } },500); }
 if(S.started){ $('startBtn').textContent=T('Devam et','Continue'); const ir=$('introRet'); ir.textContent=endless()?chapTitle():T(`👑 ${S.level}. sefer · 🌙 ${S.wave}/${WAVES}`,`👑 Chapter ${S.level} · 🌙 ${S.wave}/${WAVES}`); ir.style.display='block'; document.querySelector('#intro .steps').style.display='none'; }
 if(!isTouch) $('ctlHint').textContent=T('WASD: yürü · Tekerlek: yakınlaştır','WASD: walk · Wheel: zoom');
 
@@ -434,25 +435,27 @@ function tick(dt){ gameT+=dt; updateGateMarks(dt); updatePlayer(dt); updateTrees
    2 = eski ayarlar · 1 = piksel oranı ≤1.25, gölge haritası 1024 · 0 = piksel oranı 1, gölge haritası 512, gölge iki karede bir. 90/120/144 Hz ekranlarda en çok 60 kare (telefon ısınmasın) */
 const QG={tier:2,ema:16.7,hi:0,lo:0,t0:0,last:-1e9,upWait:30000,acc:0,prev:0,sh:0,maxPR:Math.min(window.devicePixelRatio||1,isMobile?1.75:2)};
 try{ const t=localStorage.getItem('ob-q'); if(t==='0'||t==='1') QG.tier=+t; }catch(e){}
-if(QG.tier===2&&isMobile&&navigator.deviceMemory&&navigator.deviceMemory<=2) QG.tier=1;
+if(QG.tier===2&&isMobile){ let st=null; try{ st=localStorage.getItem('ob-q'); }catch(e){} if(st!=='2') QG.tier=(navigator.deviceMemory&&navigator.deviceMemory<=2)?0:1; } /* v40: telefon orta ayarla başlar (ilk dakikada takılma yok); akıcıysa kendisi yükseltir */
 function applyQuality(){ const t=QG.tier, pr=t===2?QG.maxPR:t===1?Math.min(QG.maxPR,1.25):1; if(Math.abs(renderer.getPixelRatio()-pr)>0.01){ renderer.setPixelRatio(pr); resize(); }
-  const ms=t===2?(isMobile?1024:2048):t===1?1024:512; if(sun.shadow.mapSize.x!==ms){ sun.shadow.mapSize.set(ms,ms); if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map=null; } } renderer.shadowMap.autoUpdate=t>0; renderer.shadowMap.needsUpdate=true; }
+  const ms=t===2?(isMobile?1024:2048):t===1?1024:512; if(sun.shadow.mapSize.x!==ms){ sun.shadow.mapSize.set(ms,ms); if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map=null; } } renderer.shadowMap.autoUpdate=t===2||(t===1&&!isMobile); renderer.shadowMap.needsUpdate=true; } /* v40: telefonda gölge her karede değil 2-3 karede bir çizilir */
 applyQuality();
 function setQuality(t){ t=Math.max(0,Math.min(2,t)); if(t===QG.tier) return; if(t<QG.tier&&QG.up) QG.upWait=Math.min(300000,QG.upWait*2); QG.up=t>QG.tier; QG.tier=t; QG.last=performance.now(); QG.hi=QG.lo=0; applyQuality(); try{ localStorage.setItem('ob-q',String(t)); }catch(e){} }
 function qualityStep(now,iv){ iv=Math.min(100,iv); QG.ema+=(iv-QG.ema)*0.05; if(!started||document.hidden||document.querySelector('.intro')){ QG.t0=now; QG.hi=QG.lo=0; return; } if(now-QG.t0<4000) return; /* açılış/kart sonrası derleme takılmaları sayılmaz */
   if(QG.ema>26){ QG.hi+=iv; QG.lo=0; } else if(QG.ema<18.5){ QG.lo+=iv; QG.hi=Math.max(0,QG.hi-iv); } else { QG.hi=Math.max(0,QG.hi-iv*0.5); QG.lo=0; }
   if(QG.hi>3000&&QG.tier>0&&now-QG.last>4000) setQuality(QG.tier-1); else if(QG.lo>10000&&QG.tier<2&&now-QG.last>QG.upWait) setQuality(QG.tier+1); }
-function frameRaf(now){ if(QG.prev) QG.acc+=now-QG.prev; QG.prev=now; if(QG.acc>0&&QG.acc<15.2){ requestAnimationFrame(frameRaf); return; } const iv=QG.acc||16.7; QG.acc=Math.max(0,Math.min(16.67,QG.acc-16.67)); qualityStep(now,iv); if(QG.tier===0&&(QG.sh^=1)) renderer.shadowMap.needsUpdate=true; frame(now); }
+function frameRaf(now){ if(QG.prev) QG.acc+=now-QG.prev; QG.prev=now; if(QG.acc>0&&QG.acc<13){ requestAnimationFrame(frameRaf); return; } const iv=QG.acc||16.7; QG.acc=0; /* v40: 90/120 Hz ekranda düzgün kare aralığı */ qualityStep(now,iv); if(!renderer.shadowMap.autoUpdate&&++QG.sh>=(QG.tier===0?3:2)){ QG.sh=0; renderer.shadowMap.needsUpdate=true; } frame(now); }
+/* CRASH-FIX G: bir karede hata olursa oyun donmaz; her farklı hata bir kez yeniden fırlatılır (gizlenmez), 60+ tekrar olursa ilerleme kaydedilip yeniden yükleme önerilir */
+const FE={n:0,seen:{}}; function frameErr(e){ FE.n++; const k=String(e&&e.message); if(!FE.seen[k]){ FE.seen[k]=1; setTimeout(()=>{ throw e; },0); } if(FE.n===60){ try{ save(); }catch(_){} try{ toast(T('⚠️ Bir sorun oldu — ilerlemen kayıtlı. Sayfayı yenile.','⚠️ Something went wrong — progress saved. Please reload.'),'bad'); }catch(_){} } }
 function frame(now){
   requestAnimationFrame(frameRaf);
   let dt=Math.min(0.05,(now-last)/1000); last=now; if(slowT>0){ slowT=Math.max(0,slowT-dt); dt*=1-0.72*Math.min(1,slowT/0.9); }
   camera.position.sub(shakeOff); shakeOff.set(0,0,0);
   const sdkPlay=started&&!document.querySelector('.intro')&&!adMute, playing=sdkPlay&&!document.hidden; if(sdkPlay!==CG.playing){ CG.playing=sdkPlay; cgCall(k=>sdkPlay?k.game.gameplayStart():k.game.gameplayStop()); } /* FX1: sekme gizlenince gameplayStop yollanmaz (SDK kendisi yapar) */
-  if(playing){ CG.playSec=(CG.playSec||0)+dt; tick(dt); updateFloats(dt); updateLabels(); updateBubble(); autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; save(); } }
+  if(playing){ CG.playSec=(CG.playSec||0)+dt; try{ tick(dt); updateFloats(dt); updateLabels(); updateBubble(); }catch(e){ frameErr(e); } autoSaveT+=dt; if(autoSaveT>5){ autoSaveT=0; save(); } }
   const p=player.g.position;
   if(follow){ camPan.multiplyScalar(Math.pow(0.001,dt)); } camTarget.set(p.x+camPan.x,0,p.z+camPan.z);
   { let n=0; if(waveActive&&!runOver) for(const e of enemies) if(!e.dead) n++; const zt=1+(camera.aspect<1?0.28:0.18)*clamp((n-8)/22,0,1); zAuto+=(zt-zAuto)*(1-Math.pow(0.55,dt)); if(window.__zA) zAuto=zt; /* test: hemen */ } /* F9b: kalabalık gecede kamera yavaşça biraz uzaklaşır (dikeyde daha çok), şafakta döner */
-  zoom=lerp(zoom,Math.max(zoomTarget,Math.min(2.2,zoomTarget*zAuto)),1-Math.pow(0.002,dt)); camPos.copy(camTarget).addScaledVector(camOff,zoom); camera.position.lerp(camPos,1-Math.pow(0.0005,dt));
+  zoom=lerp(zoom,Math.max(zoomTarget,Math.min(2.2,zoomTarget*zAuto)),1-Math.pow(0.002,dt)); camPos.copy(camTarget).addScaledVector(camOff,zoom); if(started&&!frame.snap){ frame.snap=1; camera.position.copy(camPos); } /* v40: açılışta kamera oyuncunun üstünde başlar */ camera.position.lerp(camPos,1-Math.pow(0.0005,dt));
   camera.lookAt(camera.position.x-camOff.x*zoom,0,camera.position.z-camOff.z*zoom);
   if(camShake>0&&calmOn()) camShake=0; /* FX3 */
   if(camShake>0){ camShake=Math.max(0,camShake-dt); const k=camShake*camShake*2.4; shakeOff.set((Math.random()-0.5)*k,(Math.random()-0.5)*k,(Math.random()-0.5)*k); camera.position.add(shakeOff); }
@@ -461,7 +464,7 @@ function frame(now){
   fitShadow(); { const lx=camera.position.x-camOff.x*zoom, lz=camera.position.z-camOff.z*zoom; sun.target.position.set(lx,0,lz); sun.position.set(lx,0,lz).addScaledVector(SUN_DIR,60); } /* F6: gölge ekranın gördüğü yere odaklı */
   renderHud(); miniT+=dt; if(miniT>0.12){ miniT=0; drawMini(); }
   updateBlobs(); /* FX4 */
-  renderer.render(scene,camera);
+  try{ renderer.render(scene,camera); }catch(e){ let lost=false; try{ lost=renderer.getContext().isContextLost(); }catch(_){} if(!lost) frameErr(e); } /* CRASH-FIX G2: bağlam kaybolurken çizim hatası beklenen durumdur (webglcontextlost yeniden yükler) */
 }
 requestAnimationFrame(frameRaf);
 window.__dbg={setFollow:v=>{ follow=v; },tmrwHint,CG,routeGoal,avoidProps,MFX,CUT,MIL,FRG,DRL,LAKE,MDW,SWP,SNW,CST,DEP,DEPOT,initRegions,cards:{showWinCard,showFailCard,showEndCard},p7:{showBossWheel,showQuests,questEvent,ensureQuests,dawnRepair,ships,eArrows,bossChests,isWinter,get slowT(){ return slowT; }},get night(){ return night; },set night(v){ night=v; applyNight(v); },f8:{failTip,bossReady,chestGuide,upgradesLeft,questN,dayLen,banner,berth,get chestCall(){ return chestCall; },get offPend(){ return showOffline.pend; }},f6:{renderer,scene,sun,toast,planWave,fogLbl,fogGates,threatLbl,SHUT,MINE,WH,WH_FRONT,LIGHT,DRILL,CDRILL,IRON_PEAKS,SW_POOLS,SW_DEAD,HUT,MILL,MILL_IN,SAW,centerVia,propObstacles},p6:{fogSides,chests,spawnChest,openChest,boats,mushNodes,oreNodes,crysNodes,herbalists,miners,cminers,SHUT_FRONT,FORGE_FRONT,JEW_FRONT,CAUL,FORGE,JEW,lampPosts,fogK,SC,CU,PIER_B:PIER_END,castle,bossPhase,SW,IR,CO,SN,swampPile,coastPile,snowPile},bubblePadId:()=>bubblePad&&bubblePad.def.id+":"+(bubblePad.needLeave?"NL":"")+(playerMoving?"MV":""),carts,QCUT,MILL,RC,QC,animals,hunters,HHUT_FRONT,MC,nextSefer,restartSefer,revealRegion,offlineRun,showOffline,regionGuide,get pileFish(){ return S.rg.fishPile||0; },FS,fishers,DOCK_END,HUT_FRONT,fishPile,rebuildT:rebuildTowers,placeSpotRaw:(x,z)=>{ const r=placeSpot(x,z); return r.ok&&Math.hypot(r.x-x,r.z-z)<0.01; },cancelPlacing,rocksArr:()=>rocks,S,D,damageEnemy,killEnemy,player,trees,enemies,workers,soldiers,towers,pads,coins,loot,customers,plan:()=>plan,get waveActive(){return waveActive;},get waveT(){return waveT;},set waveT(v){waveT=v;},get runOver(){return runOver;},set runOver(v){runOver=v;},get placing(){return placing;},get moveTarget(){return moveTarget;},set moveTarget(v){moveTarget=v;},get guideTarget(){return guideTarget;},get zoom(){return zoom;},set zoom(v){zoom=v;},get zoomTarget(){return zoomTarget;},set zoomTarget(v){zoomTarget=v;},camera,camOff,camTarget,camPan,tick,startWave,resetRun,showMap,showCardPick,levelWon,gateBroken,placeSpot,placeGhostAt,confirmPlace,instantBuy,sidePos,setBack,setPile,setStonePile,dropCoins,addWorker,addSoldier,makeEnemy,planWaveX:planWave,expandBase,nightHp,nightCount,celebrate,STALL,DEPOT,get H(){return H;},startPlay,frameOnce:()=>frame(performance.now()),get follow(){return follow;}};

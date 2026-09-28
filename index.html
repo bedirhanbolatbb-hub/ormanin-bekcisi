@@ -125,7 +125,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .nightBtn span{background:var(--coin);color:var(--coin-ink);border-radius:10px;padding:1px 9px;font-size:15px}
 .nightBtn:active{transform:translate(-50%,3px);box-shadow:0 2px 0 #121a38}
 .nightBtn{white-space:nowrap}
-@media (max-width:600px){.nightBtn{font-size:16px;padding:10px 14px;bottom:calc(122px + env(safe-area-inset-bottom,0px))}.nightBtn span{font-size:13px}}
+@media (max-width:600px){.nightBtn{font-size:16px;padding:10px 14px;bottom:calc(124px + env(safe-area-inset-bottom,0px));left:auto;right:calc(12px + env(safe-area-inset-right,0px));transform:none}.nightBtn:active{transform:translateY(3px)}.nightBtn span{font-size:13px}}
 .banner{position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;animation:bannerIn .45s cubic-bezier(.2,1.6,.4,1) forwards}
 .banner b{display:block;font-family:var(--font-display);font-weight:800;font-size:clamp(40px,9vw,76px);line-height:1;color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 24px rgba(0,0,0,.35);letter-spacing:2px}
 .banner small{display:inline-block;margin-top:8px;font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;background:rgba(20,24,34,.75);padding:4px 14px;border-radius:12px}
@@ -264,6 +264,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .guide.off{opacity:0}
 @keyframes pulseC{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
 .nightBtn{animation-name:pulseC}
+@media (max-width:600px),(max-height:480px){.nightBtn{animation-name:pulse}} /* v40: telefonda sağ köşede, kaydırmasız nabız */
 .hud{padding-left:calc(12px + env(safe-area-inset-left,0px));padding-right:calc(12px + env(safe-area-inset-right,0px))}
 .mute,.kingBtn{left:calc(14px + env(safe-area-inset-left,0px))}
 .mini{right:calc(12px + env(safe-area-inset-right,0px))}
@@ -281,7 +282,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
   .mute{bottom:calc(10px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
   .kingBtn{bottom:calc(56px + env(safe-area-inset-bottom,0px));width:40px;height:40px;font-size:18px}
   .kingTip{left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px))}.kingTip::before{left:13px;top:auto;bottom:-7px;margin:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #2a2238;border-bottom:0}
-  .nightBtn{bottom:calc(10px + env(safe-area-inset-bottom,0px));font-size:16px;padding:9px 16px}
+  .nightBtn{bottom:calc(10px + env(safe-area-inset-bottom,0px));font-size:16px;padding:9px 16px;left:auto;right:calc(12px + env(safe-area-inset-right,0px));transform:none}.nightBtn:active{transform:translateY(3px)}
   .nightBtn span{font-size:13px}
   .fishUI{bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:8px 12px;gap:6px}
   .fishUI button{padding:8px 26px;font-size:19px}
@@ -367,12 +368,13 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .plank-dot{width:18px;height:12px;border-radius:2px;background:repeating-linear-gradient(180deg,#e8b86a 0 3px,#a8742e 3px 4px);box-shadow:inset 0 0 0 2px rgba(90,55,20,.35)}
 /* FX1: ilk dakika yardımcısı (yeni kayıt, başlangıç kartı atlanınca): Kes › Kur › Savun › Patron, tıklanmaz (yalnız ✕) */
 #loopHelp{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:2px;padding:3px 4px 3px 10px;border-radius:999px;background:rgba(255,250,236,.93);box-shadow:var(--shadow);pointer-events:none;font-family:var(--font-display);transition:opacity .5s}
-#loopHelp span{display:flex;flex-direction:column;align-items:center;min-width:38px;font-size:11px;font-weight:800;line-height:1.1;color:var(--ink-soft);opacity:.42;transition:opacity .3s,transform .3s}
+#loopHelp span{display:flex;flex-direction:column;align-items:center;min-width:38px;font-size:13px;font-weight:800;line-height:1.1;color:var(--ink-soft);opacity:.42;transition:opacity .3s,transform .3s}
 #loopHelp span i{font-style:normal;font-size:21px;line-height:1.15}
 #loopHelp span.on{opacity:1;color:var(--green);transform:scale(1.14)}
 #loopHelp b{color:#c9bb98;font-size:15px}
 #loopHelp button{pointer-events:auto;border:0;background:transparent;color:var(--ink-soft);font-size:15px;width:30px;height:30px;border-radius:50%;cursor:pointer;margin-left:2px}
 #loopHelp.out{opacity:0}
+body.fresh .lockLbl{opacity:0!important}
 @media (max-width:600px){ #loopHelp{top:calc(62px + env(safe-area-inset-top,0px))} #loopHelp span{min-width:34px} }
 /* ===== FX3: arayüz · metin · erişilebilirlik (S03/S04/S10) ===== */
 .banner{width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box}
