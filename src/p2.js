@@ -231,8 +231,8 @@ const guide=(function(){
 
 // ---------- Kontroller: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır ----------
 const keys={};
-addEventListener('keydown',e=>{ const tg=e.target; if((e.key===' '||e.key==='Enter')&&tg&&tg.closest&&tg.closest('button,input,select,textarea')){ kbdLast=true; return; } /* FX3: odaktaki düğmeye Boşluk/Enter basar */ if(kbdUI(e)){ e.preventDefault(); return; } if(document.querySelector('.intro')) return; keys[e.key.toLowerCase()]=true; if(e.code) keys[e.code]=true; moveTarget=null; if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
-addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; if(e.code) keys[e.code]=false; });
+addEventListener('keydown',e=>{ if(typeof e.key!=='string') return; /* v41: tuş adı olmayan olay (otomatik doldurma/eklenti) hata vermez */ const tg=e.target; if((e.key===' '||e.key==='Enter')&&tg&&tg.closest&&tg.closest('button,input,select,textarea')){ kbdLast=true; return; } /* FX3: odaktaki düğmeye Boşluk/Enter basar */ if(kbdUI(e)){ e.preventDefault(); return; } if(document.querySelector('.intro')) return; keys[e.key.toLowerCase()]=true; if(e.code) keys[e.code]=true; moveTarget=null; if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
+addEventListener('keyup',e=>{ if(typeof e.key!=='string') return; keys[e.key.toLowerCase()]=false; if(e.code) keys[e.code]=false; });
 function releaseKeys(){ for(const k in keys) keys[k]=false; } addEventListener('blur',releaseKeys); document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseKeys(); });
 const joy={active:false,id:null,ox:0,oy:0,dx:0,dy:0,t0:0,sx:0,sy:0,moved:false}; let zoom=1, zoomTarget=1; const ptrs=new Map(); let pinchD0=0, pinchZ0=1, pinchMid=null; let moveTarget=null;
 // Kamera gezinme: iki parmakla sürükle / sağ tuşla sürükle; karakter yürüyünce kamera ona döner
