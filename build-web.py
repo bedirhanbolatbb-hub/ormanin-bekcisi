@@ -8,6 +8,7 @@ stamp=datetime.date.today().strftime('%-d %b %Y').replace('Sep','Eyl').replace('
 stamp_en=datetime.date.today().strftime('%-d %b %Y')
 t=t.replace('<div class="sub">','<div class="sub"><span data-en="Version '+ver+' · '+stamp_en+'">Sürüm '+ver+' · '+stamp+'</span> · ')
 t=t.replace('<!--FONTS-->',open('vendor/fonts.css').read().strip()) if os.path.exists('vendor/fonts.css') else t  # FX3: gömülü yazı tipleri
+s=s.replace('__OBVER__',ver)  # v42: hata kaydına sürüm
 # v40: oyun kodu küçültülür (telefonda daha hızlı iner ve açılır); araç yoksa küçültmeden devam
 _es=os.environ.get('ESBUILD') or next((x for x in ['/home/claude/.npm-global/lib/node_modules/tsx/node_modules/@esbuild/linux-x64/bin/esbuild'] if os.path.exists(x)),None)
 if _es:

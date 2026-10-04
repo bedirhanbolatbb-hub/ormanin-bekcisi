@@ -1,3 +1,10 @@
+// v42: hata kaydı — oyuncuda bir hata olursa kısa bir kayıt (mesaj, satır, tarayıcı, sürüm, seviye) bizim kayıt defterimize gider; kişisel bilgi yok, oturum başına en çok 6 kayıt
+const ERRLOG=(function(){ const URL='https://miscocueqgqsvvybrhoz.supabase.co/rest/v1/game_errors', KEY='sb_publishable_bChqcjhQaVjgFFD2E_jtXQ_slyiw7QD'; let sent=0; const seen={}; const sess=Math.random().toString(36).slice(2,10); let ctx=()=>({});
+  function send(kind,msg,src,stack){ try{ if(location.protocol==='file:'||sent>=6) return; msg=String(msg||'').slice(0,400); const k=kind+'|'+msg; if(seen[k]){ seen[k]++; return; } seen[k]=1; sent++; let c={}; try{ c=ctx()||{}; }catch(_){} const body={ver:'__OBVER__',kind,msg,src:String(src||'').slice(0,300),stack:String(stack||'').slice(0,1500),ua:navigator.userAgent.slice(0,300),dev:(matchMedia('(pointer:coarse)').matches?'touch':'mouse')+'-'+innerWidth+'x'+innerHeight,lvl:c.l|0,wave:c.w|0,sess,n:sent};
+    fetch(URL,{method:'POST',keepalive:true,headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)}).catch(()=>{}); }catch(_){} }
+  addEventListener('error',e=>{ const er=e.error; send('error',(er&&er.message)||e.message,(e.filename||'')+':'+(e.lineno||0)+':'+(e.colno||0),er&&er.stack); });
+  addEventListener('unhandledrejection',e=>{ const r=e.reason; send('promise',(r&&(r.message||r.name))||String(r),'',r&&r.stack); });
+  return {send,setCtx:f=>{ ctx=f; }}; })();
 // CrazyGames köprüsü: site dışında sessizce çalışmaz, oyunu etkilemez
 const CG={sdk:null,env:'none',playing:false,lastMid:0,mute:false};
 // platform ilk yayında (Basic Launch) reklamı yasaklar: reklam yalnız OB_ADS açıkken istenir
