@@ -370,14 +370,14 @@ function updateCastle(dt){ const t=performance.now()/1000; const freed=(!!(S.boo
 const WARD_N=12;
 function bossPhase(e){ if(!e.boss||e.ph2||e.dead||bossOf().hat!=='crown'||e.hp>e.maxHp*0.65) return; e.ph2=true; e.chanT=3; e.cdn=4;
   const rm=new THREE.MeshBasicMaterial({color:0xff2a1a,transparent:true,opacity:0.75,depthWrite:false,side:THREE.DoubleSide}); const ring=new THREE.Mesh(new THREE.RingGeometry(0.85,1,40),rm); ring.rotation.x=-Math.PI/2; ring.position.y=0.15/e.sc; e.g.add(ring); e.enrRing=ring;
-  banner(T('⚠ KARA KRAL ÖFKELENİYOR','⚠ BLACK KING RAGING'),T('3 sn · Kılıcınla ona vurmaya hazırlan','3 s · get ready to strike him with your sword'),'boss'); tone(90,180,2.8,'sawtooth',0.05); camShake=Math.max(camShake,0.25); }
+  banner(T('⚠ KARA KRAL ÖFKELENİYOR','⚠ BLACK KING RAGING'),T('3 sn · Okunla ona vurmaya hazırlan','3 s · get ready to shoot him with your bow'),'boss'); tone(90,180,2.8,'sawtooth',0.05); camShake=Math.max(camShake,0.25); }
 function kingTick(e,dt){
   if(e.chanT>0){ e.chanT-=dt; const k=1-e.chanT/3, r=e.enrRing; if(r){ const s=(1.2+6*k)/e.sc; r.scale.set(s,s,1); r.material.opacity=0.45+0.4*Math.abs(Math.sin(k*9)); } const c=Math.ceil(e.chanT); if(c<e.cdn&&c>0){ e.cdn=c; floatText(e.g.position.clone().setY(3.2*e.sc),String(c),'red'); tone(220-c*30,160-c*20,0.2,'square',0.05); }
     if(e.chanT<=0) kingEnrage(e); return; }
   if(e.ward>0&&e.aura) e.aura.material.opacity=0.45+0.25*Math.sin(gameT*8); }
 let curseSaid=false;
 function kingEnrage(e){ curseSaid=false; if(e.enrRing){ e.g.remove(e.enrRing); e.enrRing.geometry.dispose(); e.enrRing.material.dispose(); e.enrRing=null; } e.speed*=1.2; e.atk*=1.3; e.ward=WARD_N; const pos=e.g.position.clone();
-  banner(T('KARA KRAL ÖFKELENDİ!','BLACK KING ENRAGED!'),T('Kalkan iksirleri engeller · Kılıçla kır!','Ward blocks potions · Break it with your sword!'),'boss'); SFX.night(); SFX.boom(); camShake=0.7; burst(pos.clone().setY(1.5),24,M.darkRoof,1.6,1.6); const aura=glow(0xb040ff,6,0.6); aura.position.y=2; e.g.add(aura); e.aura=aura;
+  banner(T('KARA KRAL ÖFKELENDİ!','BLACK KING ENRAGED!'),T('Kalkan iksirleri engeller · Okla kır!','Ward blocks potions · Break it with your arrows!'),'boss'); SFX.night(); SFX.boom(); camShake=0.7; burst(pos.clone().setY(1.5),24,M.darkRoof,1.6,1.6); const aura=glow(0xb040ff,6,0.6); aura.position.y=2; e.g.add(aura); e.aura=aura;
   const n=4+Math.min(4,Math.floor((S.level-10)/5)); for(let i=0;i<n;i++){ makeEnemy(i%2?'knight':'raider',e.side); const m=enemies[enemies.length-1]; m.guard=true; advanceOnRoad(m,i*1.6); burst(m.g.position.clone().setY(1),8,M.darkRoof,1.2); }
   setTimeout(()=>{ if(waveActive&&!runOver) gateAlert(T(`⚔️ ${n} muhafız ${SIDE_TR[e.side]} yolundan geliyor`,`⚔️ ${n} guards coming down the ${SIDE_TR[e.side]} road`)); },2600); }
 function wardHit(e){ e.ward--; burst(e.g.position.clone().setY(1.8),6,M.darkRoof,0.9); if(e.ward>0){ floatText(e.g.position.clone().setY(3*e.sc),'🛡 '+e.ward,'red'); tone(700,500,0.08,'triangle',0.05); return; }

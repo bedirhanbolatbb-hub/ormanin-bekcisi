@@ -73,9 +73,9 @@ function stat(k,n){ const m=S.meta; if(!m) return; const st=m.st||(m.st={}); st[
 const CARDS={
   arrow:{n:T('Keskin Oklar','Sharp Arrows'),d:T('Okçu kulelerinin hasarı +%25','Archer Tower damage +25%'),i:'🏹'}, rate:{n:T('Hızlı Yay','Quick Bow'),d:T('Okçular %20 daha hızlı atar','Archers shoot 20% faster'),i:'💨'}, range:{n:T('Uzun Menzil','Long Range'),d:T('Tüm kulelerin menzili +3','All towers get +3 range'),i:'🎯'},
   powder:{n:T('Barut','Gunpowder'),d:T('Topçu hasarı +%40','Cannon damage +40%'),i:'💣'}, wall:{n:T('Sağlam Sur','Sturdy Walls'),d:T('Sur canı +%25 ve tamamen onarılır','Wall HP +25%, fully repaired'),i:'🧱'}, mend:{n:T('Duvarcı','Mason'),d:T('Saldırı sırasında sur kendini onarır','Walls self-repair under attack'),i:'🔧'},
-  sword:{n:T('Keskin Kılıç','Sharp Sword'),d:T('Kılıç hasarı +%40, menzili biraz artar','Sword damage +40%, a bit more reach'),i:'⚔️'}, drill:{n:T('Talimli Asker','Trained Soldiers'),d:T('Askerler %40 daha sert vurur','Soldiers hit 40% harder'),i:'🛡️'}, trample:{n:T('Midilli Ezme','Pony Trample'),d:T('Koşarken çarptığın düşmanı ezersin','Trample enemies you run into'),i:'🐴'},
+  sword:{n:T('Kraliyet Yayı','Royal Bow'),d:T('Okların +%40 hasar, daha hızlı ve uzağa','Your arrows: +40% damage, faster, longer reach'),i:'⚡'} /* v43: kılıç kartı kahraman yayına döndü (kayıt anahtarı "sword" aynı kalır) */, drill:{n:T('Talimli Asker','Trained Soldiers'),d:T('Askerler %40 daha sert vurur','Soldiers hit 40% harder'),i:'🛡️'}, trample:{n:T('Midilli Ezme','Pony Trample'),d:T('Koşarken çarptığın düşmanı ezersin','Trample enemies you run into'),i:'🐴'},
   pony:{n:T('Çevik Midilli','Nimble Pony'),d:T('Midilli %15 daha hızlı','Pony 15% faster'),i:'🥕'}, axe:{n:T('Güçlü Balta','Strong Axe'),d:T('Ağaçları %30 daha hızlı kesersin','Chop trees 30% faster'),i:'🪓'}, lumber:{n:T('Odun Bereketi','Wood Galore'),d:T('Her ağaç +2 odun verir','+2 wood per tree'),i:'🌲'},
-  magnet:{n:T('Mıknatıs','Magnet'),d:T('Altın ve ganimet %60 daha uzaktan gelir','Gold and loot pickup range +60%'),i:'🧲'}, trade:{n:T('Pazarlık','Haggling'),d:T('Miğferler %30 daha pahalı satılır','Helmets sell for 30% more'),i:'🤝'}, gold:{n:T('Hazine Sandığı','Treasure Chest'),d:T('Hemen altın kazan','Instant gold'),i:'💰'},
+  magnet:{n:T('Mıknatıs','Magnet'),d:T('Altın ve ganimet %45 daha uzaktan gelir','Gold and loot pickup range +45%'),i:'🧲'}, trade:{n:T('Pazarlık','Haggling'),d:T('Miğferler %30 daha pahalı satılır','Helmets sell for 30% more'),i:'🤝'}, gold:{n:T('Hazine Sandığı','Treasure Chest'),d:T('Hemen altın kazan','Instant gold'),i:'💰'},
 };
 // kart ancak etkileyeceği bir şey varsa sunulur (topçu yokken Barut, asker yokken Talimli Asker çıkmaz)
 const CARD_NEED={arrow:()=>S.towers.some(t=>t.k!=='c'&&t.lvl>=1), rate:()=>CARD_NEED.arrow(), range:()=>S.towers.some(t=>t.lvl>=1), powder:()=>S.towers.some(t=>t.k==='c'&&t.lvl>=1), drill:()=>(S.lv.soldier||0)>0};
@@ -87,12 +87,16 @@ Object.assign(CARD_NEED,{axe:woodWanted, lumber:woodWanted, gold:()=>!goldRich()
 const CARD_FIGHT=['arrow','rate','range','powder','wall','mend','sword','drill','trample'];
 const cc=k=>(S.cards&&S.cards[k])||0; const mu=k=>(S.meta&&S.meta.up&&S.meta.up[k])||0;
 // F7: kahramanın kılıcı seferle güçlenir (eskiden 1. seferdeki 9'da kalıyordu, geç seferlerde düşman canının %1'i): gece saldırılan kapıda durmak her seferde hissedilir
+const HERO_K=30; /* v43: kahraman okunun 1. seferdeki taban hasarı (sim ölçümü: iyi oyuncuda gece hasarının ~%25-30'u) */
+/* v43: yay hasarı seferin beklenen savunma gücünü (REF_DPS) izler: geç seferlerde de kahraman işe yarar */
+const heroScale=()=>Math.pow(refDps(Math.max(1,S.level|0),3)/refDps(1,3),0.9);
 const heroK=()=>1+1.5*Math.max(0,(S.level|0)-1);
 const hasPerk=k=>cc({arrows:'rate',mason:'mend',gold:'trade',lumber:'lumber',magnet:'magnet',cannon:'powder',trample:'trample'}[k]||k)>0;
 const D = {
   chopRate:()=>4.0*(1+0.3*cc('axe'))*(isWinter()?0.72:1), treeHits:()=>1, logsPerTree:()=>4+2*cc('lumber'),
-  cap:()=>40+15*S.lv.feet, speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>3.8*(1+0.6*cc('magnet')), lootPrice:()=>(8+gw()*1.0+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
-  swordDmg:()=>9*heroK()*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'),
+  cap:()=>40+15*S.lv.feet, speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>6*(1+0.45*cc('magnet')), lootPrice:()=>(8+gw()*1.0+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
+  swordDmg:()=>9*heroK()*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'), /* v43: kılıç yalnız midilli ezmesinin hasar tabanı */
+  heroDmg:()=>(window.__hk||HERO_K)*heroScale()*(1+0.4*cc('sword')), heroRange:()=>(window.__hr||11.5)+0.6*Math.min(4,cc('sword')), heroRate:()=>2.1*(1+0.1*Math.min(4,cc('sword'))), /* v43: kahraman yayı: hasar, menzil, saniyede atış */
   gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.05*mu('wall'))*(1+0.12*(S.lv.ironWall||0))), towerDmg:l=>(5+3*(l-1))*(1+0.25*cc('arrow'))*(1+0.04*mu('arrow'))*(1+0.1*(S.lv.ironArrow||0)), towerRange:()=>17+3*cc('range'), towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*(1+0.4*cc('powder')), soldierDmg:()=>8*(1+0.4*cc('drill')),
 };
 // Kapı sayısı: bölümün gecesine ve bölüm numarasına göre açılır
@@ -118,6 +122,7 @@ const SFX = {
   chop:()=>{ noise(0.08,0.2); tone(180,90,0.08,'square',0.035); }, fall:()=>{ noise(0.3,0.25); tone(120,50,0.3,'sawtooth',0.045); }, /* FX4: kesme/devrilme sesi kısıldı, para/ödeme sesi açıldı (oyuncunun kendi ödülü duyulsun) */
   coin:()=>{ if(typeof coinChime==='function') coinChime(); else tone(880,1320,0.12,'sine',0.06); }, sell:(()=>{ let n=0,t0=0; const PS=[0,2,4,7,9,12,14,16,19,21]; return ()=>{ const now=performance.now(); n=now-t0<420?n+1:0; t0=now; const f=660*Math.pow(2,PS[n%PS.length]/12); tone(f,f*1.5,0.08,'triangle',0.05); }; })(), /* FX4: art arda bırakmada aynı bip yerine yükselen beşli dizi */ pay:(k)=>{ k=Math.max(0,Math.min(1,k||0)); const f=420+k*900; tone(f,f*1.12,0.05,'triangle',0.045+0.04*k); },
   build:()=>{ tone(300,600,0.15,'triangle',0.08); setTimeout(()=>tone(600,900,0.2,'triangle',0.08),120); setTimeout(()=>tone(900,1200,0.25,'sine',0.07),260); },
+  bow:()=>{ tone(620,240,0.08,'triangle',0.032); tone(1500,700,0.05,'sine',0.012); noise(0.05,0.06); }, /* v43: yay sesi: kısa, yumuşak tıngırtı + vınlama */
   slash:()=>{ noise(0.07,0.25); tone(900,300,0.09,'sawtooth',0.04); }, hit:()=>{ tone(300,120,0.1,'square',0.05); }, die:()=>{ tone(400,80,0.2,'sawtooth',0.05); },
   gate:()=>{ noise(0.12,0.3); tone(90,40,0.15,'square',0.06); }, wave:()=>{ tone(220,330,0.25,'triangle',0.08); setTimeout(()=>tone(330,440,0.3,'triangle',0.08),200); },
   boom:()=>{ noise(0.35,0.3); tone(90,30,0.35,'sawtooth',0.07); },
@@ -131,7 +136,7 @@ const SFX = {
 };
 /* FX4: aynı ses çok sık çalmaz (GAP: en kısa aralık, sn; daha yakındaki/yüksek ses sırayı alır), sık seslerde hafif perde oynaması (DET, cent);
    dünya sesleri sfxAt(konum,taban) ile oyuncuya uzaklığa göre kısılır, uzaktakiler hiç çalmaz; büyük kutlama sesleri (build/fanfare/win/lose) aynı anda üst üste binmez: aynı karede en önemlisi çalar, 0.8 sn içinde eşit/düşük önemlisi atlanır */
-{ const GAP={hit:0.07,sell:0.11,boom:0.12,gate:0.2,chop:0.08,fall:0.12,die:0.06,slash:0.07,pay:0.045,coin:0.035,wave:0.5,night:1,card:0.3}, DET={hit:60,sell:35,boom:50,gate:50,chop:60,fall:40,die:50,slash:50}, PRI={build:1,fanfare:2,win:3,lose:3,doom:3}, lastT={}, lastK={}; let stQ=null, stT=-9, stP=0;
+{ const GAP={hit:0.07,sell:0.11,boom:0.12,gate:0.2,chop:0.08,fall:0.12,die:0.06,slash:0.07,bow:0.1,pay:0.045,coin:0.035,wave:0.5,night:1,card:0.3}, DET={hit:60,sell:35,boom:50,gate:50,chop:60,fall:40,die:50,slash:50,bow:45}, PRI={build:1,fanfare:2,win:3,lose:3,doom:3}, lastT={}, lastK={}; let stQ=null, stT=-9, stP=0;
   for(const k of Object.keys(SFX)){ const raw=SFX[k];
     if(PRI[k]) SFX[k]=(...a)=>{ SFX_K=1; if(!AC||sfxOff()) return; const p=PRI[k]; if(stQ){ if(p>stQ.p) stQ={p,raw,a}; return; } stQ={p,raw,a}; setTimeout(()=>{ const q=stQ; stQ=null; if(!q||!AC) return; const t=AC.currentTime; if(t-stT<0.8&&q.p<=stP) return; stT=t; stP=q.p; q.raw(...q.a); },0); };
     else SFX[k]=(...a)=>{ const K=SFX_K; SFX_K=1; if(!AC||sfxOff()||K<0.04) return; const t=AC.currentTime, g=GAP[k]||0; if(g&&t-(lastT[k]||-9)<g&&K<=(lastK[k]||0)*1.8) return; lastT[k]=t; lastK[k]=K; SFX_K=K; SFX_DET=DET[k]||0; try{ raw(...a); } finally { SFX_K=1; SFX_DET=0; } }; } }
@@ -176,7 +181,7 @@ const DAY={bg:new THREE.Color(0xe8dcc0),sun:new THREE.Color(0xfff1d2),hemi:new T
 // F9b: son seferde (Kara Kral yaşarken) ışık kırmızı-karanlığa kayar: gündüz hafif, gece tam; açılışta kısa bir kırmızı parlama (DOOM>1)
 let DOOM=0; const DOOMC={bg:new THREE.Color(0x3a1418),sun:new THREE.Color(0xff5a40),hemi:new THREE.Color(0x8a3440)};
 function applyDoom(k){ if(DOOM<0.002) return; const f=Math.min(1,Math.max(0,DOOM-1)), d=Math.max(f,Math.min(1,DOOM*(0.3+0.7*k))); scene.background.lerp(DOOMC.bg,d*0.6); scene.fog.color.copy(scene.background); sun.color.lerp(DOOMC.sun,d*0.5); hemi.color.lerp(DOOMC.hemi,d*0.35); sun.intensity*=1-0.3*d; renderer.toneMappingExposure*=1-0.12*d-0.25*f; }
-function applyNight(k){ scene.background.copy(DAY.bg).lerp(NIGHT.bg,k); scene.fog.color.copy(scene.background); sun.color.copy(DAY.sun).lerp(NIGHT.sun,k); sun.intensity=lerp(DAY.sunI,NIGHT.sunI,k); hemi.color.copy(DAY.hemi).lerp(NIGHT.hemi,k); hemi.intensity=lerp(DAY.hemiI,NIGHT.hemiI,k); renderer.toneMappingExposure=lerp(DAY.exp,NIGHT.exp,k); applyDoom(k); }
+function applyNight(k){ scene.background.copy(DAY.bg).lerp(NIGHT.bg,k); scene.fog.color.copy(scene.background); sun.color.copy(DAY.sun).lerp(NIGHT.sun,k); sun.intensity=lerp(DAY.sunI,NIGHT.sunI,k); hemi.color.copy(DAY.hemi).lerp(NIGHT.hemi,k); hemi.intensity=lerp(DAY.hemiI,NIGHT.hemiI,k); renderer.toneMappingExposure=lerp(DAY.exp,NIGHT.exp,k); applyDoom(k); if(typeof M_VCE!=='undefined') M_VCE.emissive.setRGB(0.34*k,0.08*k,0.06*k); }
 sun.position.set(14,26,10); sun.castShadow=true;
 sun.shadow.mapSize.set(isMobile?1024:2048,isMobile?1024:2048);
 Object.assign(sun.shadow.camera,{left:-60,right:60,top:60,bottom:-60,near:1,far:120});
@@ -211,14 +216,14 @@ function bakeStatic(root,keep){ root.updateMatrixWorld(true); const inv=new THRE
   for(const c of root.children){ if((keep&&keep.has(c))||!c.isMesh||c.isInstancedMesh||!c.visible||Array.isArray(c.material)||c.material.map||!c.geometry.attributes.normal||c.geometry.attributes.color) continue; const k=c.material.uuid+(c.castShadow?'s':'')+(c.receiveShadow?'r':''); let e=B.get(k); if(!e) B.set(k,e={m:c.material,cs:c.castShadow,rs:c.receiveShadow,l:[]}); e.l.push(c); }
   for(const e of B.values()){ if(e.l.length<2) continue; const gs=e.l.map(c=>{ const g=c.geometry.index?c.geometry.toNonIndexed():c.geometry.clone(); g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,c.matrixWorld)); return g; }); const m=new THREE.Mesh(mergeGeos(gs),e.m); gs.forEach(g=>g.dispose()); m.castShadow=e.cs; m.receiveShadow=e.rs; m.userData.baked=true; for(const c of e.l) root.remove(c); root.add(m); } return root; }
 /* F6: karakter parçaları: grubun doğrudan çocuğu olan düz renkli ağlar köşe renkli tek ağ olur (kişi başına ~20 yerine ~9 çizim). Işıltılı/saydam/dokulu malzemeler ayrı kalır */
-const M_VC=new THREE.MeshLambertMaterial({vertexColors:true}); const VC_CACHE=new Map();
-function bakeVC(root){ root.updateMatrixWorld(true); const inv=new THREE.Matrix4().copy(root.matrixWorld).invert(), B={};
+const M_VC=new THREE.MeshLambertMaterial({vertexColors:true}); const VC_CACHE=new Map(); const M_VCE=new THREE.MeshLambertMaterial({vertexColors:true}); /* v43b: düşmanlara özel: gece kırmızımsı ışıma (siluet okunur) */
+function bakeVC(root,MV){ root.updateMatrixWorld(true); const inv=new THREE.Matrix4().copy(root.matrixWorld).invert(), B={};
   for(const c of root.children){ const m=c.material; if(!c.isMesh||c.isInstancedMesh||!c.visible||!m||Array.isArray(m)||!m.isMeshLambertMaterial||m.map||m.transparent||m.vertexColors||(m.emissive&&m.emissive.getHex()!==0)||!c.geometry.attributes.normal) continue; (B[c.castShadow?'s':'n']=B[c.castShadow?'s':'n']||[]).push(c); }
   for(const k in B){ const l=B[k]; if(l.length<2) continue; const mats=l.map(c=>new THREE.Matrix4().multiplyMatrices(inv,c.matrixWorld)); const key=k+l.map((c,i)=>c.geometry.uuid+c.material.color.getHexString()+mats[i].elements.map(v=>Math.round(v*1000)).join(',')).join('|'); let geo=VC_CACHE.get(key);
     if(!geo){ const pos=[],nor=[],col=[]; l.forEach((c,j)=>{ const g=c.geometry.index?c.geometry.toNonIndexed():c.geometry.clone(); g.applyMatrix4(mats[j]); const P=g.attributes.position.array, N=g.attributes.normal.array, C=c.material.color; for(let i=0;i<P.length;i+=3){ pos.push(P[i],P[i+1],P[i+2]); nor.push(N[i],N[i+1],N[i+2]); col.push(C.r,C.g,C.b); } g.dispose(); });
       geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3)); if(VC_CACHE.size<400) VC_CACHE.set(key,geo); else geo.userData.own=true; }
-    for(const c of l) root.remove(c); const m=new THREE.Mesh(geo,M_VC); m.castShadow=k==='s'; m.receiveShadow=true; if(geo.userData.own) m.userData.baked=true; root.add(m); } return root; } /* aynı görünüşlü karakterler (düşman türleri, işçiler) aynı birleşik geometriyi paylaşır: her gece yeni düşman bellek sızdırmaz */
-function bakeGuy(g){ for(const r of [g.root,g.legL,g.legR,g.armL,g.armR]) if(r) bakeVC(r); return g; }
+    for(const c of l) root.remove(c); const m=new THREE.Mesh(geo,MV||M_VC); m.castShadow=k==='s'; m.receiveShadow=true; if(geo.userData.own) m.userData.baked=true; root.add(m); } return root; } /* aynı görünüşlü karakterler (düşman türleri, işçiler) aynı birleşik geometriyi paylaşır: her gece yeni düşman bellek sızdırmaz */
+function bakeGuy(g,MV){ for(const r of [g.root,g.legL,g.legR,g.armL,g.armR]) if(r) bakeVC(r,MV); return g; }
 function disposeBaked(root){ root.traverse(o=>{ if(o.userData&&o.userData.baked&&o.geometry) o.geometry.dispose(); }); }
 const m4=new THREE.Matrix4(), q=new THREE.Quaternion(), e3=new THREE.Euler(), vs=new THREE.Vector3(), vp=new THREE.Vector3(), v3=new THREE.Vector3();
 // F9b: haritaya yayılmış süs katmanları (çalı, kaya, çimen, tepeler) 50×50 parçalara bölünür: her parça kendi sınır küresiyle ekran/gölge dışındaysa çizilmez.

@@ -125,7 +125,7 @@ function updateTrees(dt){ let any=false; trees.forEach((t,i)=>{ if(t.gone) retur
   if(any){ treeTrunk.instanceMatrix.needsUpdate=true; treeCrown.instanceMatrix.needsUpdate=true; } }
 function nearestTree(pos,range,forWorker){ let best=null,bd=range; for(const t of trees){ if(!t.alive||t.falling>0||t.gone) continue; if(forWorker&&t.claimed&&t.claimed!==forWorker) continue; const d=Math.hypot(t.x-pos.x,t.z-pos.z); if(d<bd){bd=d;best=t;} } return best; }
 function hitTree(t,byGuy,onLog){ t.hp-=1; t.shake=0.3; t.dirty=true; const tfell=t.hp<=0; if(!tfell) sfxAt(t).chop(); /* FX4: devrilen ağaçta yalnız devrilme sesi; uzaktaki işçi kısık */ burst(new THREE.Vector3(t.x,1.2*t.s,t.z),6,M.logEnd,1); burst(new THREE.Vector3(t.x,2.4*t.s,t.z),5,M.bush,0.5);
-  if(t.hp<=0){ t.alive=false; t.falling=0.001; S.treesCut=(S.treesCut||0)+1; questEvent('chop'); sfxAt(t).fall(); const n=D.logsPerTree(); for(let i=0;i<n;i++){ setTimeout(()=>{ fly(new THREE.Vector3(t.x+rand(-.6,.6),1.0,t.z+rand(-.6,.6)),byGuy.g,onLog,true,4); }, 300+i*70); } } }
+  if(t.hp<=0){ t.alive=false; t.falling=0.001; S.treesCut=(S.treesCut||0)+1; if(byGuy===player&&S.level===1&&S.wave<=1&&(S.ftc|0)<6){ S.ftc=(S.ftc|0)+1; dropCoins(new THREE.Vector3(t.x,1.6,t.z),2,1.5,1.6,0.8,1); } /* v43: ilk ağaçlar birkaç altın düşürür: yeni oyuncu ilk 30 sn'de sayacın arttığını görür */ questEvent('chop'); sfxAt(t).fall(); const n=D.logsPerTree(); for(let i=0;i<n;i++){ setTimeout(()=>{ fly(new THREE.Vector3(t.x+rand(-.6,.6),1.0,t.z+rand(-.6,.6)),byGuy.g,onLog,true,4); }, 300+i*70); } } }
 function pushOutOfTrunks(p,r){ for(const t of trees){ if(t.gone) continue; if(!t.alive&&t.falling===0&&t.regrow<12) continue; const dx=p.x-t.x, dz=p.z-t.z; if(Math.abs(dx)>r||Math.abs(dz)>r) continue; const d=Math.hypot(dx,dz); if(d<r&&d>0.001){ p.x=t.x+dx/d*r; p.z=t.z+dz/d*r; } } }
 function pushOutOfCenter(p,r){ if(S.towers[0].lvl<1) return; const d=Math.hypot(p.x,p.z); if(d<r&&d>0.001){ p.x=p.x/d*r; p.z=p.z/d*r; } }
 
@@ -143,7 +143,10 @@ function hitRock(r,byGuy,onStone){ r.hp-=1; r.shake=0.3; r.dirty=true; sfxAt(r).
 // ---------- Karakterler (chibi) ----------
 const helmGeo=mergeGeos([new THREE.SphereGeometry(0.45,10,8).scale(1,0.55,1).translate(0,0.2,0),new THREE.BoxGeometry(0.7,0.12,0.24).translate(0,0.12,0.35)]);
 const LOG_MAX=160; const logSlots=[]; for(let i=0;i<LOG_MAX;i++){ const row=Math.floor(i/2), side=i%2; vp.set(side?0.24:-0.24,0.1+row*0.3,-0.05-(row%2)*0.06); e3.set(0,rand(-.08,.08),Math.PI/2); q.setFromEuler(e3); vs.set(1,1,1); logSlots.push(new THREE.Matrix4().compose(vp,q,vs)); }
-const COIN_STACK=40; const coinSlots=[]; for(let i=0;i<COIN_STACK;i++){ vp.set(rand(-.03,.03),0.08+i*0.15,rand(-.03,.03)); e3.set(0,rand(0,6),0); q.setFromEuler(e3); vs.set(0.75,0.75,0.75); coinSlots.push(new THREE.Matrix4().compose(vp,q,vs)); }
+const COIN_STACK=40; /* v43: taşınan altın yığını: 10 altın = 1 sikke (30'a kadar), sonrası logaritmik (40'ta durur) */
+function heroStackN(c){ if(!(c>0.5)) return 0; if(c<=300) return Math.ceil(c/10); return Math.min(COIN_STACK,30+Math.floor(Math.log2(c/300)*3)); }
+function stackTop(){ return 0.95+2.3+(player.coinMesh.count*0.12+0.1)*player.coinMesh.scale.y; } /* yığının tepesi (ödeme altını buradan uçar) */
+const COIN_STACK_=0; const coinSlots=[]; for(let i=0;i<COIN_STACK;i++){ vp.set(rand(-.03,.03),0.08+i*0.12,rand(-.03,.03)); /* v43: daha sık dizilir (30+ altın) */ e3.set(0,rand(0,6),0); q.setFromEuler(e3); vs.set(0.75,0.75,0.75); coinSlots.push(new THREE.Matrix4().compose(vp,q,vs)); }
 function makePony(){ const g=new THREE.Group(); const body=mesh(G.box,M.pony,0.7,0.62,1.35); body.position.set(0,0.78,-0.05); const neck=mesh(G.box,M.pony,0.4,0.5,0.4); neck.position.set(0,1.1,0.6); neck.rotation.x=-0.5; const head=mesh(G.box,M.pony,0.42,0.42,0.62); head.position.set(0,1.32,0.95); const snout=mesh(G.box,M.ponyLight,0.3,0.24,0.24); snout.position.set(0,1.22,1.3); const e1=mesh(G.sph,M.pupil,0.05,0.06,0.04,false); e1.position.set(-0.19,1.4,1.1); const e2=e1.clone(); e2.position.x=0.19; const earL=mesh(G.cone,M.pony,0.09,0.25,0.09); earL.position.set(-0.15,1.62,0.85); const earR=earL.clone(); earR.position.x=0.15; const mane=mesh(G.box,M.mane,0.14,0.5,0.7); mane.position.set(0,1.28,0.5); mane.rotation.x=-0.5; const tail=mesh(G.box,M.mane,0.14,0.6,0.16); tail.position.set(0,0.85,-0.78); tail.rotation.x=0.4; const saddle=mesh(G.box,M.banner,0.76,0.12,0.6); saddle.position.set(0,1.12,-0.05); g.add(body,neck,head,snout,e1,e2,earL,earR,mane,tail,saddle); const legs=[]; for(const [x,z] of [[-0.24,0.42],[0.24,0.42],[-0.24,-0.5],[0.24,-0.5]]){ const l=new THREE.Group(); l.position.set(x,0.55,z); const lm=mesh(G.box,M.ponyDark,0.18,0.55,0.2); lm.position.y=-0.28; const hoof=mesh(G.box,M.mane,0.2,0.1,0.22); hoof.position.y=-0.56; l.add(lm,hoof); g.add(l); legs.push(l);} bakeVC(g); /* F6 */ return {g,legs,tail,t:rand(0,6)}; }
 // müşteriler sivil: miğfer yok, düşman kırmızısı yok; yeşil/sarı/mavi/mor gömlek, bazısında hasır şapka
 const CIV_SHIRT=[mat(0x6cbf5f),mat(0xf2c14e),mat(0x4fb3c8),mat(0xa98bdc),mat(0xf3a6c8)], CIV_STRAW=mat(0xe8cf8a);
@@ -177,8 +180,9 @@ function makeGuy(kind){
   root.add(legL,legR,armL,armR);
   let pony=null; if(kind==='player'){ pony=makePony(); g.add(pony.g); root.position.y=0.95; legL.rotation.x=-1.3; legR.rotation.x=-1.3; legL.position.set(-0.3,0.42,0.1); legR.position.set(0.3,0.42,0.1); }
   const tool=new THREE.Group(); tool.position.set(0,-0.34,0.05);
-  if(kind==='player'||kind==='soldier'||kind==='enemy'){ const bl=mesh(G.box,kind==='enemy'?M.metal:M.blade,0.1,0.06,1.1); bl.position.z=0.7; const guard=mesh(G.box,M.gold,0.34,0.08,0.08); guard.position.z=0.18; const grip=mesh(G.cyl,M.handle,0.05,0.3,0.05); grip.rotation.x=Math.PI/2; grip.position.z=0.02; tool.add(bl,guard,grip); if(kind==='enemy'){ const sh=mesh(G.cyl,M.enemyDark,0.36,0.06,0.36); sh.rotation.z=Math.PI/2; sh.position.set(-0.1,0,0.1); armL.add(sh);} }
-  else { const handle=mesh(G.cyl,M.handle,0.06,1.0,0.06); handle.rotation.x=Math.PI/2; handle.position.z=0.35; const head2=mesh(G.box,M.metal,0.12,0.44,0.28); head2.position.set(0,0.14,0.75); const head3=mesh(G.box,M.handle,0.15,0.18,0.16); head3.position.set(0,0,0.75); tool.add(handle,head2,head3); }
+  if(kind==='soldier'||kind==='enemy'){ const bl=mesh(G.box,kind==='enemy'?M.metal:M.blade,0.1,0.06,1.1); bl.position.z=0.7; const guard=mesh(G.box,M.gold,0.34,0.08,0.08); guard.position.z=0.18; const grip=mesh(G.cyl,M.handle,0.05,0.3,0.05); grip.rotation.x=Math.PI/2; grip.position.z=0.02; tool.add(bl,guard,grip); if(kind==='enemy'){ const sh=mesh(G.cyl,M.enemyDark,0.36,0.06,0.36); sh.rotation.z=Math.PI/2; sh.position.set(-0.1,0,0.1); armL.add(sh);} }
+  else if(kind!=='player'){ const handle=mesh(G.cyl,M.handle,0.06,1.0,0.06); handle.rotation.x=Math.PI/2; handle.position.z=0.35; const head2=mesh(G.box,M.metal,0.12,0.44,0.28); head2.position.set(0,0.14,0.75); const head3=mesh(G.box,M.handle,0.15,0.18,0.16); head3.position.set(0,0,0.75); tool.add(handle,head2,head3); }
+  if(kind==='player'){ const bow=new THREE.Group(); const arc=new THREE.Mesh(new THREE.TorusGeometry(0.52,0.05,5,12,Math.PI).rotateZ(Math.PI/2),M.handle); const str=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,1.04,4),M.flashW||M.blade); const tip1=mesh(G.sph,M.gold,0.1,0.1,0.1,false); tip1.position.y=0.52; const tip2=tip1.clone(); tip2.position.y=-0.52; bow.add(arc,str,tip1,tip2); bow.rotation.set(0.9,-Math.PI/2,0); bow.position.set(0,-0.36,0.08); armL.add(bow); } /* v43: kahraman kılıç yerine yay taşır */
   armR.add(tool);
   const back=new THREE.Group(); back.position.set(0,0.5,-0.4); root.add(back);
   const logMesh=new THREE.InstancedMesh(G.log,M.log,LOG_MAX); logSlots.forEach((m,i)=>logMesh.setMatrixAt(i,m)); logMesh.count=0; logMesh.castShadow=true; logMesh.frustumCulled=false; back.add(logMesh);
@@ -226,7 +230,9 @@ const guide=(function(){
   const pin=mesh(G.cone,M.arrow,0.35,0.7,0.35,false); pin.rotation.x=Math.PI;
   scene.add(arrow,ring,pin);
   const el=document.createElement('div'); el.className='guide'; document.body.appendChild(el);
-  return {arrow,ring,pin,el};
+  /* v43b: yol noktaları: hedef surun öbür yanındaysa kapıdan geçen yol kesik çizgiyle gösterilir (tek çizim) */
+  const dots=new THREE.InstancedMesh(new THREE.CircleGeometry(0.22,10).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:0.9,depthWrite:false}),18); dots.count=0; dots.renderOrder=2; dots.frustumCulled=false; scene.add(dots);
+  return {arrow,ring,pin,el,dots};
 })();
 
 // ---------- Kontroller: sürükle = yürü, dokun = oraya git, iki parmak = yakınlaştır ----------
@@ -238,7 +244,7 @@ const joy={active:false,id:null,ox:0,oy:0,dx:0,dy:0,t0:0,sx:0,sy:0,moved:false};
 // Kamera gezinme: iki parmakla sürükle / sağ tuşla sürükle; karakter yürüyünce kamera ona döner
 const camPan=new THREE.Vector3(); let follow=true; let panDrag=null; const recenterEl=$('recenter');
 // ekranın kısa kenarı her zaman aynı genişlikte dünya gösterir: telefon dönünce dünya büyüyüp küçülmez, sadece yanlar açılır
-function viewHalfW(){ const a=innerWidth/Math.max(1,innerHeight); return a<1?13:Math.max(22,13*a); }
+function viewHalfW(){ const a=innerWidth/Math.max(1,innerHeight); return a<1?(innerWidth<600?10.8:13):Math.max(22,13*a); } /* v43b: dikey telefonda varsayılan ~%20 yakın (karakterler okunur); kıstırma sınırları (0.6-2.2) buna göre */
 function worldPerPx(){ return 2*viewHalfW()*zoom/innerWidth; }
 function panBy(dxPx,dyPx){ const k=worldPerPx(); const cy=Math.cos(YAW), sn=Math.sin(YAW); camPan.x-=(dxPx*cy+dyPx*sn)*k; camPan.z-=(-dxPx*sn+dyPx*cy)*k; const lim=WORLD+10; camPan.x=clamp(camPan.x,-lim-player.g.position.x,lim-player.g.position.x); camPan.z=clamp(camPan.z,-lim-player.g.position.z,lim-player.g.position.z); follow=false; recenterEl.classList.add('show'); }
 function recenter(){ follow=true; recenterEl.classList.remove('show'); }
@@ -246,12 +252,13 @@ recenterEl.addEventListener('click',()=>{ audio(); recenter(); });
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 const joyEl=$('joy'); const ray=new THREE.Raycaster();
 function groundPoint(cx,cy){ v3.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1,0.5); ray.setFromCamera(v3,camera); const o=ray.ray.origin, d=ray.ray.direction; if(Math.abs(d.y)<1e-4) return null; const t=-o.y/d.y; if(t<0) return null; return [o.x+d.x*t,o.z+d.z*t]; }
+function nearEl(el,x,y,m){ if(!el) return false; const r=el.getBoundingClientRect(); return r.width>0&&x>r.left-m&&x<r.right+m&&y>r.top-m&&y<r.bottom+m; } /* v43b: onay düğmesine giden fare hayaleti sürüklemez */
 function capPtr(id){ try{ canvas.setPointerCapture(id); }catch(_){} } /* CRASH-FIX D */
 function ptrReset(){ ptrs.clear(); pinchMid=null; pinchD0=0; panDrag=null; if(joy.active){ joy.active=false; joy.dx=joy.dy=0; joyEl.style.display='none'; } } /* CRASH-FIX E */
 addEventListener('pointerup',e=>{ if(e.target!==canvas){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinchMid=null; if(joy.active&&e.pointerId===joy.id){ joy.active=false; joy.dx=joy.dy=0; joyEl.style.display='none'; } } },true); addEventListener('pointercancel',e=>{ if(e.target!==canvas) ptrReset(); },true); addEventListener('blur',ptrReset); document.addEventListener('visibilitychange',()=>{ if(document.hidden) ptrReset(); });
 canvas.addEventListener('pointerdown',e=>{ audio(); if(e.isPrimary&&e.pointerType!=='mouse'&&(ptrs.size||joy.active)) ptrReset(); /* CRASH-FIX E: ilk parmak = önceki dokunuşlar bitmiş */ if(e.pointerType==='mouse'&&e.button!==0){ panDrag=[e.clientX,e.clientY]; capPtr(e.pointerId); return; } ptrs.set(e.pointerId,[e.clientX,e.clientY]); if(ptrs.size===2){ const a=[...ptrs.values()]; pinchD0=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]); pinchZ0=zoomTarget; pinchMid=[(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2]; joy.active=false; joy.dx=joy.dy=0; joyEl.style.display='none'; return; } if(joy.active) return; joy.active=true; joy.id=e.pointerId; joy.ox=e.clientX; joy.oy=e.clientY; joy.sx=e.clientX; joy.sy=e.clientY; joy.t0=performance.now(); joy.moved=false; joy.dx=joy.dy=0; capPtr(e.pointerId); if(placing){ const gp=groundPoint(e.clientX,e.clientY); if(gp) placeGhostAt(gp[0],gp[1]); } });
 canvas.addEventListener('pointermove',e=>{ if(panDrag){ panBy(e.clientX-panDrag[0],e.clientY-panDrag[1]); panDrag=[e.clientX,e.clientY]; return; } if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId,[e.clientX,e.clientY]); if(ptrs.size===2){ const a=[...ptrs.values()]; const d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]); if(pinchD0>0) zoomTarget=clamp(pinchZ0*pinchD0/d,0.6,2.2); const mid=[(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2]; if(pinchMid){ panBy(mid[0]-pinchMid[0],mid[1]-pinchMid[1]); } pinchMid=mid; return; }
-  if(placing&&!isTouch){ const gp=groundPoint(e.clientX,e.clientY); if(gp) placeGhostAt(gp[0],gp[1]); }
+  if(placing&&!isTouch){ if(!placing.m0) placing.m0=[e.clientX,e.clientY]; else if((placing.free||Math.hypot(e.clientX-placing.m0[0],e.clientY-placing.m0[1])>48)&&!nearEl($('placeBar'),e.clientX,e.clientY,90)){ placing.free=1; const gp=groundPoint(e.clientX,e.clientY); if(gp) placeGhostAt(gp[0],gp[1]); } } /* v43b: önerilen yer, fare belirgin oynayana dek kalır */
   if(!joy.active||e.pointerId!==joy.id) return; let dx=e.clientX-joy.ox, dy=e.clientY-joy.oy; if(!joy.moved){ if(Math.hypot(e.clientX-joy.sx,e.clientY-joy.sy)<10) return; joy.moved=true; if(placing) return; joyEl.style.display='block'; joyEl.style.left=joy.ox+'px'; joyEl.style.top=joy.oy+'px'; moveTarget=null; }
   if(placing) return; const len=Math.hypot(dx,dy), R=42; if(len>R){ joy.ox=e.clientX-dx*R/len; joy.oy=e.clientY-dy*R/len; joyEl.style.left=joy.ox+'px'; joyEl.style.top=joy.oy+'px'; dx*=R/len; dy*=R/len; } joy.dx=dx/R; joy.dy=dy/R; joyEl.firstElementChild.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`; });
 const joyEnd=e=>{ if(panDrag){ panDrag=null; return; } ptrs.delete(e.pointerId); if(ptrs.size<2) pinchMid=null; if(!joy.active||e.pointerId!==joy.id) return; const tap=!joy.moved&&performance.now()-joy.t0<350; joy.active=false; joy.dx=joy.dy=0; joyEl.style.display='none'; if(tap){ const gp=groundPoint(e.clientX,e.clientY); if(!gp) return; if(placing){ placeGhostAt(gp[0],gp[1]); confirmPlace(); return; } let tx=clamp(gp[0],-WORLD+2,WORLD-2), tz=clamp(gp[1],-WORLD+2,WORLD-2); for(const pd of pads){ if(pd.g.visible&&Math.hypot(pd.g.position.x-tx,pd.g.position.z-tz)<1.7){ tx=pd.g.position.x; tz=pd.g.position.z; break; } } moveTarget=[tx,tz]; moveMark.visible=true; moveMark.position.set(tx,0.05,tz); moveMark.scale.setScalar(1.6); } };
@@ -264,13 +271,20 @@ const floats=[];
 /* FX4: opt={key,v,fmt,follow}: aynı anahtarlı canlı yazı varsa yenisi açılmaz, değer ona eklenir (+70 +70 → +140 tek sayı, zıplar); follow: yazı bir nesneyi izler (oyuncunun altın sayacı). Yazılar büyüyerek belirir, yumuşak yükselir */
 function fpop(el,s){ if(document.body.classList.contains('calm')) return; if(el.animate) try{ el.animate([{transform:`translate(-50%,-50%) scale(${s})`},{transform:'translate(-50%,-50%) scale(1)'}],{duration:s<1?260:180,easing:'cubic-bezier(.2,1.6,.4,1)'}); }catch(e){} }
 function floatText(pos,txt,cls,opt){ if(opt&&opt.key){ for(const f of floats){ if(f.key===opt.key&&f.t<(opt.follow?1.0:0.7)&&(opt.follow||f.p.distanceToSquared(pos)<6.25)){ f.v+=opt.v||0; const t2=opt.fmt?opt.fmt(f.v):txt; if(t2!==f.txt){ f.txt=t2; f.el.textContent=t2; f.w=0; } f.t=Math.min(f.t,0.12); if(!opt.follow) f.p.copy(pos); const now=performance.now(); if(now-(f.popT||0)>120){ f.popT=now; fpop(f.el,1.3); } return; } } if(opt.fmt) txt=opt.fmt(opt.v||0); }
-  for(const f of floats){ if(f.txt===txt&&f.t<0.6&&f.p.distanceToSquared(pos)<9){ f.t=0; f.p.copy(pos); return; } } /* FX3: aynı yazı üst üste binmez, yenilenir */ let dy=0; for(const f of floats){ if(f.t<0.5&&f.p.distanceToSquared(pos)<4) dy+=0.7; } const el=document.createElement('div'); el.className='float '+(cls||''); el.textContent=txt; document.body.appendChild(el); floats.push({el,p:pos.clone(),t:0,txt,dy:Math.min(2.1,dy),key:opt&&opt.key,v:(opt&&opt.v)||0,follow:opt&&opt.follow}); fpop(el,0.4); }
+  for(const f of floats){ if(f.txt===txt&&f.t<0.6&&f.p.distanceToSquared(pos)<9){ f.t=0; f.p.copy(pos); return; } } /* FX3: aynı yazı üst üste binmez, yenilenir */
+  const msg=cls!=='dmg'&&!(opt&&(opt.follow||opt.key))&&!/\bbig\b/.test(cls||''); /* v43b: bilgi yazıları (seviye atlama, "Kule kuruldu!" …) aynı anda en çok 2; fazlası sıraya girer */
+  if(msg&&!(opt&&opt.fromQ)){ let n=0; for(const f of floats) if(f.msg&&f.t<0.85) n++; if(n>=2||floatQ.length){ if(floatQ.length<6&&!floatQ.some(q=>q[1]===txt)) floatQ.push([pos.clone(),txt,cls]); return; } }
+  let dy=0; for(const f of floats){ if(f.t<0.5&&f.p.distanceToSquared(pos)<4) dy+=0.7; } const el=document.createElement('div'); el.className='float '+(cls||''); el.textContent=txt; document.body.appendChild(el); floats.push({el,p:pos.clone(),t:0,txt,dy:Math.min(2.1,dy),key:opt&&opt.key,v:(opt&&opt.v)||0,follow:opt&&opt.follow,msg}); fpop(el,0.4); }
+const floatQ=[];
 /* FX4: ekran uzayında çakışma çözümü: oyuncunun sayacı (follow) sabit, diğerleri oluşma sırasıyla, altındakiyle çakışırsa yumuşakça yukarı kayar; kenarlara kırpılır (FX3 sınırları) */
 function updateFloats(dt){ for(let i=floats.length-1;i>=0;i--){ const f=floats[i]; f.t+=dt; if(f.t>1.1){ f.el.remove(); floats.splice(i,1); } }
+  if(floatQ.length){ let n=0; for(const f of floats) if(f.msg&&f.t<0.85) n++; if(n<2){ const [qp,qt,qc]=floatQ.shift(); floatText(qp,qt,qc,{fromQ:1}); } } /* v43b */
+  v3.copy(player.g.position); v3.y=1.2; v3.project(camera); const hX=(v3.x+1)/2*innerWidth, hY=(1-v3.y)/2*innerHeight; /* v43b: kahramanın ekran yeri: bilgi yazıları üstüne binmez */
   const ord=floats.filter(f=>f.follow).concat(floats.filter(f=>!f.follow)), put=[];
   for(const f of ord){ v3.copy(f.follow?f.follow.position:f.p); v3.y+=2.4+(f.dy||0)+1.9*(1-Math.pow(1-f.t/1.1,3)); v3.project(camera); /* yavaşlayarak yükselir */ if(!f.w){ f.w=f.el.offsetWidth||60; f.h=f.el.offsetHeight||22; }
     const x=clamp((v3.x+1)/2*innerWidth,f.w/2+8,innerWidth-f.w/2-8), by=(1-v3.y)/2*innerHeight; let y=by-(f.off||0), need=0;
     for(let it=0;it<4;it++){ let hit=false; for(const o of put){ if(Math.abs(o.x-x)<(o.w+f.w)/2+4&&Math.abs(o.y-(by-need))<(o.h+f.h)/2+2){ need=Math.max(need,by-(o.y-(o.h+f.h)/2-2)); hit=true; } } if(!hit) break; }
+    if(f.msg&&Math.abs(x-hX)<f.w/2+34){ const top=hY-62-f.h/2; if(by-need>top) need=Math.max(need,by-top); } /* v43b: kahramanın başının üstüne çıkar */
     f.off=(f.off||0)+(need-(f.off||0))*(need>(f.off||0)?0.5:0.15); y=clamp(by-f.off,60,innerHeight-70); put.push({x,y:by-need,w:f.w,h:f.h});
     f.el.style.left=x+'px'; f.el.style.top=y+'px'; f.el.style.opacity=String(1-Math.max(0,f.t-0.8)/0.3); } } /* daha geç solar */
 const labels=[];
@@ -288,6 +302,7 @@ const chips=[]; const chipGeo=new THREE.BoxGeometry(0.14,0.09,0.14);
 function burst(pos,n,matl,up,big){ for(let i=0;i<n;i++){ const m=new THREE.Mesh(chipGeo,matl); m.position.copy(pos); if(big) m.scale.setScalar(big); m.castShadow=false; scene.add(m); chips.push({m,v:new THREE.Vector3(rand(-2.5,2.5),rand(2,5.5)*(up||1),rand(-2.5,2.5)),t:0}); } }
 function updateChips(dt){ for(let i=chips.length-1;i>=0;i--){ const c=chips[i]; c.t+=dt; c.v.y-=14*dt; c.m.position.addScaledVector(c.v,dt); c.m.rotation.x+=5*dt; c.m.rotation.z+=4*dt; if(c.m.position.y<0){ c.m.position.y=0; c.v.set(0,0,0);} if(c.t>0.9){ scene.remove(c.m); chips.splice(i,1);} } }
 // Yerdeki ganimet: oyuncu ya da toplayıcı alır; kimse almazsa kendi tezgâha uçar (yerde kalmaz)
+const LOOT_K=0.7, LOOT_KILL=0.3; /* v43: miğfer değerinin %30'u öldürünce doğrudan altın olarak düşer, tezgâh %70'ini öder (toplam aynı) */
 const LOOT_MAX=200; const lootMesh=new THREE.InstancedMesh(helmGeo,M.enemy,LOOT_MAX); lootMesh.count=0; lootMesh.castShadow=true; lootMesh.frustumCulled=false; lootMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(lootMesh); const loot=[];
 function dropLoot(x,z){ if(loot.length>=LOOT_MAX) loot.shift(); loot.push({x:x+rand(-.6,.6),y:1,z:z+rand(-.6,.6),vy:rand(3,6),ry:rand(0,6),t:0,fly:false,auto:false,taken:false}); }
 function updateLoot(dt){ const p=player.g.position; const R=D.magnet(); let got=0; let inAir=0; for(const l of loot) if(l.fly) inAir++;
@@ -300,16 +315,16 @@ function updateLoot(dt){ const p=player.g.position; const R=D.magnet(); let got=
 // ---------- Yerdeki altınlar ----------
 const COIN_MAX=900;
 const coinMesh=new THREE.InstancedMesh(G.coin,M.coin,COIN_MAX); coinMesh.castShadow=false; coinMesh.count=0; coinMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); coinMesh.frustumCulled=false; scene.add(coinMesh);
-const coins=[]; const stackH=new Map(); let coinSfxT=0, celebT=0, celebSpawn=0;
+const coins=[]; const stackH=new Map(); let coinSfxT=0, celebT=0, celebSpawn=0; const STALL_PULL=10;
 const cellKey=(x,z)=>((Math.round(x/0.9))+','+(Math.round(z/0.9)));
-function dropCoins(pos,n,value,spread,up){ for(let i=0;i<n;i++){ if(coins.length>=COIN_MAX){ const c=coins.shift(); S.coins+=c.value; if(c.key) stackH.set(c.key,Math.max(0,(stackH.get(c.key)||1)-1)); } const a=rand(0,6.28), sp=rand(0.3,1)*(spread||3); coins.push({x:pos.x,y:(pos.y||1),z:pos.z,vx:Math.cos(a)*sp,vy:rand(5,9)*(up||1),vz:Math.sin(a)*sp,fly:false,rest:false,t:0,rot:rand(0,6),value,key:null,ry:0.07}); } }
+function dropCoins(pos,n,value,spread,up,fl){ /* v43: fl=1 kahramana kendiliğinden uçar (öldürme/ağaç), fl=2 tezgâh altını (geniş çekim) */ for(let i=0;i<n;i++){ if(coins.length>=COIN_MAX){ const c=coins.shift(); S.coins+=c.value; if(c.key) stackH.set(c.key,Math.max(0,(stackH.get(c.key)||1)-1)); } const a=rand(0,6.28), sp=rand(0.3,1)*(spread||3); coins.push({x:pos.x,y:(pos.y||1),z:pos.z,vx:Math.cos(a)*sp,vy:rand(5,9)*(up||1),vz:Math.sin(a)*sp,fly:false,rest:false,t:0,rot:rand(0,6),value,key:null,ry:0.07,mag:fl===1,st:fl===2}); } }
 function updateCoins(dt){
   const p=player.g.position; if(celebT>0) celebT=Math.max(0,celebT-dt); /* FX4: patron zaferinde altın süpürgesi (celebT) artık gerçekten çalışır */ const R=celebT>0?9:D.magnet(); coinSfxT-=dt; let got=0;
   for(let i=coins.length-1;i>=0;i--){ const c=coins[i];
     if(!c.fly){ c.t+=dt;
       if(!c.rest){ c.vy-=22*dt; c.x+=c.vx*dt; c.y+=c.vy*dt; c.z+=c.vz*dt; if(c.y<0.07){ c.y=0.07; c.vy=-c.vy*0.4; c.vx*=0.6; c.vz*=0.6; if(Math.abs(c.vy)<0.8){ c.rest=true; c.key=cellKey(c.x,c.z); const h=(stackH.get(c.key)||0); stackH.set(c.key,h+1); c.ry=0.07+h*0.15; c.x=Math.round(c.x/0.9)*0.9+rand(-.12,.12); c.z=Math.round(c.z/0.9)*0.9+rand(-.12,.12); } } }
       else { c.y=lerp(c.y,c.ry,Math.min(1,dt*10)); }
-      const d=Math.hypot(c.x-p.x,c.z-p.z); if(c.t>0.3&&d<R){ c.fly=true; c.t=0; if(c.key){ stackH.set(c.key,Math.max(0,(stackH.get(c.key)||1)-1)); } } }
+      const d=Math.hypot(c.x-p.x,c.z-p.z); if(c.t>(c.mag?0.32:0.3)&&(c.mag||d<R||(c.st&&d<STALL_PULL))){ /* v43: öldürme altını nereden düşerse düşsün kahramana süpürülür; tezgâh altını geniş çekimle gelir */ c.fly=true; c.t=0; if(c.key){ stackH.set(c.key,Math.max(0,(stackH.get(c.key)||1)-1)); } } }
     else { c.t+=dt; const dx=p.x-c.x, dy=1.0-c.y, dz=p.z-c.z, d=Math.hypot(dx,dy,dz); const sp=(7+c.t*40)*dt; if(d<Math.max(0.5,sp)){ coins.splice(i,1); S.coins+=c.value; sellGain+=c.value; got++; continue; } c.x+=dx/d*sp; c.y+=dy/d*sp; c.z+=dz/d*sp; }
   }
   if(got>0){ coinPop(); if(coinSfxT<=0){ coinSfxT=0.06; SFX.coin(); } }
@@ -380,7 +395,7 @@ function updateCustomers(dt){
     else { c.state='queue'; c.guy.g.rotation.y=ROT45; animGuy(c.guy,dt,false,1); }
   }
   const first=customers.find(c=>c.state==='queue'); stallT-=dt;
-  if(first&&S.stall>0&&stallT<=0){ stallT=D.buyTime(); S.stall--; S.sold=(S.sold||0)+1; stallPile.count=Math.min(30,S.stall); const price=D.lootPrice(); first.state='leave'; first.t=0; SFX.coin(); const from=stallDrop(); const n=Math.max(2,Math.min(8,Math.round(price/5))); dropCoins(STALL_FRONT.clone().setY(1.4),n,price/n,1.8,0.8); floatText(from,`+${Math.round(price)}`,'',{key:'stall',v:price,fmt:v=>'+'+Math.round(v)}); /* FX4: art arda satışlar tek sayıda toplanır */ }
+  if(first&&S.stall>0&&stallT<=0){ stallT=D.buyTime(); S.stall--; S.sold=(S.sold||0)+1; stallPile.count=Math.min(30,S.stall); const price=D.lootPrice()*LOOT_K; first.state='leave'; first.t=0; SFX.coin(); const from=stallDrop(); const n=Math.max(2,Math.min(8,Math.round(price/5))); dropCoins(STALL_FRONT.clone().setY(1.4),n,price/n,1.8,0.8,2); floatText(from,`+${Math.round(price)}`,'',{key:'stall',v:price,fmt:v=>'+'+Math.round(v)}); /* FX4: art arda satışlar tek sayıda toplanır */ }
   stallPile.count=Math.min(30,S.stall);
 }
 stallPile.count=Math.min(30,S.stall);

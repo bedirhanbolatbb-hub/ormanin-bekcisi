@@ -108,7 +108,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .wl.pad small b{color:#ffd23f}
 .wl.pad.can{background:var(--green);box-shadow:0 0 0 3px rgba(255,210,63,.6),var(--shadow)}
 .wl small{display:block;font-family:var(--font-body);font-weight:700;font-size:11px;color:var(--ink-soft)}
-.hpbar{position:fixed;left:0;top:0;width:34px;height:6px;transform:translate(-50%,-50%);pointer-events:none;z-index:3;background:rgba(0,0,0,.35);border-radius:3px;overflow:hidden}
+.hpbar{position:fixed;left:0;top:0;width:30px;height:4px;transform:translate(-50%,-50%);pointer-events:none;z-index:3;background:rgba(0,0,0,.35);border-radius:3px;overflow:hidden}
 .hpbar i{display:block;height:100%;background:#ff5f5f;width:100%}
 .hpbar.boss{width:70px;height:9px}
 .vig{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(20,40,25,.28) 100%)}
@@ -131,6 +131,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .banner small{display:inline-block;margin-top:8px;font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;background:rgba(20,24,34,.75);padding:4px 14px;border-radius:12px}
 .banner.night b{color:#cfd8ff}.banner.boss b{color:#ff6b5f;font-size:clamp(38px,8vw,70px)}.banner.day b{color:#ffe27a}
 .banner.out{animation:bannerOut .5s ease forwards}
+.comeInd{position:fixed;left:0;top:0;transform:translate(-50%,-50%);z-index:5;pointer-events:none;background:rgba(150,28,28,.92);color:#fff;font-family:var(--font-display);font-weight:800;font-size:17px;padding:7px 14px;border-radius:14px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.35);animation:comePulse .8s ease-in-out infinite} /* v43b */
+@keyframes comePulse{50%{transform:translate(-50%,-50%) scale(1.07)}}
+body.calm .comeInd{animation:none}
 @keyframes bannerIn{from{transform:translate(-50%,-50%) scale(.6)}to{transform:translate(-50%,-50%) scale(1)}}
 @keyframes bannerOut{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-70%) scale(1.05)}}
 .intro .cards{display:flex;flex-direction:column;gap:10px;margin:8px 0 2px}
@@ -170,6 +173,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 .crowns.big{font-family:var(--font-display);font-weight:800;font-size:24px;color:var(--coin-ink);background:#fff3cf;border-radius:14px;padding:4px 12px}
 .gift{background:var(--green-soft);color:var(--green);font-weight:800;border-radius:12px;padding:8px 10px;margin:8px 0}
 .awayGold{font-family:var(--font-display);font-weight:800;font-size:30px;color:var(--coin-ink);background:#fff3cf;border-radius:14px;padding:4px 14px;margin:6px auto;width:max-content}
+.awayEarn b{font:inherit;color:inherit}.awayEarn .log-dot{vertical-align:-2px} /* v43b */
+.crownHelp{font-size:13px;font-weight:700;margin:6px 0 2px;opacity:.85}
 .dgift b{font-family:var(--font-display);color:var(--coin-ink)}.dgift small{display:block;font-weight:700;opacity:.85;margin-top:4px}
 .streak{display:flex;gap:5px;justify-content:center;margin-top:6px}.streak i{font-style:normal;width:26px;height:26px;line-height:26px;border-radius:50%;background:#fff;color:var(--green);font-size:13px;border:2px solid var(--green-soft);opacity:.55}.streak i.on{background:var(--green);color:#fff;opacity:1}.streak i.now{box-shadow:0 0 0 3px #ffd34d}
 .levels{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
@@ -189,6 +194,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
 @media (prefers-reduced-motion:reduce){.nightBtn,.intro .levels .lv.next{animation:none}}
 .placeBar{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:7;background:rgba(20,24,34,.92);color:#fff;border-radius:16px;padding:8px 8px 8px 14px;display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:var(--shadow);white-space:nowrap}
 .placeBar button{border:0;border-radius:12px;padding:8px 12px;background:var(--danger);color:#fff;font-family:var(--font-display);font-weight:800;font-size:15px;cursor:pointer}
+.placeBar button.ok{background:var(--green);font-size:18px;padding:12px 18px;animation:okPulse 1.2s ease-in-out infinite} /* v43b: büyük onay */
+@keyframes okPulse{50%{transform:scale(1.06)}}
+body.calm .placeBar button.ok{animation:none}
+@media (max-width:600px){.placeBar span{display:none}.placeBar{padding:8px}}
 @media (max-width:600px){.placeBar{bottom:calc(122px + env(safe-area-inset-bottom,0px));font-size:13px}}
 
 .kingBtn{position:fixed;left:14px;bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--panel);border:0;border-radius:14px;width:44px;height:44px;box-shadow:var(--shadow);font-size:20px;cursor:pointer}
@@ -388,6 +397,7 @@ body.fresh .lockLbl{opacity:0!important}
 .guide{width:max-content;max-width:calc(100vw - 16px);box-sizing:border-box;white-space:normal;text-align:center;z-index:5}
 .float{color:#ffe27a;z-index:5;text-shadow:-2px 0 #1b2230,2px 0 #1b2230,0 -2px #1b2230,0 2px #1b2230,-1.5px -1.5px #1b2230,1.5px 1.5px #1b2230,-1.5px 1.5px #1b2230,1.5px -1.5px #1b2230,0 3px 5px rgba(0,0,0,.45)}
 .float.red{color:#ff8a7f}.float.green{color:#8ee38f}
+.float.dmg{font-size:13px;color:#fff3c4;z-index:4} /* v43: kahraman okunun hasar sayısı */
 .bubble{max-width:min(300px,86vw)}
 .bubble button{white-space:nowrap;background:#23803d;box-shadow:0 3px 0 #17592a;min-height:40px;padding:9px 14px}
 .bubble button[data-act=no]{background:#c0392b;box-shadow:0 3px 0 #8e2a20}
@@ -444,7 +454,7 @@ body.calm .banner.out{opacity:0}body.calm .confetti{display:none}
 <div class="bossBar" id="bossBar" style="display:none"><b><span id="bossNm"></span><span id="bossPct"></span></b><div class="bar"><i></i></div></div>
 <div class="bossPtr" id="bossPtr" style="display:none"><span></span><i>💀</i></div>
 <button class="nightBtn" id="nightBtn" style="display:none">🌙 Geceyi başlat</button>
-<div class="placeBar" id="placeBar" style="display:none"><span data-en="👆 Tap an empty spot">👆 Boş yere dokun</span><button id="placeCancel">✕</button></div>
+<div class="placeBar" id="placeBar" style="display:none"><span data-en="👆 Tap to move">👆 Taşımak için dokun</span><button id="placeOk" class="ok" data-en="Place here ✓">Buraya kur ✓</button><button id="placeCancel">✕</button></div>
 <div class="joy" id="joy"><i></i></div>
 <canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita" data-en-aria="Minimap"></canvas>
 <button class="recenter" id="recenter" aria-label="Karaktere dön" data-en-aria="Back to hero">📍<span data-en=" Back to hero"> Karaktere dön</span></button>
