@@ -4,7 +4,8 @@
 Object.assign(M,{ flashW:new THREE.MeshBasicMaterial({color:0xffffff}), raft:mat(0x9a6a3a), pirateSail:mat(0x1d1d22,{side:THREE.DoubleSide}), skull:mat(0xf4efe4), eArrow:mat(0xd04a2a,{emissive:0x5a1408}) });
 
 // ----- vuruş hissi: beyaz parlama, seri öldürme sesi, patron ölünce ağır çekim -----
-function flashOn(e){ if(!e.fm){ e.fm=[]; e.g.traverse(o=>{ if(o.isMesh) e.fm.push([o,o.material]); }); } for(const f of e.fm) f[0].material=M.flashW; }
+const M_FLVC=new THREE.MeshLambertMaterial({vertexColors:true,emissive:0x6a5a50}); /* v45: vuruş parlaması rengi silmez (eski: düz beyaz → sürekli ok yiyen düşman/patron beyaz çarşaf gibi görünüyordu) */
+function flashOn(e){ const now=performance.now(); if(e.flT0&&now-e.flT0<300) return false; e.flT0=now; if(!e.fm){ e.fm=[]; e.g.traverse(o=>{ if(o.isMesh&&o.material!==M.flashW&&o.material!==M_FLVC) e.fm.push([o,o.material]); }); } for(const f of e.fm){ const fl=ART_FLASH.get(f[0].geometry); f[0].material=fl?(fl.length===1?fl[0]:fl):f[0].geometry.attributes.color?M_FLVC:M.flashW; } return true; }
 function flashOff(e){ if(e.fm) for(const f of e.fm) f[0].material=f[1]; }
 let comboN=0, comboAt=-9;
 function comboKill(e){ comboN=gameT-comboAt<1.4?comboN+1:1; comboAt=gameT; const k=Math.min(14,comboN-1); tone(400*(1+0.07*k),80+20*k,0.2,'sawtooth',0.05); if(k>=3) tone(900+80*k,1300+90*k,0.08,'triangle',0.035);
@@ -111,7 +112,7 @@ function dailyLbl(dc){ return `${mapIc(dc.L)} ${mapName(dc.L)} · ${DMODS[dc.mod
 function campNext(){ const u=Math.max(1,Math.min(LEVELS+1,(S.meta.unlocked|0)||1)); return Math.max(1,Math.min(u,(S.meta.campL|0)||u)); }
 function startDaily(){ if(!dailyOn()||dailyDone()) return false; const dc=dailyToday(); if(S.mode!=='daily') S.meta.campL=S.won?Math.min(LEVELS+1,S.level+1):S.level; startMap(dc.L,false,{daily:dc}); return true; }
 /* p2m6: Sisli gün görünümü: sis yakına iner (yalnız bu modda; diğer haritalarda eski değer) */
-function applyDailyLook(){ if(!scene.fog) return; const f=dmod('foggy'); scene.fog.near=f?26:120; scene.fog.far=f?92:230; }
+function applyDailyLook(){ if(!scene.fog) return; const f=dmod('foggy'), th=TH(); scene.fog.near=f?26:th.fog[0]; scene.fog.far=f?92:th.fog[1]; } /* v45: sis temaya göre */
 /* p2m6: Kampanya sekmesindeki kutucuk: bugünün teması + değiştiricisi, ödül, yarının önizlemesi */
 function dailyHtml(){ if(!dailyOn()){ const dc=dailyToday(), md=DMODS[dc.mod]; return `<div class="rchest dtile lock"><div class="rch"><i>🎯</i><div><b>${T('Günün Meydan Okuması','Daily Challenge')}</b><small>${T('Bugün','Today')}: ${md.i} ${md.n} · 👑 +${DAILY_CR} · 🏆</small></div><button disabled>🔒 ${T('1. harita','Map 1')}</button></div><p class="dmod">${md.i} ${md.d}</p><small class="dtm">🔒 ${T('1. haritayı kazanınca açılır · her gün yeni harita + kural','Unlocks after Map 1 · a new map + twist every day')}</small></div>`; } /* v44: kilitliyken de bugünün kuralı ve ödülü görünür */
   const dc=dailyToday(), md=DMODS[dc.mod], done=dailyDone(), on=S.mode==='daily'&&!S.won&&S.dkey===dc.k, nx=dailyTomorrow();
@@ -201,16 +202,15 @@ let winterOn=null, groundMesh=null, crownBase=null, winterToast=0;
 // F8: kış bütün haritada: ağaç tepeleri karlı, çatılar kırağılı, zemin karlı ama geceleri kararır; kış geceleri daha koyu ve mavi
 const NIGHT0={bg:NIGHT.bg.getHex(),sun:NIGHT.sun.getHex(),hemi:NIGHT.hemi.getHex(),sunI:NIGHT.sunI,hemiI:NIGHT.hemiI,exp:NIGHT.exp}, WG=new THREE.Color(0x46505c), WL=new THREE.Color(0x4a5660);
 function winterTrees(w){ const ic=treeCrown&&treeCrown.instanceColor; if(!ic) return; if(!crownBase){ if(!w) return; crownBase=ic.array.slice(); } const a=ic.array, sn=[0.86,0.92,0.96]; for(let i=0;i<a.length;i++) a[i]=w?crownBase[i]*0.4+sn[i%3]*0.6:crownBase[i]; ic.needsUpdate=true; }
-function applyWinterLook(){ const w=isWinter(); if(w===winterOn) return; winterOn=w; M.leaf.color.setHex(w?0xe4eef4:0xffffff); M.leaf.emissive.setHex(0); if(!groundMesh) scene.traverse(o=>{ if(o.isMesh&&o.material&&o.material.map===groundTex) groundMesh=o; }); if(groundMesh){ groundMesh.material.color.setHex(w?0xe2eaf2:0xffffff); groundMesh.material.emissive.setHex(0); } DAY.hemi.setHex(w?0xe8f0ff:0xfff4e0); DAY.bg.setHex(w?0xdfe6ee:0xe8dcc0);
-  M.roof.color.setHex(w?0xc9d3dc:0x6e4a3a); winterTrees(w); NIGHT.bg.setHex(w?0x1c2544:NIGHT0.bg); NIGHT.sun.setHex(w?0x7088d8:NIGHT0.sun); NIGHT.hemi.setHex(w?0x4a5ea0:NIGHT0.hemi); NIGHT.sunI=w?0.45:NIGHT0.sunI; NIGHT.hemiI=w?0.26:NIGHT0.hemiI; NIGHT.exp=w?0.88:NIGHT0.exp; applyNight(night);
-  winterToast=w&&S.started&&S.meta&&S.meta.winterSeen!==S.level?1:0; }
+function applyWinterLook(){ const k=themeKey(); if(k===winterOn) return; winterOn=k; if(!groundMesh) scene.traverse(o=>{ if(o.isMesh&&o.material&&o.material.map===groundTex) groundMesh=o; }); applyTheme(); /* v45: kış dahil bütün görünüm haritanın temasından */
+  winterToast=isWinter()&&S.started&&S.meta&&S.meta.winterSeen!==S.level?1:0; }
 // kış uyarısı bölge açılışı/afiş/pencere bitince, seferde bir kez, nötr renkte
-function winterTick(){ if(!winterOn) return; const k=1-night; if(groundMesh) groundMesh.material.emissive.copy(WG).multiplyScalar(k); M.leaf.emissive.copy(WL).multiplyScalar(k);
+function winterTick(){ if(!isWinter()) return; const k=1-night; if(groundMesh) groundMesh.material.emissive.copy(WG).multiplyScalar(k); M.leaf.emissive.copy(WL).multiplyScalar(k);
   if(winterToast&&!S.pendingReveal&&!$('banner')&&!document.querySelector('.intro')&&!waveActive){ winterToast=0; S.meta.winterSeen=S.level; toast(T('❄️ Kış: günler kısa · ağaç kesmek yavaş','❄️ Winter: short days · slower chopping')); } }
 
 // ----- ana döngü ve sıfırlama -----
 let p7T=0;
-function updateP7(dt){ updateBossChests(dt); updateEArrows(dt); updateShips(dt); p7T-=dt; if(p7T<=0){ p7T=1; applyWinterLook(); } winterTick(); }
+function updateP7(dt){ updateBossChests(dt); updateEArrows(dt); updateShips(dt); p7T-=dt; if(p7T<=0){ p7T=1; applyWinterLook(); } winterTick(); updateTheme(dt); updateArtCorpses(dt); }
 // F8: kışın ilk iki gün uzun (uzak Karlı Geçit'e gidip dönmeye vakit), sonra kısa
 const DAY_LEN=window.__dayLen||55; function dayLen(){ if(S.mode==='daily'&&S.mod==='nightOnly') return 30; /* p2m6: Bitmeyen Gece: kısa gündüz */ return isWinter()?(S.wave<=2?DAY_LEN-4:DAY_LEN-8):DAY_LEN; } /* p2m3: haritalar 8-12 dk: gündüz 30→55 sn (kış biraz kısa) */
 for(const s of SIDES) threatLbl[s].clampIn=true; /* F8: kapı tehdit etiketi (👑) ekran kenarında kesilmez */

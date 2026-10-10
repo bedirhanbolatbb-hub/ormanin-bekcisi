@@ -1,2 +1,5 @@
 .DS_Store
 node_modules/
+_kaykit/
+_kaykit.tgz
+_kaykit2.tgz

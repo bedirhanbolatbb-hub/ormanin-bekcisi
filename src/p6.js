@@ -467,7 +467,7 @@ function jobs6(J){ const p=player.g.position; const near=(list)=>{ let best=null
     ok:()=>(S.rg.crysIn||0)<crysCap()*0.5,load:jobLoad(snowPile,S.rg.crysIn||0,crysCap())});
 }
 const PIER_T=PIER_A.clone().lerp(PIER_B,0.98).addScaledVector(PIER_B.clone().sub(PIER_A).normalize(),-1.05);
-function collide6(p){ waterCollide(p,SC,SEA.r-0.3,PIER_A,PIER_T,1.05); castleCollide(p); solids6(p); }
+function collide6(p){ waterCollide(p,SC,SEA.r-0.3,PIER_A,PIER_T,1.05); castleCollide(p); solids6(p); themeCollide(p); }
 /* F6: bölge binaları katı (kutu/daire): oyuncu içinden geçmez, kenarından kayar; teslim noktaları dışarıda kalır */
 let near6P=null; const near6=(F,m)=>{ const p=near6P; return Math.hypot(p.x-F.C.x,p.z-F.C.z)<F.R.r+m; };
 function solids6(p){ near6P=p;
@@ -476,7 +476,7 @@ function solids6(p){ near6P=p;
   if(revealed('coast')&&near6(CO,10)){ boxPush(p,WH,CO.ang,1.9+PR,-1.5-PR,1.5+PR); if(lighthouse.visible) circPush(p,LIGHT.x,LIGHT.z,1.1+PR); }
   if(revealed('snow')&&near6(SN,8)){ boxPush(p,JEW,SN.ang,1.8+PR,-1.4-PR,1.4+PR); if(cdGrp.visible) circPush(p,CDRILL.x,CDRILL.z,1.4+PR); } }
 /* rehber yolu için büyük engeller [x,z,r] */
-function obstacles6(o){ if(revealed('swamp')) o.push([SHUT.x,SHUT.z,2.6],[CAUL.x,CAUL.z,1.9]); if(revealed('iron')) o.push([FORGE.x,FORGE.z,2.6],[MINE.x,MINE.z,3.6]); for(const k of IRON_PEAKS) o.push([k[0],k[1],k[2]*0.88+0.6]); if(revealed('coast')) o.push([WH.x,WH.z,2.5]); if(revealed('snow')) o.push([JEW.x,JEW.z,2.4]); }
+function obstacles6(o){ if(revealed('swamp')) o.push([SHUT.x,SHUT.z,2.6],[CAUL.x,CAUL.z,1.9]); if(revealed('iron')) o.push([FORGE.x,FORGE.z,2.6],[MINE.x,MINE.z,3.6]); for(const k of IRON_PEAKS) o.push([k[0],k[1],k[2]*0.88+0.6]); if(revealed('coast')) o.push([WH.x,WH.z,2.5]); if(revealed('snow')) o.push([JEW.x,JEW.z,2.4]); for(const t of themeObs) o.push(t); }
 // ----- ana güncelleme / kurulum / sıfırlama -----
 function vis6(){ swamp.visible=revealed('swamp'); ironArea.visible=revealed('iron'); coast.visible=revealed('coast'); snowArea.visible=revealed('snow'); flies.P.visible=revealed('swamp'); swampPile.g.visible=revealed('swamp'); coastPile.g.visible=revealed('coast'); snowPile.g.visible=revealed('snow');
   if(!revealed('swamp')){ shutLbl.hide=true; farmLbl.hide=true; } if(!revealed('iron')){ forgeLbl.hide=true; drillLbl.hide=true; } if(!revealed('coast')) whLbl.hide=true; if(!revealed('snow')){ jewLbl.hide=true; cdLbl.hide=true; } }

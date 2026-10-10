@@ -1,18 +1,39 @@
 
 // ---------- Sur (10 seviye, her seviyede farklı görünüm) ----------
-let wallGroup=null; let wallPop=1;
+let wallGroup=null; let wallPop=1; let wallKey=null;
 function wallSegs(){ const h=H, g=2.6; return [[-h,-h,-g,-h],[g,-h,h,-h],[-h,h,-g,h],[g,h,h,h],[-h,-h,-h,-g],[-h,g,-h,h],[h,-h,h,-g],[h,g,h,h]]; }
+const WT_M={}; const wtm=(c,e)=>WT_M[c+'_'+(e||0)]||(WT_M[c+'_'+(e||0)]=mat(c,e?{emissive:e}:undefined));
+function cornerTowers(tw,level){ for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const x=sx*H, z=sz*H; const low=sx>0&&sz>0; if(artOk()&&ART.glb.bld){ const kc=artKC(); const t=low?artProp('building_tower_base_'+kc,2.1,1.25,2.1):artProp('building_tower_A_'+kc,2.5); if(t){ t.position.set(x,0,z); t.rotation.y=Math.atan2(sx,sz); wallGroup.add(t); continue; } } /* kameraya en yakın köşe alçak: arkasındaki pedi saklamaz */ const h=(low?0.5:1)*tw.h+0.15*Math.min(3,level); const g=new THREE.Group(); g.position.set(x,0,z);
+    const bm=wtm(tw.c); if(tw.base){ const bs=mesh(G.box,wtm(tw.base),2.0,0.9,2.0); bs.position.y=0.45; g.add(bs); }
+    const body=tw.b==='box'?mesh(G.box,bm,1.7,h,1.7):tw.b==='spike'?mesh(G.cone4,bm,1.3,h,1.3):mesh(G.cyl,bm,0.95,h,0.95); body.position.y=h/2; if(tw.b==='spike') body.rotation.y=Math.PI/4; g.add(body);
+    if(tw.stripe&&!low) for(const k of [0.35,0.7]){ const st=mesh(G.cyl,wtm(tw.stripe),0.97,h*0.12,0.97); st.position.y=h*k; g.add(st); }
+    const rc=tw.rc?wtm(tw.rc):M.banner;
+    if(tw.roof==='cone'){ const r=mesh(G.cone,rc,1.35,1.5,1.35); r.position.y=h+0.75; g.add(r); }
+    else if(tw.roof==='cren'){ const r=mesh(G.cyl,bm,1.15,0.3,1.15); r.position.y=h+0.15; g.add(r); for(let i=0;i<6;i++){ const a=i/6*6.283, c=mesh(G.box,bm,0.42,0.45,0.42); c.position.set(Math.cos(a)*0.95,h+0.5,Math.sin(a)*0.95); g.add(c); } }
+    else if(tw.roof==='spike'){ const r=mesh(G.cone4,tw.b==='spike'?wtm(0x8a2a2a,0x3a0a0a):wtm(0x6a6e76),0.9,1.6,0.9); r.position.y=h+0.8; r.rotation.y=Math.PI/4; g.add(r); }
+    if(tw.lamp&&!low){ const l=mesh(G.box,wtm(tw.lamp===2?0xff5a2a:0xffd86a,tw.lamp===2?0xa82a0a:0xffb020),0.4,0.4,0.4,false); l.position.y=h*0.78; l.position.x=0.95*-sx*0.75; l.position.z=0.95*-sz*0.75; g.add(l); }
+    if(!low&&tw.roof!=='spike'){ const pole=mesh(G.cyl,M.handle,0.04,1.3,0.04); pole.position.y=h+1.9; const fl=mesh(G.box,M.flag,0.6,0.38,0.04); fl.position.set(0.3,h+2.3,0); g.add(pole,fl); }
+    bakeStatic(g); wallGroup.add(g); } }
 function buildWalls(level){
   if(wallGroup){ scene.remove(wallGroup); disposeBaked(wallGroup); } wallGroup=new THREE.Group(); scene.add(wallGroup); wallPop=0;
   const add=(im)=>{ scene.remove(im); wallGroup.add(im); return im; };
   const segs=wallSegs();
+  const TW=TH().wall; wallKey=themeKey(); /* v45: sur haritanın temasıyla: kazık biçimi, renk, uç, kuşak, taş temel */
   if(level<=3){
-    const h0=[1.6,2.2,2.6,3.0][level]; const logs=[]; for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz),n=Math.round(len/0.5); for(let i=0;i<=n;i++){ const h=h0+rand(-0.15,0.2); logs.push({x:x0+dx*i/n,y:h/2,z:z0+dz*i/n,sx:.27,sy:h,sz:.27,c:level>=2?(Math.random()<.5?0x8a5a2c:0x76481f):(Math.random()<.5?0x9a6a3a:0x86582c)}); } }
-    const tips=logs.map(l=>({x:l.x,y:l.sy+0.18,z:l.z,sx:.27,sy:.36,sz:.27,c:l.c}));
-    add(instanced(G.cyl,mat(0xffffff),logs)); add(instanced(G.cone,mat(0xffffff),tips));
-    if(level>=1){ const rails=[]; for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz); const ry=-Math.atan2(dz,dx); rails.push({x:(x0+x1)/2,y:h0*0.55,z:(z0+z1)/2,ry,sx:len,sy:.14,sz:.36,c:0x7d5124}); if(level>=3) rails.push({x:(x0+x1)/2,y:h0*0.85,z:(z0+z1)/2,ry,sx:len,sy:.14,sz:.36,c:0x5a3a1e}); } add(instanced(G.box,mat(0xffffff),rails)); }
+    const h0=[1.6,2.2,2.6,3.0][level]; const logs=[], tips=[], foot=[]; const LC=level>=2?TW.log2:TW.log; const box=TW.post==='box', spk=TW.post==='spike';
+    for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz),n=Math.round(len/(box?0.62:0.5)); const ry=-Math.atan2(dz,dx); for(let i=0;i<=n;i++){ const h=h0+rand(-0.15,0.2)+(spk?((i*7)%3)*0.25:0); const c=LC[Math.random()<.5?0:1]; logs.push({x:x0+dx*i/n,y:h/2,z:z0+dz*i/n,ry,sx:box?.6:.27,sy:h,sz:box?.55:.27,c}); }
+      if(TW.foot) foot.push({x:(x0+x1)/2,y:0.28,z:(z0+z1)/2,ry,sx:len+0.5,sy:.56,sz:.62,c:TW.foot}); }
+    if(TW.tip==='cone') for(const l of logs) tips.push({x:l.x,y:l.sy+0.18,z:l.z,sx:.27,sy:.36,sz:.27,c:l.c});
+    else if(TW.tip==='spike') for(const l of logs) tips.push({x:l.x,y:l.sy+0.3,z:l.z,ry:l.ry,sx:.24,sy:.6,sz:.24,c:TW.tipC||l.c});
+    else if(TW.tip==='ice') for(const l of logs) if(Math.random()<.6) tips.push({x:l.x,y:l.sy+0.06,z:l.z,ry:l.ry,sx:.66,sy:.12,sz:.62,c:0xf4fbff});
+    add(instanced(spk?G.cone4:box?G.box:G.cyl,mat(0xffffff),logs)); if(tips.length) add(instanced(TW.tip==='ice'?G.box:TW.tip==='spike'?G.cone4:G.cone,mat(0xffffff),tips)); if(foot.length) add(instanced(G.box,mat(0xffffff),foot));
+    if(level>=1){ const rails=[]; const rw=TW.railW||0.14; for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz); const ry=-Math.atan2(dz,dx); rails.push({x:(x0+x1)/2,y:h0*0.55,z:(z0+z1)/2,ry,sx:len,sy:rw,sz:box?.7:.36,c:TW.rail}); if(level>=3) rails.push({x:(x0+x1)/2,y:h0*0.85,z:(z0+z1)/2,ry,sx:len,sy:.14,sz:box?.7:.36,c:TW.rail}); } add(instanced(G.box,mat(0xffffff),rails)); }
+  } else if(artOk()&&ART.glb.bld&&artPropGeo('wall_straight')){ /* v46: taş sur = KayKit taş duvar parçaları, seviyeyle yükselir */
+    const Hh=level<=10?[2.6,3.0,3.4,3.6,3.9,4.2,4.6][level-4]:Math.min(5.6,4.6+0.2*(level-10)); const pcs=[];
+    for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz); const ry=-Math.atan2(dz,dx); const n=Math.max(1,Math.round(len/2.4)), pl=len/n; for(let i=0;i<n;i++){ const t=(i+0.5)/n; const m=artProp('wall_straight',pl/2*1.02,Hh/1.1,1.25); m.position.set(x0+dx*t,0,z0+dz*t); m.rotation.y=ry; wallGroup.add(m); }
+      if(level>=9){ const b=mesh(G.box,M.gold,len+0.3,0.14,1.05); b.position.set((x0+x1)/2,Hh-0.12,(z0+z1)/2); b.rotation.y=ry; wallGroup.add(b); } }
   } else {
-    const tier=level<=6?0:level<=10?1:2; /* F9a: her seviye (11+ sonsuz kuşatmada): boy 10'dan sonra yavaş artar, 11+ koyu taş + çift altın bant */ const Hh=level<=10?[2.6,3.0,3.4,3.6,3.9,4.2,4.6][level-4]:Math.min(5.6,4.6+0.2*(level-10)); const col=tier===2?0x6c7386:tier?0x8d94a4:0xa8a49c, col2=tier===2?0x545a6b:tier?0x6f7686:0x9c9890;
+    const tier=level<=6?0:level<=10?1:2; /* F9a: her seviye (11+ sonsuz kuşatmada): boy 10'dan sonra yavaş artar, 11+ koyu taş + çift altın bant */ const Hh=level<=10?[2.6,3.0,3.4,3.6,3.9,4.2,4.6][level-4]:Math.min(5.6,4.6+0.2*(level-10)); const shade=(c,k)=>{ const q=new THREE.Color(c); q.lerp(new THREE.Color(0x5a6278),k); return q.getHex(); }; const col=shade(TW.stone[0],tier===2?0.55:tier?0.25:0), col2=shade(TW.stone[1],tier===2?0.55:tier?0.25:0); /* v45: taş sur tema renginde, seviyeyle koyulaşır */
     const blocks=[], crens=[];
     for(const [x0,z0,x1,z1] of segs){ const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz); const ry=-Math.atan2(dz,dx); blocks.push({x:(x0+x1)/2,y:Hh/2,z:(z0+z1)/2,ry,sx:len+0.6,sy:Hh,sz:0.9+0.15*tier,c:col}); const n=Math.round(len/1.2); if(level>=5) for(let i=0;i<=n;i++){ crens.push({x:x0+dx*i/n,y:Hh+0.3,z:z0+dz*i/n,ry,sx:.6,sy:.6,sz:1.0+0.15*tier,c:col2}); }
       const m=Math.max(1,Math.round(len)); for(let i=0;i<m;i++){ blocks.push({x:x0+dx*(i+0.5)/m,y:rand(0.4,Hh-0.4),z:z0+dz*(i+0.5)/m,ry,sx:rand(.5,1.1),sy:.35,sz:0.94+0.15*tier,c:Math.random()<.5?col2:col}); }
@@ -20,6 +41,7 @@ function buildWalls(level){
     add(instanced(G.box,mat(0xffffff),blocks)); if(crens.length) add(instanced(G.box,mat(0xffffff),crens));
     if(level>=7){ for(const [x,z] of [[-H,-H],[H,-H],[-H,H],[H,H]]){ const t=mesh(G.cyl,tier?M.stoneBlue:M.stone,1.1+0.1*(tier===2),Hh+2,1.1+0.1*(tier===2)); t.position.set(x,(Hh+2)/2,z); const cap=mesh(G.cone,level>=10?M.flag:M.banner,1.5,1.5,1.5); cap.position.set(x,Hh+2.7,z); const fl=mesh(G.box,M.flag,0.7,0.5,0.05); fl.position.set(x+0.35,Hh+3.6,z); const pole=mesh(G.cyl,M.handle,0.05,1.6,0.05); pole.position.set(x,Hh+3.7,z); wallGroup.add(t,cap,fl,pole); } }
   }
+  if((level<7||(artOk()&&ART.glb.bld))&&TW.tw) cornerTowers(TW.tw,level); /* v45: köşe kuleleri haritanın kale tarzında (taş surun kendi kuleleri Sv7'de) */
   for(const s of SIDES){ for(const a of [-3.6,3.6]){ const [x,z]=sidePos(s,a,0.4); const p=mesh(G.cyl,M.woodDark,0.08,1.6,0.08); p.position.set(x,0.8,z); const f=mesh(G.sph,M.gold,0.18,0.26,0.18,false); f.position.set(x,1.75,z); wallGroup.add(p,f); } }
   bakeStatic(wallGroup); /* F6 */
 }
@@ -40,8 +62,10 @@ function buildGates(level){
     function post(x){ const t=new THREE.Group(); const b=mesh(tier?G.box:G.cyl,postM,tier?0.8:0.42,3.4+0.4*tier,tier?0.8:0.42); b.position.y=(3.4+0.4*tier)/2; const cap=mesh(tier?G.box:G.cone,tier===2?M.gold:postM,tier?0.95:0.42,0.5,tier?0.95:0.42); cap.position.y=3.6+0.4*tier; t.add(b,cap); t.position.x=x; return t; }
     const top=mesh(G.box,postM,5.4,0.35+0.2*tier,0.5+0.3*tier); top.position.y=3.2+0.3*tier;
     function leaf(sign){ const h=new THREE.Group(); h.position.set(sign*-2.3,0,0); for(let i=0;i<5;i++){ const d=mesh(G.cyl,leafM,0.2,2.4,0.2); d.position.set(sign*(0.25+i*0.45),1.2,0); const c=mesh(G.cone,leafM,0.2,0.3,0.2); c.position.set(sign*(0.25+i*0.45),2.55,0); h.add(d,c);} const b1=mesh(G.box,bandM,2.2,0.16,0.28); b1.position.set(sign*1.15,0.8,0.1); const b2=b1.clone(); b2.position.y=1.9; h.add(b1,b2); if(tier>=1){ for(let i=0;i<4;i++){ const r=mesh(G.sph,M.metal,0.07,0.07,0.07,false); r.position.set(sign*(0.4+i*0.5),0.8,0.26); h.add(r); const r2=r.clone(); r2.position.y=1.9; h.add(r2);} } return h; }
-    const L=leaf(1), R=leaf(-1); g.add(post(-2.6),post(2.6),top,L,R);
-    if(tier>=1){ const arch=mesh(G.box,postM,6.2,0.6,0.9+0.3*tier); arch.position.y=3.9+0.3*tier; g.add(arch); }
+    const L=leaf(1), R=leaf(-1); const artG=tier>=1&&artOk()&&ART.glb.bld&&artPropGeo('building_tower_base_red'); /* v46: taş kapı = iki KayKit kule */
+    if(artG){ const kc=artKC(); for(const x of [-3.0,3.0]){ const t=artProp('building_tower_base_'+kc,1.55,(3.6+0.4*tier)/1.5,1.55); t.position.x=x; g.add(t); } g.add(L,R); }
+    else { g.add(post(-2.6),post(2.6),top,L,R);
+    if(tier>=1){ const arch=mesh(G.box,postM,6.2,0.6,0.9+0.3*tier); arch.position.y=3.9+0.3*tier; g.add(arch); } }
     if(tier===2){ for(const x of [-2.6,2.6]){ const fl=mesh(G.box,M.banner,0.06,1.2,0.7); fl.position.set(x,4.6,0.5); g.add(fl);} }
     const [x,z]=sidePos(s,0,0); g.position.set(x,0,z); g.rotation.y=(s==='E'||s==='W')?Math.PI/2:0; scene.add(g); for(const o of [g,L,R,...g.children.filter(c=>c.isGroup&&c!==L&&c!==R)]) bakeStatic(o); /* F6: kapı parçaları birleşir (kanatlar ayrı döner) */
     /* p2: kapalı (henüz kurulmamış) kapı = sur hattında kazıklı çit: kapı açılınca kapı kanatları görünür */ if(gates[s]&&gates[s].fence){ scene.remove(gates[s].fence); disposeBaked(gates[s].fence); }
@@ -176,6 +200,9 @@ function updateBlobs(){ let n=0; const re=(++blobTick%90)===0; for(const g of BL
     if(!g.visible||n>=BLOB_MAX) continue; const r=u.blobR*g.scale.x; if(r<0.05) continue; vp.set(g.position.x,g.position.y+0.045,g.position.z); q.identity(); vs.set(r,1,r); m4.compose(vp,q,vs); blobIM.setMatrixAt(n++,m4); }
   blobIM.count=n; if(n) blobIM.instanceMatrix.needsUpdate=true; }
 function makeGuy(kind){
+  if(artOk()&&kind!=='enemy'&&ART_ROLES[kind]) try{ return artGuy(kind); }catch(e){ ART.ok=false; ART.err='guy '+e.message; } /* v46: 3B karakter; hata olursa eski çizim */
+  if(artOk()&&kind==='enemy') try{ return artGuy('enemy',Object.assign({},ART_ROLES.grunt,{enemy:true})); }catch(e){ ART.ok=false; ART.err='en '+e.message; }
+  if(kind==='archerT') kind='soldier';
   const g=new THREE.Group(); const root=new THREE.Group(); g.add(root);
   const shirt= kind==='player'?M.shirt: kind==='worker'?M.workerShirt: kind==='soldier'?M.soldierShirt: kind==='civ'?CIV_SHIRT[Math.floor(Math.random()*CIV_SHIRT.length)]: M.enemy;
   const torso=mesh(G.box,shirt,0.62,0.6,0.42); torso.position.y=0.72;
@@ -207,6 +234,7 @@ function makeGuy(kind){
   const out={g,root,head,legL,legR,armL,armR,tool,back,logMesh,lootMesh,stoneMesh,coinMesh,pony,walkT:rand(0,6),swing:0,moving:false,aim:false}; blobAdd(g,kind==='player'?0.95:0.6); /* FX4 */ if(kind!=='enemy') bakeGuy(out); /* F6: düşman makeEnemy sonunda (boyandıktan sonra) */ return out;
 }
 function animGuy(guy,dt,moving,k){
+  if(guy.art) return artAnim(guy,dt,moving,k);
   k=k||1; const r=guy.root;
   if(guy.pony){ const po=guy.pony; if(moving){ po.t+=dt*16*k; const s1=Math.sin(po.t); po.legs[0].rotation.x=s1*0.8; po.legs[3].rotation.x=s1*0.8; po.legs[1].rotation.x=-s1*0.8; po.legs[2].rotation.x=-s1*0.8; po.g.position.y=Math.abs(Math.sin(po.t))*0.12; po.g.rotation.x=Math.sin(po.t)*0.05; po.tail.rotation.x=0.4+Math.sin(po.t*0.5)*0.3; } else { const e=1-Math.pow(0.001,dt); for(const l of po.legs) l.rotation.x*=1-e; po.g.position.y*=1-e; po.g.rotation.x*=1-e; po.tail.rotation.x=0.4+Math.sin(performance.now()/400)*0.15; }
     guy.armL.rotation.x=moving? -0.9+Math.sin(po.t)*0.1 : -0.9; if(guy.swing<=0&&!guy.aim) guy.armR.rotation.x=lerp(guy.armR.rotation.x,-0.9,Math.min(1,dt*8)); r.position.y=0.95+(moving?Math.abs(Math.sin(po.t))*0.12:0); r.rotation.x=moving?0.08:0; guy.back.rotation.z=moving?Math.sin(po.t)*0.05:0; if(guy.swing>0){ guy.swing-=dt; const t=1-guy.swing/0.3; guy.armR.rotation.x = t<0.35? lerp(-0.9,-2.3,t/0.35) : lerp(-2.3,0.6,(t-0.35)/0.65); } return; }

@@ -26,7 +26,14 @@ os.makedirs('cg',exist_ok=True)
 cgpage=full.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js"></script>','<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script><script src="three.min.js"></script>')
 open('cg/index.html','w').write(cgpage)
 if os.path.exists('vendor/three.min.js'): shutil.copy('vendor/three.min.js','cg/three.min.js')
+# v46: 3B modeller (KayKit, CC0) docs/ ve cg/ yanına kopyalanır; zip'e girer
+if os.path.isdir('assets'):
+    for d in ('docs/assets','cg/assets'):
+        if os.path.isdir(d): shutil.rmtree(d)
+        shutil.copytree('assets',d)
 with zipfile.ZipFile('cg/ormanin-bekcisi-crazygames.zip','w',zipfile.ZIP_DEFLATED) as z:
     z.write('cg/index.html','index.html')
     if os.path.exists('cg/three.min.js'): z.write('cg/three.min.js','three.min.js')
+    if os.path.isdir('cg/assets'):
+        for f in sorted(os.listdir('cg/assets')): z.write('cg/assets/'+f,'assets/'+f)
 print(len(full))

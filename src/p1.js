@@ -13,9 +13,15 @@ function cgCall(fn){ try{ if(CG.sdk) return fn(CG.sdk); }catch(e){} }
 // FX1: SDK hazır olmadan (Data modülü okunmadan) oyun başlamaz ve buluta hiçbir şey yazılmaz: en çok 15 sn beklenir (Oyna düğmesi ⏳).
 // Süre dolarsa oyun yalnız localStorage ile açılır; SDK geç hazır olursa bulut kaydı okunur, daha ilerideyse o yüklenir (CG.onLate), değilse yereldeki buluta yazılır.
 function cgReady(s){ CG.sdk=s; CG.env=s.environment||'unknown'; cgCall(k=>{ CG.mute=!!(k.game.settings&&k.game.settings.muteAudio); k.game.addSettingsChangeListener(st=>{ CG.mute=!!(st&&st.muteAudio); }); }); }
+/* v46: KayKit (CC0, Kay Lousberg) 3B modelleri: oyun başlamadan yüklenir; yüklenemezse (dosya yok, eski cihaz, zaman aşımı) oyun eski çizimlerle açılır */
+const ART={ok:false,glb:{},err:null,t:0};
+const ART_FILES=['bld','anim_h','anim_s','knight','barbarian','rogue','rogue_h','mage','sk_minion','sk_warrior','sk_rogue','sk_mage','w_axe','w_blade','w_crossbow','w_shield_small_a','w_shield_large_a','w_staff','w_crossbow_1handed','w_axe_1handed','w_sword_1handed','w_shield_badge_color','w_axe_2handed'];
+function loadArt(){ const t0=performance.now(); return new Promise((res)=>{ try{ if(location.protocol==='file:'&&!window.__artFile) throw new Error('file'); if(!window.GLTFLoader||!window.MeshoptDecoder||!window.SkeletonUtils) throw new Error('lib '+(window.__artLibErr||'')); const L=new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); const base=window.__ARTBASE||'assets/'; let n=0, bad=0; const done=()=>{ if(++n<ART_FILES.length) return; ART.ok=!bad; ART.t=Math.round(performance.now()-t0); res(ART.ok); };
+    for(const f of ART_FILES) L.load(base+f+'.glb',g=>{ ART.glb[f]=g; done(); },undefined,e=>{ bad++; ART.err=f+': '+((e&&e.message)||e); done(); }); }catch(e){ ART.err=String(e&&e.message||e); res(false); } }); }
+const ART_P=loadArt();
 (async function boot(){ const s=window.CrazyGames&&window.CrazyGames.SDK; if(s){ const b=document.getElementById('startBtn'), bh=b&&b.innerHTML; if(b){ b.disabled=true; b.innerHTML='⏳'; } let ok=false; const ip=Promise.resolve().then(()=>s.init()).then(()=>{ ok=true; },()=>{});
   await Promise.race([ip,new Promise(r=>setTimeout(r,15000))]); if(b){ b.disabled=false; b.innerHTML=bh; }
-  if(ok){ try{ cgReady(s); cgCall(k=>k.game.loadingStart()); }catch(e){} } else ip.then(()=>{ if(ok&&CG.onLate) try{ CG.onLate(s); }catch(e){} }); } try{ startGame(); }catch(e){ fatalScreen(e); throw e; } })();
+  if(ok){ try{ cgReady(s); cgCall(k=>k.game.loadingStart()); }catch(e){} } else ip.then(()=>{ if(ok&&CG.onLate) try{ CG.onLate(s); }catch(e){} }); } { const b=document.getElementById('startBtn'), bh=b&&b.innerHTML; if(b&&!ART.ok){ b.disabled=true; b.innerHTML='⏳'; } await Promise.race([ART_P,new Promise(r=>setTimeout(r,15000))]); if(b){ b.disabled=false; b.innerHTML=bh; } } /* v46: modeller */ try{ startGame(); }catch(e){ fatalScreen(e); throw e; } })();
 // CRASH-FIX A: startGame çökerse ölü Oyna düğmesi yerine anlaşılır ekran + Yeniden yükle (hata yine fırlatılır: gerçek hatalar gizlenmez)
 function fatalScreen(e,gl){ try{ const tr=(document.documentElement.lang||navigator.language||'').toLowerCase().startsWith('tr'); const it=document.getElementById('intro'); const box=it&&it.querySelector('.card'); if(!box) return; const msg=gl?(tr?'Cihazın 3B grafiği başlatamadı. Diğer sekmeleri kapatıp yeniden dene; bilgisayarda tarayıcının donanım hızlandırmasını aç.':'Your device could not start 3D graphics. Close other tabs and try again; on a computer, turn on hardware acceleration in your browser.'):(tr?'Bir şeyler ters gitti. İlerlemen kayıtlı.':'Something went wrong. Your progress is saved.'); box.innerHTML='<h1>'+(tr?'Ormanın Bekçisi':'Grovehold')+'</h1><p style="margin:12px 0">'+msg+'</p><button id="fatalReload">'+(tr?'Yeniden yükle':'Reload')+'</button>'; it.style.display=''; const b=document.getElementById('fatalReload'); if(b) b.onclick=()=>location.reload(); }catch(_){} }
 function startGame(){
@@ -113,8 +119,8 @@ function stat(k,n){ const m=S.meta; if(!m) return; const st=m.st||(m.st={}); st[
 const CARDS={
   arrow:{n:T('Keskin Oklar','Sharp Arrows'),d:T('Okçu kulelerinin hasarı +%25','Archer Tower damage +25%'),i:'🏹'}, rate:{n:T('Hızlı Yay','Quick Bow'),d:T('Okçular %20 daha hızlı atar','Archers shoot 20% faster'),i:'💨'}, range:{n:T('Uzun Menzil','Long Range'),d:T('Tüm kulelerin menzili +3','All towers get +3 range'),i:'🎯'},
   powder:{n:T('Barut','Gunpowder'),d:T('Topçu hasarı +%40','Cannon damage +40%'),i:'💣'}, wall:{n:T('Sağlam Sur','Sturdy Walls'),d:T('Sur canı +%25 ve tamamen onarılır','Wall HP +25%, fully repaired'),i:'🧱'}, mend:{n:T('Duvarcı','Mason'),d:T('Saldırı sırasında sur kendini onarır','Walls self-repair under attack'),i:'🔧'},
-  sword:{n:T('Kraliyet Yayı','Royal Bow'),d:T('Okların +%40 hasar, daha hızlı ve uzağa','Your arrows: +40% damage, faster, longer reach'),i:'⚡'} /* v43: kılıç kartı kahraman yayına döndü (kayıt anahtarı "sword" aynı kalır) */, drill:{n:T('Talimli Asker','Trained Soldiers'),d:T('Askerler %40 daha sert vurur','Soldiers hit 40% harder'),i:'🛡️'}, trample:{n:T('Midilli Ezme','Pony Trample'),d:T('Koşarken çarptığın düşmanı ezersin','Trample enemies you run into'),i:'🐴'},
-  pony:{n:T('Çevik Midilli','Nimble Pony'),d:T('Midilli %15 daha hızlı','Pony 15% faster'),i:'🥕'}, axe:{n:T('Güçlü Balta','Strong Axe'),d:T('Ağaçları %30 daha hızlı kesersin','Chop trees 30% faster'),i:'🪓'}, lumber:{n:T('Odun Bereketi','Wood Galore'),d:T('Her ağaç +2 odun verir','+2 wood per tree'),i:'🌲'},
+  sword:{n:T('Kraliyet Yayı','Royal Bow'),d:T('Okların +%40 hasar, daha hızlı ve uzağa','Your arrows: +40% damage, faster, longer reach'),i:'⚡'} /* v43: kılıç kartı kahraman yayına döndü (kayıt anahtarı "sword" aynı kalır) */, drill:{n:T('Talimli Asker','Trained Soldiers'),d:T('Askerler %40 daha sert vurur','Soldiers hit 40% harder'),i:'🛡️'}, trample:{n:T('Kalkan Hücumu','Shield Charge'),d:T('Koşarken çarptığın düşmanı devirirsin','Knock down enemies you run into'),i:'🛡️'},
+  pony:{n:T('Rüzgâr Çizmesi','Wind Boots'),d:T('%15 daha hızlı koşarsın','Run 15% faster'),i:'👢'}, axe:{n:T('Güçlü Balta','Strong Axe'),d:T('Ağaçları %30 daha hızlı kesersin','Chop trees 30% faster'),i:'🪓'}, lumber:{n:T('Odun Bereketi','Wood Galore'),d:T('Her ağaç +2 odun verir','+2 wood per tree'),i:'🌲'},
   magnet:{n:T('Mıknatıs','Magnet'),d:T('Altın ve ganimet %45 daha uzaktan gelir','Gold and loot pickup range +45%'),i:'🧲'}, trade:{n:T('Pazarlık','Haggling'),d:T('Miğferler %30 daha pahalı satılır','Helmets sell for 30% more'),i:'🤝'}, gold:{n:T('Hazine Sandığı','Treasure Chest'),d:T('Hemen altın kazan','Instant gold'),i:'💰'},
 };
 // kart ancak etkileyeceği bir şey varsa sunulur (topçu yokken Barut, asker yokken Talimli Asker çıkmaz)
@@ -175,6 +181,76 @@ const MAPS={1:{th:'forest',regs:[],gates:['S','E','W','N'],gp:[1,1,2,2,2],day0:7
   10:{th:'dark',regs:['dark','iron'],gates:['N','E','W','S'],gp:[3,4,4,4,4],day0:60}}; /* p2m3: 9-10: ilk gece üç kapı boş arsada → ilk gündüz 60 sn (kışta kesim yavaş) */
 const MAP_END={th:'endless',regs:['lake','meadow','quarry','river','swamp','iron','coast','snow','dark'],gates:['N','E','S','W'],gp:[3,4,4,4,4],day0:75}; /* p2m3: ilk gündüz 75 sn, ilk gece 3 kapı */
 const mapCfg=L=>MAPS[L||S.level]||MAP_END;
+/* v45: HER HARİTA AYRI BİR YER. Tema = gökyüzü/ışık, zemin, ağaç türü, sur ve bina malzemesi, sancak rengi, hava (yağmur/kar/yaprak/ateş böceği…), kale çevresindeki manzara parçaları, düşman başlığı.
+   gnd: zemin; gA/gB: zemin lekeleri [ton1,ton2,doy1,doy2,açık1,açık2,adet]; gin: sur içi çim [ton1,ton2,doy,açık]; road: yol [kenar, orta]
+   tree: ağaç biçimi (pine/round/willow/dead/palm/burnt), leaf: tepe renkleri, trunk: gövde, dens: ağaç sıklığı (1 = hepsi)
+   wall: post (cyl/box/spike) · tip (cone/none/spike/ice) · log/log2: kazık renkleri (Sv0-1 / Sv2-3) · rail: kuşak · foot: taş temel · stone: taş sur rengi
+   mats: bina malzemeleri; wx: hava; set: kale çevresi manzarası; helm: düşman başlığı */
+const THEMES={
+  forest:{kc:'green',n:T('Orman Kapısı','Forest Gate'),tag:T('Her şey bu ormanda başladı','Where it all began'),
+    sky:0xe8dcc0,sun:0xfff1d2,sunI:1.25,hemi:0xfff4e0,hemiI:0.5,exp:1.12,nbg:0x3b4160,nsun:0x8fa6ff,nhemi:0x6f7fb8,fog:[120,230],
+    gnd:'#d7b989',gA:[32,44,38,52,58,72,6000],gB:[95,115,40,55,48,60,500],gin:[100,120,48,50],ginC:'#63b85a',road:['#c9a26d','#e3c898'],
+    tree:'pine',leaf:[0x2f7d47,0x3a8c4e,0x256b3c],trunk:0x8a5a36,dens:1,
+    wall:{post:'cyl',tip:'cone',log:[0x9a6a3a,0x86582c],log2:[0x8a5a2c,0x76481f],rail:0x7d5124,stone:[0xa8a49c,0x9c9890],tw:{b:'cyl',c:0x8a5a2c,h:3.6,roof:'cone'}},
+    mats:{},banner:0xd9534f,flag:0xf2b43c,roof:0x6e4a3a,wx:'motes',set:'forest',helm:0xc02f2f},
+  lake:{kc:'blue',n:T('Gümüş Göl','Silver Lake'),tag:T('Sazlıklar ve sakin sular','Reeds and quiet water'),
+    sky:0xd9e8f0,sun:0xf4f8ff,sunI:1.2,hemi:0xe6f2ff,hemiI:0.56,exp:1.1,nbg:0x2a3c5e,nsun:0x88aaff,nhemi:0x5f7fb8,fog:[110,220],
+    gnd:'#a6c27c',gA:[72,92,30,45,56,68,5000],gB:[140,165,25,40,48,60,600],gin:[115,140,35,62],ginC:'#8ec9a0',road:['#b9ad8a','#ddd3b2'],
+    tree:'round',leaf:[0x7fb84a,0x96c85a,0x6aa848],trunk:0xeeeae0,dens:0.85,
+    wall:{post:'cyl',tip:'cone',log:[0xe2d8c4,0xcfc3a8],log2:[0xd4c8ae,0xbcae92],rail:0x5f7f99,stone:[0xc9d2d8,0xb4bec6],tw:{b:'cyl',c:0xe8e0d0,h:4.2,roof:'cone'}},
+    mats:{wood:0xc9b48a,woodDark:0x8a7a62,plank:0xe4d4b0,gate:0xc9b48a},banner:0x3f86c9,flag:0xffffff,roof:0x4f6f8f,wx:'motes',set:'lake',helm:0x2f4f8a},
+  meadow:{kc:'yellow',n:T('Geyik Çayırı','Deer Meadow'),tag:T('Sonbahar rüzgârı ve değirmen','Autumn wind and the windmill'),
+    sky:0xf3dcb4,sun:0xffd9a0,sunI:1.3,hemi:0xffe8c8,hemiI:0.5,exp:1.1,nbg:0x3e3550,nsun:0xb09ae0,nhemi:0x7a6aa0,fog:[110,220],
+    gnd:'#d9b86a',gA:[36,48,50,65,55,70,5500],gB:[62,82,35,50,45,58,700],gin:[40,50,55,58],ginC:'#d2b058',road:['#b98a52','#d8b27a'],
+    tree:'round',leaf:[0xe0782a,0xe0b02a,0xc4462a],trunk:0x6b4a32,dens:0.9,
+    wall:{post:'cyl',tip:'cone',log:[0xb88a52,0xa57a46],log2:[0xa0703e,0x8e6236],rail:0x5d8a3a,railW:0.5,stone:[0xc8b48e,0xb4a07a],tw:{b:'cyl',c:0xb88a52,h:3.4,roof:'cone',rc:0xe6c25a}},
+    mats:{},banner:0xe2a21f,flag:0xc4462a,roof:0x9a4a2a,wx:'leaves',set:'meadow',helm:0x7a2a1a},
+  quarry:{kc:'red',n:T('Taş Ocağı','Stone Quarry'),tag:T('Kayalıklar arasında bir kale','A fort among the cliffs'),
+    sky:0xdfe3e6,sun:0xf6f7f8,sunI:1.3,hemi:0xe8ecf0,hemiI:0.5,exp:1.12,nbg:0x3b3b4a,nsun:0x9aa6d8,nhemi:0x707aa0,fog:[100,210],
+    gnd:'#b6b6b0',gA:[200,220,4,10,62,76,6000],gB:[30,40,4,10,44,56,900],gin:[30,40,6,66],ginC:'#b0aca2',road:['#8e8e88','#c4c4bc'],
+    tree:'round',leaf:[0x7f9a4a,0x8fa656,0x6d8a40],trunk:0x7a6a5a,dens:0.35,
+    wall:{post:'box',tip:'none',log:[0x9e988c,0x8c867c],log2:[0x8c867a,0x7a746a],rail:0x6a645a,stone:[0x9c968c,0x86807a],tw:{b:'cyl',c:0xa49e92,h:3.8,roof:'cren'}},
+    mats:{wood:0xa8865a,plank:0xc4aa80,stone:0x9e9a92},banner:0xe07b2a,flag:0x3a3a3a,roof:0x7a5040,wx:'dust',set:'quarry',helm:0x8a5a2a},
+  river:{kc:'green',n:T('Değirmen Nehri','Mill River'),tag:T('Yağmurlu kıyıda köprüler','Bridges on a rainy bank'),
+    sky:0xcfdbe0,sun:0xe8eef2,sunI:1.02,hemi:0xdbe6ee,hemiI:0.64,exp:1.08,nbg:0x243650,nsun:0x7896d0,nhemi:0x4f6a98,fog:[90,200],
+    gnd:'#9fbf86',gA:[88,110,28,40,50,62,5000],gB:[28,38,25,35,42,52,700],gin:[110,140,22,56],ginC:'#7aa88a',road:['#9a8566','#bba886'],
+    tree:'willow',leaf:[0x5f9a6a,0x74ac7a,0x4f8a62],trunk:0x5e4a3a,dens:0.8,
+    wall:{post:'cyl',tip:'cone',log:[0x7a5232,0x6a4628],log2:[0x6a4628,0x5a3a20],rail:0x4a3220,foot:0x8a8f94,stone:[0x9aa0a4,0x868c90],tw:{b:'box',c:0x7a5232,h:3.8,roof:'cone',base:0x8a8f94}},
+    mats:{},banner:0x2a9d8f,flag:0xe9c46a,roof:0x3f5a5a,wx:'rain',set:'river',helm:0x2f5a5a},
+  swamp:{kc:'yellow',n:T('Sisli Bataklık','Misty Swamp'),tag:T('Sisin içinde fenerler yanar','Lanterns burn in the mist'),
+    sky:0xb4c2a4,sun:0xdce6bc,sunI:0.95,hemi:0xc4d0a8,hemiI:0.62,exp:1.06,nbg:0x1c2826,nsun:0x6a9a7a,nhemi:0x3a5a4a,fog:[45,150],
+    gnd:'#76845a',gA:[70,90,22,34,32,44,5000],gB:[48,60,18,26,24,34,900],gin:[50,62,22,34],ginC:'#6a6a44',road:['#6a5a40','#857252'],
+    tree:'dead',leaf:[0x55663e,0x606f44,0x45553a],trunk:0x3e3428,dens:0.75,
+    wall:{post:'cyl',tip:'cone',log:[0x5a4a32,0x4a3c28],log2:[0x4e4030,0x403424],rail:0x3e5a2e,stone:[0x6f7a66,0x5d6856],tw:{b:'cyl',c:0x4e4030,h:3.6,roof:'cone',lamp:1}},
+    mats:{wood:0x7a6448,woodDark:0x4e3e2a,plank:0x9a8460,gate:0x6a5640},banner:0x7a4fa8,flag:0xb6e35a,roof:0x3e4a3a,wx:'fireflies',set:'swamp',helm:0x3e5a2e},
+  iron:{kc:'red',n:T('Demir Dağı','Iron Mountain'),tag:T('Kızıl kayalar, sıcak ocaklar','Red rocks, hot forges'),
+    sky:0xe6cdb8,sun:0xffd2a8,sunI:1.3,hemi:0xf0d8c8,hemiI:0.5,exp:1.1,nbg:0x3a2a30,nsun:0xc08a9a,nhemi:0x7a5060,fog:[100,210],
+    gnd:'#a9826a',gA:[14,26,25,36,46,60,6000],gB:[18,28,8,14,34,44,900],gin:[14,24,26,48],ginC:'#9a6e58',road:['#8a6a52','#a8866a'],
+    tree:'pine',leaf:[0x2a4f3a,0x335a40,0x23463a],trunk:0x5a4030,dens:0.6,
+    wall:{post:'cyl',tip:'spike',tipC:0x6a6e76,log:[0x5e4636,0x4e3a2c],log2:[0x4e3a2c,0x40302a],rail:0x3a3e46,stone:[0x7a6e6a,0x645a56],tw:{b:'box',c:0x4a4f57,h:4.0,roof:'spike'}},
+    mats:{wood:0x8a6448,woodDark:0x4a362a,plank:0xa8805e,gate:0x6a4a36,stone:0x8a7e78},banner:0xb3261e,flag:0x2b2b2b,roof:0x4a3a3a,wx:'embers',set:'iron',helm:0x4a4f57},
+  coast:{kc:'blue',n:T('Kumsal Koyu','Sandy Cove'),tag:T('Palmiyeler ve turkuaz lagün','Palms and a turquoise lagoon'),
+    sky:0xbfe0f0,sun:0xfff6e6,sunI:1.25,hemi:0xe2f0fa,hemiI:0.5,exp:1.06,nbg:0x1e3a5c,nsun:0x7aa6e0,nhemi:0x4a76a8,fog:[120,240],
+    gnd:'#e0c48c',gA:[36,46,45,60,66,78,6000],gB:[85,110,28,40,50,60,450],gin:[38,46,45,80],ginC:'#e4d0a0',road:['#d2b98a','#efdcb4'],
+    tree:'palm',leaf:[0x4f9a3a,0x62ac46,0x3f8a34],trunk:0xa8865a,dens:0.5,
+    wall:{post:'cyl',tip:'cone',log:[0xd4c0a0,0xc0aa88],log2:[0xc4ae8c,0xae9876],rail:0x2f5f8a,stone:[0xdcc8a0,0xc8b288],tw:{b:'cyl',c:0xf4f0e8,h:4.4,roof:'cone',stripe:0xc4302a,lamp:1}},
+    mats:{wood:0xc8a878,woodDark:0x8a6e50,plank:0xe8d2a8,gate:0xb89a6e,stone:0xd8c8a4},banner:0x1f4e8c,flag:0xffffff,roof:0x3a7aa0,wx:'none',set:'coast',helm:0x1f4e8c},
+  snow:{kc:'blue',n:T('Karlı Geçit','Snowy Pass'),tag:T('Buz duvarlar, uzun geceler','Ice walls, long nights'),
+    sky:0xdfe6ee,sun:0xf2f6ff,sunI:1.2,hemi:0xe8f0ff,hemiI:0.6,exp:1.1,nbg:0x1c2544,nsun:0x7088d8,nhemi:0x4a5ea0,nsunI:0.45,nhemiI:0.26,nexp:0.88,fog:[100,210],
+    gnd:'#eef3f7',gA:[200,215,20,32,86,95,5000],gB:[200,210,22,30,78,86,700],gin:[195,210,25,90],ginC:'#e4ecf2',road:['#bfccd6','#dde6ee'],
+    tree:'pine',leaf:[0xd8e6ea,0xb8d0cc,0xe8f0f2],trunk:0x6a5040,dens:0.85,
+    wall:{post:'box',tip:'ice',log:[0xbfe3f2,0xa8d4ea],log2:[0xa8d4ea,0x92c4e0],rail:0x8ab8d0,stone:[0xcfe4ef,0xb2ccdc],tw:{b:'cyl',c:0xbfe3f2,h:4.2,roof:'cone',rc:0xffffff}},
+    mats:{stone:0xc4d8e4,stoneDark:0x9ab4c4},banner:0x4aa3d8,flag:0xffffff,roof:0xdfe8ee,wx:'snow',set:'snow',helm:0xeef4f8},
+  dark:{kc:'red',n:T('Kara Kale','The Black Castle'),tag:T('Kara Kral\'ın kalesi ufukta','The Black King\'s castle looms'),
+    sky:0xb89a9a,sun:0xffb08a,sunI:1.1,hemi:0xd8b0b0,hemiI:0.55,exp:1.05,nbg:0x2a1418,nsun:0xd06a5a,nhemi:0x7a3440,fog:[80,190],
+    gnd:'#6e625e',gA:[0,18,5,12,30,42,6000],gB:[8,16,14,24,20,28,450],gin:[10,20,8,32],ginC:'#5a4e4a',road:['#4e4440','#6a5e58'],
+    tree:'burnt',leaf:[0x3a3434,0x4a4040,0x2e2a2a],trunk:0x2e2626,dens:0.5,
+    wall:{post:'spike',tip:'spike',tipC:0x8a2a2a,log:[0x3a3440,0x2e2a34],log2:[0x2e2a34,0x24202a],rail:0x5a1a1a,stone:[0x4a4650,0x3a3640],tw:{b:'spike',c:0x2e2a34,h:4.8,roof:'spike',lamp:2}},
+    mats:{wood:0x5a4a44,woodDark:0x2e2626,plank:0x6e5e56,gate:0x4a3e3a,stone:0x5a5660,stoneDark:0x403c46},banner:0x8a1020,flag:0x1a1a1a,roof:0x3a2a2e,wx:'ash',set:'dark',helm:0x1a1a1a},
+};
+const THEME_ORDER=['forest','lake','meadow','quarry','river','swamp','iron','coast','snow','dark'];
+function themeKey(L){ L=L||S.level||1; const m=MAPS[L]; if(m&&THEMES[m.th]) return m.th; return THEME_ORDER[(Math.max(1,L)-1)%10]; } /* Sonsuz Kuşatma: temalar sırayla döner (her 10'un 9'u kış) */
+function TH(L){ return THEMES[themeKey(L)]; }
 /* p2: GORD = bu haritanın kapı sırası (yerinde değişir, referansı sabit); actSides() = şu an açık kapılar. Düşman yalnız actSides()'tan gelir */
 const GORD=SIDES.slice(); function setGord(L){ const g=mapCfg(L).gates; GORD.splice(0,4,...g); }
 const sidesActive=()=>{ if(S.mode==='daily'&&S.mod==='allGates'&&MAPS[S.level]) return 4; /* p2m6: Dört Kapı değiştiricisi */ if(S.level>LEVELS) return (S.level-LEVELS-1)*WAVES+S.wave<=1?3:4; /* p2m3: Sonsuz: 1. gece 3 kapı, sonra 4 */ const g=mapCfg().gp; return g[Math.max(0,Math.min(4,S.wave-1))]; };
@@ -261,7 +337,7 @@ const DAY={bg:new THREE.Color(0xe8dcc0),sun:new THREE.Color(0xfff1d2),hemi:new T
 // F9b: son seferde (Kara Kral yaşarken) ışık kırmızı-karanlığa kayar: gündüz hafif, gece tam; açılışta kısa bir kırmızı parlama (DOOM>1)
 let DOOM=0; const DOOMC={bg:new THREE.Color(0x3a1418),sun:new THREE.Color(0xff5a40),hemi:new THREE.Color(0x8a3440)};
 function applyDoom(k){ if(DOOM<0.002) return; const f=Math.min(1,Math.max(0,DOOM-1)), d=Math.max(f,Math.min(1,DOOM*(0.3+0.7*k))); scene.background.lerp(DOOMC.bg,d*0.6); scene.fog.color.copy(scene.background); sun.color.lerp(DOOMC.sun,d*0.5); hemi.color.lerp(DOOMC.hemi,d*0.35); sun.intensity*=1-0.3*d; renderer.toneMappingExposure*=1-0.12*d-0.25*f; }
-function applyNight(k){ scene.background.copy(DAY.bg).lerp(NIGHT.bg,k); scene.fog.color.copy(scene.background); sun.color.copy(DAY.sun).lerp(NIGHT.sun,k); sun.intensity=lerp(DAY.sunI,NIGHT.sunI,k); hemi.color.copy(DAY.hemi).lerp(NIGHT.hemi,k); hemi.intensity=lerp(DAY.hemiI,NIGHT.hemiI,k); renderer.toneMappingExposure=lerp(DAY.exp,NIGHT.exp,k); applyDoom(k); if(typeof M_VCE!=='undefined') M_VCE.emissive.setRGB(0.34*k,0.08*k,0.06*k); }
+function applyNight(k){ scene.background.copy(DAY.bg).lerp(NIGHT.bg,k); scene.fog.color.copy(scene.background); sun.color.copy(DAY.sun).lerp(NIGHT.sun,k); sun.intensity=lerp(DAY.sunI,NIGHT.sunI,k); hemi.color.copy(DAY.hemi).lerp(NIGHT.hemi,k); hemi.intensity=lerp(DAY.hemiI,NIGHT.hemiI,k); renderer.toneMappingExposure=lerp(DAY.exp,NIGHT.exp,k); applyDoom(k); if(typeof M_VCE!=='undefined') M_VCE.emissive.setRGB(0.34*k,0.08*k,0.06*k); try{ artNight(k); }catch(e){} }
 sun.position.set(14,26,10); sun.castShadow=true;
 sun.shadow.mapSize.set(isMobile?1024:2048,isMobile?1024:2048);
 Object.assign(sun.shadow.camera,{left:-60,right:60,top:60,bottom:-60,near:1,far:120});
@@ -364,16 +440,17 @@ function nearQuarry(x,z,m){ return QUARRIES.some(qq=>Math.hypot(x-qq[0],z-qq[1])
 function inRegClear(x,z){ for(const k in REG){ const R=REG[k]; if(Math.hypot(x-R.c[0],z-R.c[1])<R.clear) return true; } return false; }
 function freeSpot(x,z,pad,noRoad){ /* p2m3: noRoad: yol şeridi serbest sayılır (kullanılmayan yol ağaçları) */ return !nearBase(x,z,5.5) && !IRON_PEAKS.some(k=>Math.hypot(x-k[0],z-k[1])<k[2]*0.92+pad) && (noRoad||roadDist(x,z)>4.2+pad) && !nearQuarry(x,z,7.5) && !inRegClear(x,z) && polyDist(RIVER,x,z)>4.5+pad && Math.hypot(x-SEA.x,z-SEA.z)>SEA.r+3+pad && !CART_PATHS.some(P=>polyDist(P,x,z)<3+pad); }
 
-let groundTex=null;
+let groundTex=null, groundKey=null;
 function paintGround(){
   const N=2048, c=document.createElement('canvas'); c.width=c.height=N; const x=c.getContext('2d');
   const W2=WORLD*2; const px=v=>(v+WORLD)/W2*N; const pw=v=>v/W2*N;
-  x.fillStyle='#d7b989'; x.fillRect(0,0,N,N);
-  for(let i=0;i<6000;i++){ const r=rand(8,60); x.fillStyle=`hsla(${rand(32,44)},${rand(38,52)}%,${rand(58,72)}%,${rand(.12,.35)})`; x.beginPath(); x.ellipse(rand(0,N),rand(0,N),r,r*rand(.5,1),rand(0,3),0,7); x.fill(); }
-  for(let i=0;i<500;i++){ const r=rand(30,110); x.fillStyle=`hsla(${rand(95,115)},${rand(40,55)}%,${rand(48,60)}%,${rand(.35,.7)})`; x.beginPath(); x.ellipse(rand(0,N),rand(0,N),r,r*rand(.5,1),rand(0,3),0,7); x.fill(); }
-  x.lineCap='round'; x.lineJoin='round';
-  for(const s of mapRoads()){ const P=roadPath(s); for(const [col,w] of [['#c9a26d',6],['#e3c898',3.6]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
-  x.lineCap='round'; x.lineJoin='round'; for(const P of CART_PATHS){ for(const [col,w] of [['#c9a26d',3.2],['#dcc093',1.8]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
+  const th=TH(); groundKey=themeKey(); const A=th.gA, B=th.gB; /* v45: zemin haritanın temasıyla boyanır */
+  x.fillStyle=th.gnd; x.fillRect(0,0,N,N);
+  for(let i=0;i<A[6];i++){ const r=rand(8,60); x.fillStyle=`hsla(${rand(A[0],A[1])},${rand(A[2],A[3])}%,${rand(A[4],A[5])}%,${rand(.12,.35)})`; x.beginPath(); x.ellipse(rand(0,N),rand(0,N),r,r*rand(.5,1),rand(0,3),0,7); x.fill(); }
+  for(let i=0;i<B[6];i++){ const r=rand(30,110); x.fillStyle=`hsla(${rand(B[0],B[1])},${rand(B[2],B[3])}%,${rand(B[4],B[5])}%,${rand(.35,.7)})`; x.beginPath(); x.ellipse(rand(0,N),rand(0,N),r,r*rand(.5,1),rand(0,3),0,7); x.fill(); }
+  x.lineCap='round'; x.lineJoin='round'; paintThemeGround(x,px,pw,th,0);
+  for(const s of mapRoads()){ const P=roadPath(s); for(const [col,w] of [[th.road[0],6],[th.road[1],3.6]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
+  x.lineCap='round'; x.lineJoin='round'; for(const P of CART_PATHS){ for(const [col,w] of [[th.road[0],3.2],[th.road[1],1.8]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); } }
   for(const [col,w] of [['#d8c28f',7.5],['#3d8fc0',5],['#5fb0dc',3],['#8fd0ee',0.9]]){ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); RIVER.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); }
   // son bölgelerin zemini: bataklık yosunu, dağ eteği, sahil kumu, kar, kavrulmuş toprak
   const blob=(cx,cz,r,cols,n,sz)=>{ for(let i=0;i<n;i++){ const a=rand(0,6.283), rr=Math.sqrt(Math.random())*r; x.fillStyle=cols[i%cols.length]; x.beginPath(); x.ellipse(px(cx+Math.cos(a)*rr),px(cz+Math.sin(a)*rr),pw(rand(sz*0.5,sz)),pw(rand(sz*0.4,sz*0.8)),rand(0,3),0,7); x.fill(); } };
@@ -383,16 +460,34 @@ function paintGround(){
   { const R=REG.dark; blob(R.c[0]-2,R.c[1]-4,R.clear-2,['rgba(96,86,84,.55)','rgba(76,68,70,.5)'],140,5); }
   x.fillStyle='#ecd9a8'; x.beginPath(); x.arc(px(SEA.x),px(SEA.z),pw(SEA.r+6),0,7); x.fill(); blob(SEA.x,SEA.z,SEA.r+6,['rgba(222,196,140,.4)','rgba(246,230,190,.5)'],120,3); x.fillStyle='#2f7fb4'; x.beginPath(); x.arc(px(SEA.x),px(SEA.z),pw(SEA.r),0,7); x.fill();
   for(const [qx,qz] of QUARRIES){ x.fillStyle='#b9b3a6'; x.beginPath(); x.ellipse(px(qx),px(qz),pw(7),pw(6),0.6,0,7); x.fill(); x.fillStyle='#a19b8f'; for(let i=0;i<14;i++){ x.beginPath(); x.ellipse(px(qx+rand(-5,5)),px(qz+rand(-4,4)),pw(rand(.8,2)),pw(rand(.6,1.4)),rand(0,3),0,7); x.fill(); } }
-  x.fillStyle='#63b85a'; x.fillRect(px(-H),px(-H),pw(2*H),pw(2*H));
-  for(let i=0;i<Math.round(H*H*2);i++){ x.fillStyle=`hsla(${rand(100,120)},${rand(40,55)}%,${rand(42,58)}%,${rand(.15,.35)})`; x.beginPath(); x.ellipse(rand(px(-H),px(H)),rand(px(-H),px(H)),rand(6,22),rand(4,14),rand(0,3),0,7); x.fill(); }
+  paintThemeGround(x,px,pw,th,1); const gi=th.gin;
+  x.fillStyle=th.ginC; x.fillRect(px(-H),px(-H),pw(2*H),pw(2*H));
+  for(let i=0;i<Math.round(H*H*2);i++){ x.fillStyle=`hsla(${rand(gi[0],gi[1])},${rand(gi[2]-6,gi[2]+6)}%,${rand(gi[3]-7,gi[3]+7)}%,${rand(.15,.35)})`; x.beginPath(); x.ellipse(rand(px(-H),px(H)),rand(px(-H),px(H)),rand(6,22),rand(4,14),rand(0,3),0,7); x.fill(); }
   // sur içi yollar (dört kapıdan merkeze) ve meydan
-  x.strokeStyle='#e0c69a'; x.lineWidth=pw(3.4); x.beginPath(); x.moveTo(px(0),px(-H)); x.lineTo(px(0),px(H)); x.moveTo(px(-H),px(0)); x.lineTo(px(H),px(0)); x.stroke();
+  x.strokeStyle=th.road[1]; x.lineWidth=pw(3.4); x.beginPath(); x.moveTo(px(0),px(-H)); x.lineTo(px(0),px(H)); x.moveTo(px(-H),px(0)); x.lineTo(px(H),px(0)); x.stroke();
   // köşe binalarına giden ince patikalar
-  x.strokeStyle='#dcc296'; x.lineWidth=pw(1.6); x.beginPath(); for(const [sx,sz] of [[-1,-1],[1,1],[-1,1],[1,-1]]){ x.moveTo(px(sx*3.2),px(sz*3.2)); x.lineTo(px(sx*(H-4.6)),px(sz*(H-4.6))); } x.stroke();
-  x.fillStyle='#e6cfa4'; x.beginPath(); x.arc(px(0),px(0),pw(4.2),0,7); x.fill();
-  x.strokeStyle='#cfb283'; x.lineWidth=pw(0.35); x.beginPath(); x.arc(px(0),px(0),pw(4.2),0,7); x.stroke();
+  x.strokeStyle=th.road[1]; x.lineWidth=pw(1.6); x.beginPath(); for(const [sx,sz] of [[-1,-1],[1,1],[-1,1],[1,-1]]){ x.moveTo(px(sx*3.2),px(sz*3.2)); x.lineTo(px(sx*(H-4.6)),px(sz*(H-4.6))); } x.stroke();
+  x.fillStyle=th.plaza||th.road[1]; x.beginPath(); x.arc(px(0),px(0),pw(4.2),0,7); x.fill();
+  x.strokeStyle=th.road[0]; x.lineWidth=pw(0.35); x.beginPath(); x.arc(px(0),px(0),pw(4.2),0,7); x.stroke();
   if(!groundTex){ groundTex=new THREE.CanvasTexture(c); groundTex.encoding=THREE.sRGBEncoding; groundTex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); const ground=new THREE.Mesh(new THREE.PlaneGeometry(W2,W2),new THREE.MeshLambertMaterial({map:groundTex})); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground); }
   else { groundTex.image=c; groundTex.needsUpdate=true; }
+}
+/* v45: tema zemin ayrıntısı. ph 0: yollardan önce (nehir, çiçek, çatlak, buz…), ph 1: sur içinden önce */
+const THEME_RIVER=[[-42,-42],[-33,-29],[-29,-16],[-30,-2],[-29,12],[-25,24],[-13,32],[2,35],[16,40],[30,52],[52,66],[78,78],[104,86]];
+function paintThemeGround(x,px,pw,th,ph){ const k=themeKey(); if(ph) return;
+  const dots=(n,cols,r0,r1,a0,a1)=>{ for(let i=0;i<n;i++){ x.fillStyle=cols[i%cols.length]; x.globalAlpha=rand(a0,a1); const r=rand(r0,r1); x.beginPath(); x.arc(rand(0,2048),rand(0,2048),r,0,7); x.fill(); } x.globalAlpha=1; };
+  const line=(P,col,w)=>{ x.strokeStyle=col; x.lineWidth=pw(w); x.beginPath(); P.forEach(([a,b],i)=> i?x.lineTo(px(a),px(b)):x.moveTo(px(a),px(b))); x.stroke(); };
+  const crack=(cx,cz,len,cols)=>{ let a=rand(0,6.283), P=[[cx,cz]]; for(let i=0;i<6;i++){ a+=rand(-0.8,0.8); const q=P[P.length-1]; P.push([q[0]+Math.cos(a)*len/6,q[1]+Math.sin(a)*len/6]); } cols.forEach(([c,w])=>line(P,c,w)); };
+  if(k==='river'){ for(const [col,w] of [['#8a9a6a',12],['#c9b98a',9.5],['#2f7fb0',7],['#4a9ccc',5],['#6fbbe2',3],['#a6dcf2',1]]) line(THEME_RIVER,col,w); }
+  else if(k==='meadow'){ dots(9000,['#f4d03f','#ffffff','#e67e22','#c0392b','#f7dc6f'],1,2.6,.5,.95); for(let i=0;i<60;i++){ const cx=rand(-WORLD,WORLD), cz=rand(-WORLD,WORLD); if(Math.abs(cx)<30&&Math.abs(cz)<30) continue; x.fillStyle='rgba(232,190,90,.55)'; x.beginPath(); x.ellipse(px(cx),px(cz),pw(rand(6,12)),pw(rand(4,8)),rand(0,3),0,7); x.fill(); } }
+  else if(k==='quarry'){ dots(14000,['#8a8478','#b0a998','#6e695f','#d2cab8'],0.8,2.4,.4,.8); for(let i=0;i<40;i++) crack(rand(-WORLD,WORLD),rand(-WORLD,WORLD),rand(6,14),[['rgba(110,100,88,.55)',0.5]]); }
+  else if(k==='swamp'){ for(let i=0;i<260;i++){ const cx=rand(-WORLD,WORLD), cz=rand(-WORLD,WORLD), r=rand(1.2,4.5); x.fillStyle='rgba(60,72,40,.6)'; x.beginPath(); x.ellipse(px(cx),px(cz),pw(r+0.8),pw(r*0.7+0.8),0,0,7); x.fill(); x.fillStyle='rgba(58,84,70,.85)'; x.beginPath(); x.ellipse(px(cx),px(cz),pw(r),pw(r*0.7),0,0,7); x.fill(); } dots(5000,['#4e5e34','#8a9a5a','#3a4428'],1,3,.3,.7); }
+  else if(k==='iron'){ dots(12000,['#6e4e3e','#c08a6a','#4a3a32','#8a6a5a'],0.8,2.6,.4,.8); for(let i=0;i<50;i++) crack(rand(-WORLD,WORLD),rand(-WORLD,WORLD),rand(8,16),[['rgba(70,46,36,.6)',0.6]]); }
+  else if(k==='coast'){ for(let i=0;i<180;i++){ const cz=rand(-WORLD,WORLD), cx=rand(-WORLD,WORLD), L=rand(8,20); x.strokeStyle='rgba(214,190,140,.45)'; x.lineWidth=pw(0.35); x.beginPath(); for(let j=0;j<=10;j++){ const xx=cx+L*j/10, zz=cz+Math.sin(j*0.9)*0.6; j?x.lineTo(px(xx),px(zz)):x.moveTo(px(xx),px(zz)); } x.stroke(); } dots(3000,['#ffffff','#f6c6b0','#e8d0a0'],0.8,1.8,.5,.9); }
+  else if(k==='snow'){ for(let i=0;i<70;i++){ const cx=rand(-WORLD,WORLD), cz=rand(-WORLD,WORLD); if(Math.abs(cx)<26&&Math.abs(cz)<26) continue; x.fillStyle='rgba(176,214,236,.55)'; x.beginPath(); x.ellipse(px(cx),px(cz),pw(rand(3,8)),pw(rand(2,5)),rand(0,3),0,7); x.fill(); } dots(6000,['#ffffff','#dbe8f0'],1,3,.5,.9); }
+  else if(k==='dark'){ dots(9000,['#3a3232','#8a7a70','#2a2424','#5a2a22'],0.8,2.6,.4,.8); for(let i=0;i<90;i++) crack(rand(-WORLD,WORLD),rand(-WORLD,WORLD),rand(8,18),[['rgba(30,20,20,.8)',1.0],['rgba(255,110,40,.85)',0.35]]); }
+  else if(k==='lake'){ dots(5000,['#ffffff','#f3e6ff','#d6ecff'],0.8,1.8,.5,.9); }
+  else { dots(1800,['#f4f0d0','#ffffff','#f7d26b'],0.8,1.6,.4,.8); }
 }
 paintGround();
 const decor=[];
