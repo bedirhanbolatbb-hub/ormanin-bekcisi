@@ -8,7 +8,7 @@ function flashOn(e){ if(!e.fm){ e.fm=[]; e.g.traverse(o=>{ if(o.isMesh) e.fm.pus
 function flashOff(e){ if(e.fm) for(const f of e.fm) f[0].material=f[1]; }
 let comboN=0, comboAt=-9;
 function comboKill(e){ comboN=gameT-comboAt<1.4?comboN+1:1; comboAt=gameT; const k=Math.min(14,comboN-1); tone(400*(1+0.07*k),80+20*k,0.2,'sawtooth',0.05); if(k>=3) tone(900+80*k,1300+90*k,0.08,'triangle',0.035);
-  if(comboN>=5&&comboN%5===0){ const bonus=Math.round((4+gw()*0.8)*comboN/5); dropCoins(e.g.position.clone().setY(1.2),Math.min(10,3+comboN/5),bonus/Math.min(10,3+comboN/5),2,1.2); floatText(e.g.position,T(`SERİ ×${comboN}! +${bonus}`,`COMBO ×${comboN}! +${bonus}`),'green'); camShake=Math.max(camShake,0.2); } }
+  if(comboN>=5&&comboN%5===0){ const bonus=Math.round((4+ew()*0.8)*comboN/5); dropCoins(e.g.position.clone().setY(1.2),Math.min(10,3+comboN/5),bonus/Math.min(10,3+comboN/5),2,1.2); floatText(e.g.position,T(`SERİ ×${comboN}! +${bonus}`,`COMBO ×${comboN}! +${bonus}`),'green'); camShake=Math.max(camShake,0.2); } }
 
 // ----- patron sandığı: patron ölünce yere büyük altın sandık düşer, sefer sonunda çark döner -----
 const bossChests=[];
@@ -22,7 +22,14 @@ function updateBossChests(dt){ for(const c of bossChests){ c.t+=dt; const k=Math
 function clearBossChests(){ for(const c of bossChests){ scene.remove(c.g); freeOwned(c.g); } bossChests.length=0; }
 // çark: 8 dilim; nadir büyük ödül; kıl payı kaçırma hissi
 // Dilimler seferin açık bölgelerine göre kurulur: dilimde görünen ödül (simge + miktar) ödenen ödülün aynısıdır
-function wheelSlices(){ const w=gw(), L=S.level, g=Math.round(120+25*w), gb=Math.round(180+30*w), gr=g*3, ns=20+3*L, np=12+2*L, ni=6+L;
+/* p2m4: kampanya haritasında patron sandığı yalnız KALICI ödül verir (harita bitti, altın işe yaramaz): taç, sonraki haritaya hazır kart (meta.nextCard), kupa parçası (meta.troph[L]; 3 parça = kupa + 5 taç). 5. dilim büyük ödül (J=5) */
+function metaSlices(){ const L=S.level, m=S.meta, tp=Math.min(3,(m.troph&&m.troph[L])|0);
+  const cr=n=>()=>{ m.crowns+=n; return n>=6?T(`+${n} taç — büyük ödül!`,`+${n} crowns — jackpot!`):T(`+${n} taç`,`+${n} crowns`); };
+  const card={i:'🃏',n:T('Hazır güç kartı','Head-start card'),a:'',w:9,c:'#3d63c9',pay:()=>{ m.nextCard=(m.nextCard||0)+1; return T('Sonraki haritaya bir güç kartıyla başlarsın','Head start: a power card on your next map'); }};
+  const troph=tp>=3?{i:'👑',n:'+4',a:'+4',w:9,c:'#8a5ad0',pay:cr(4)}:{i:'🏆',n:T('Kupa parçası','Trophy piece'),a:`${tp+1}/3`,w:9,c:'#8a5ad0',pay:()=>{ const t=m.troph||(m.troph={}); t[L]=Math.min(3,(t[L]|0)+1); if(t[L]>=3){ m.crowns+=5; return T(`${mapName(L)} kupası tamam! +5 👑`,`${mapName(L)} trophy complete! +5 👑`); } return T(`Kupa parçası ${t[L]}/3`,`Trophy piece ${t[L]}/3`); }};
+  /* v44: ödül dağılımı: beklenen ~+4 taç (eski ~+2: çoğu dönüş +2'ydi); +2 dilimi yok; büyük ödül +8 */
+  return [{i:'👑',n:'+3',a:'+3',w:16,c:'#f2b43c',pay:cr(3)},card,{i:'👑',n:'+4',a:'+4',w:20,c:'#e8961a',pay:cr(4)},troph,{i:'👑',n:'+5',a:'+5',w:16,c:'#c98d4e',pay:cr(5)},{i:'💎',n:T('+8 taç','+8 crowns'),a:'+8',w:6,c:'#d9534f',jack:true,pay:cr(8)},{i:'👑',n:'+3',a:'+3',w:12,c:'#7cc47f',pay:cr(3)},{i:'👑',n:'+5',a:'+5',w:12,c:'#3d9a55',pay:cr(5)}]; }
+function wheelSlices(){ if(MAPS[S.level]) return metaSlices(); const w=ew(), L=S.level, g=Math.round(120+25*w), gb=Math.round(180+30*w), gr=g*3, ns=20+3*L, np=12+2*L, ni=6+L;
   const gold=n=>()=>{ S.coins+=n; return T(`+${n} altın`,`+${n} gold`); }, crowns=n=>()=>{ S.meta.crowns+=n; return n>=6?T(`+${n} taç — büyük ödül!`,`+${n} crowns — jackpot!`):T(`+${n} taç`,`+${n} crowns`); };
   return [{i:'<span class="coin-dot"></span>',n:T('Altın','Gold'),a:'+'+g,w:28,c:'#f2b43c',pay:gold(g)},
     revealed('river')?{i:'<span class="plank-dot"></span>',n:T('Kereste','Planks'),a:'+'+np,w:14,c:'#c98d4e',pay:()=>{ S.planks=(S.planks||0)+np; return T(`+${np} kereste`,`+${np} planks`); }}
@@ -33,50 +40,103 @@ function wheelSlices(){ const w=gw(), L=S.level, g=Math.round(120+25*w), gb=Math
       :{i:'👛',n:T('Altın kesesi','Gold pouch'),a:'+'+gb,w:12,c:'#8fb8de',pay:gold(gb)},
     {i:'🏆',n:T('+6 taç','+6 crowns'),a:'+6👑',w:4,c:'#d9534f',jack:true,pay:crowns(6)},
     {i:'🎁',n:T('Hediye','Gift'),a:'?',w:14,c:'#7cc47f',pay:gold(g)},
-    {i:'🃏',n:T('Hazır güç kartı','Free power card'),a:'',w:4,c:'#3d63c9',pay:()=>{ S.meta.nextCard=(S.meta.nextCard||0)+1; return endless()?T('Sonraki geceye bir güç kartıyla başlarsın','Power card for the next night!'):T('Sonraki sefere bir güç kartıyla başlarsın','Power card for next chapter!'); }}]; }
+    {i:'🃏',n:T('Hazır güç kartı','Free power card'),a:'',w:4,c:'#3d63c9',pay:()=>{ S.meta.nextCard=(S.meta.nextCard||0)+1; return endless()?T('Sonraki geceye bir güç kartıyla başlarsın','Power card for the next night!'):T('Sonraki haritaya bir güç kartıyla başlarsın','Power card for your next map!'); }}]; }
 function wheelReward(k,W){ W=W||wheelSlices()[k]||wheelSlices()[0]; const at=player.g.position.clone(); const txt=W.pay();
   coinPop(); celebrate(at,W.jack?2:1.1); if(W.jack) confetti(); if(S.post) S.post.wheel=1; save(); return W.i+' '+txt; }
 function showBossWheel(done){ if($('wheelCard')){ done&&done(); return; } const card=document.createElement('div'); card.className='intro'; card.id='wheelCard';
   const WHEEL=wheelSlices(); const lbl=WHEEL.map((s,i)=>{ const a=i*45+22.5; return `<span style="transform:rotate(${a}deg)"><b style="transform:rotate(${-a}deg)">${s.i}</b><i style="transform:rotate(${-a}deg)">${s.a}</i></span>`; }).join(''); /* FX3: simge ve miktar dik durur */ const grad=WHEEL.map((s,i)=>`${s.c} ${i*45}deg ${(i+1)*45}deg`).join(',');
-  card.innerHTML=`<div class="card wheelCard"><h1>${T('Patron sandığı!','Boss Chest!')}</h1><p>${T(`${bossName()} yenildi. Çarkı çevir, ödülünü al.`,`${bossName()} defeated. Spin for your prize!`)}</p><div class="wheel"><i class="wpin"></i><div class="wdisc" id="wdisc" style="background:conic-gradient(${grad})">${lbl}<em></em></div></div><p class="wres" id="wres">&nbsp;</p><button id="wheelSpin" class="gold">${T('ÇEVİR!','SPIN!')}</button><button id="wheelOk" style="display:none">${T('Devam →','Continue →')}</button></div>`;
+  card.innerHTML=`<div class="card wheelCard"><h1>${T('Patron sandığı!','Boss Chest!')}</h1><p>${(MAPS[S.level]?T(`${bossName()} yenildi. Çevir: taç, güç kartı ya da kupa parçası!`,`${bossName()} defeated. Spin for crowns, a power card or a trophy piece!`):T(`${bossName()} yenildi. Çarkı çevir, ödülünü al.`,`${bossName()} defeated. Spin for your prize!`))}</p><div class="wheel"><i class="wpin"></i><div class="wdisc" id="wdisc" style="background:conic-gradient(${grad})">${lbl}<em></em></div></div><p class="wres" id="wres">&nbsp;</p><button id="wheelSpin" class="gold">${T('ÇEVİR!','SPIN!')}</button><button id="wheelOk" style="display:none">${T('Devam →','Continue →')}</button></div>`;
   document.body.appendChild(card); SFX.card();
   $('wheelSpin').addEventListener('click',()=>{ audio(); const b=$('wheelSpin'); if(b.disabled) return; b.disabled=true; b.textContent=T('Dönüyor…','Spinning…');
     let k=S.post&&S.post.k>=0?S.post.k:-1; if(k<0){ let tot=0; for(const s of WHEEL) tot+=s.w; let r=Math.random()*tot; k=0; for(let i=0;i<WHEEL.length;i++){ r-=WHEEL[i].w; if(r<=0){ k=i; break; } } if(S.post){ S.post.k=k; save(); } } // sonuç kaydedilir: yeniden yüklemek çarkı yeniden çevirtmez
-    const J=5; let off=rand(8,37); if(k===J-1) off=rand(40,43.5); else if(k===J+1) off=rand(1.5,5); const rot=360*6-(k*45+off);
+    let off=rand(8,37); const rot=360*6-(k*45+off); /* v44: kıl payı kaçırma hilesi kalktı */
     const disc=$('wdisc'); disc.style.transition='transform 3.6s cubic-bezier(.12,.72,.18,1)'; disc.style.transform=`rotate(${rot}deg)`;
     /* FX4: tıklar çarkın gerçek açısından: her dilim sınırı iğneden geçerken bir tık (hızlıyken sık, yavaşlarken seyrek; son yavaş geçişler de duyulur), iğne her tıkta seker; durunca kazanan dilim parlar */
     { const bz=(x1,y1,x2,y2,x)=>{ let lo=0,hi=1,t=x; for(let i=0;i<22;i++){ t=(lo+hi)/2; const xx=3*x1*t*(1-t)*(1-t)+3*x2*t*t*(1-t)+t*t*t; if(xx<x) lo=t; else hi=t; } return 3*y1*t*(1-t)*(1-t)+3*y2*t*t*(1-t)+t*t*t; }; const t0=performance.now(), pin=card.querySelector('.wpin'); let lastS=0, lastTick=0;
       const step=()=>{ if(!document.body.contains(card)) return; const x=Math.min(1,(performance.now()-t0)/3600), sl=Math.floor(bz(.12,.72,.18,1,x)*rot/45); if(sl!==lastS){ lastS=sl; const now=performance.now(); if(now-lastTick>28){ lastTick=now; tone(900+500*x,700+300*x,0.03,'square',0.035); if(pin&&pin.animate&&!document.body.classList.contains('calm')) try{ pin.animate([{transform:'translateX(-50%) rotate(-20deg)'},{transform:'translateX(-50%) rotate(0deg)'}],{duration:90}); }catch(e){} } }
         if(x<1){ setTimeout(step,16); return; } const sp=card.querySelectorAll('.wdisc span')[k], bb=sp&&sp.querySelector('b'); if(bb){ bb.style.transition='transform .25s cubic-bezier(.2,1.6,.4,1)'; bb.style.transform='scale(1.35)'; bb.style.filter='drop-shadow(0 0 5px #fff) drop-shadow(0 0 3px #ffd23f)'; } tone(520,390,0.09,'triangle',0.06); }; step(); }
-    setTimeout(()=>{ const txt=wheelReward(k,WHEEL[k]); const res=$('wres'); if(res) res.innerHTML=`<b>${txt}</b>${(k===J-1||k===J+1)?'<small>'+T('Büyük ödüle kıl payı!','So close to the jackpot!')+'</small>':''}`; if(WHEEL[k].jack) SFX.win(); else SFX.fanfare(); b.style.display='none'; const ok=$('wheelOk'); if(ok) ok.style.display=''; },3800); });
+    setTimeout(()=>{ const txt=wheelReward(k,WHEEL[k]); const res=$('wres'); if(res) res.innerHTML=`<b>${txt}</b>`; if(WHEEL[k].jack) SFX.win(); else SFX.fanfare(); b.style.display='none'; const ok=$('wheelOk'); if(ok) ok.style.display=''; },3800); });
   $('wheelOk').addEventListener('click',()=>{ audio(); card.remove(); clearBossChests(); done&&done(); }); }
 function applyNextCard(){ S.wheelCards={}; const n=(S.meta&&S.meta.nextCard)||0; if(!n) return; S.meta.nextCard=0; const ks=['arrow','rate','range','powder','wall','drill'].filter(cardUseful); for(let i=0;i<n;i++){ const k=ks[Math.floor(Math.random()*ks.length)]; S.cards[k]=(S.cards[k]||0)+1; S.wheelCards[k]=(S.wheelCards[k]||0)+1; if(k==='wall') S.gateHp=D.gateMax(); setTimeout(()=>toast('🃏 '+CARDS[k].i+' '+CARDS[k].n,'good'),2600+i*2600); } }
 
 // ----- günlük görevler: her gün 3 görev, bitince taç + altın -----
 const QPOOL=[
   {k:'chop',t:n=>T(`${n} ağaç kes`,`Chop ${n} trees`),b:25,s:10},{k:'kill',t:n=>T(`${n} düşman yen`,`Defeat ${n} enemies`),b:40,s:25},{k:'night',t:n=>T(`${n} gece atlat`,`Survive ${n} nights`),b:3,s:1},{k:'buy',t:n=>T(`${n} geliştirme yap`,`Upgrade ${n} times`),b:8,s:3},
-  {k:'pile',t:n=>T(`Yığınlardan ${n} altın topla`,`Collect ${n} gold from piles`),b:250,s:300,need:()=>revealed('lake')||revealed('meadow')},{k:'fish',t:n=>T(`${n} balık tut`,`Catch ${n} fish`),b:8,s:3,g:1,need:()=>qRegion('fish',['lake','coast'])},{k:'hunt',t:n=>T(`${n} hayvan avla`,`Hunt ${n} animals`),b:8,s:3,g:1,need:()=>qRegion('hunt',['meadow'])},
-  {k:'herb',t:n=>T(`${n} mantar topla`,`Gather ${n} mushrooms`),b:12,s:4,g:1,need:()=>qRegion('herb',['swamp'])},{k:'mine',t:n=>T(`${n} cevher ya da kristal kaz`,`Mine ${n} ore or crystals`),b:12,s:4,g:1,need:()=>qRegion('mine',['iron','snow'])},{k:'chest',t:n=>T(`Sahilde ${n} sandık aç`,`Open ${n} beach chests`),b:2,s:1,mx:4,need:()=>revealed('coast')},
+  {k:'pile',t:n=>T(`Yığınlardan ${n} altın topla`,`Collect ${n} gold from piles`),b:250,s:300,need:()=>qRegion('pile',['lake','meadow'])},{k:'fish',t:n=>T(`${n} balık tut`,`Catch ${n} fish`),b:8,s:3,g:1,need:()=>qRegion('fish',['lake','coast'])},{k:'hunt',t:n=>T(`${n} hayvan avla`,`Hunt ${n} animals`),b:8,s:3,g:1,need:()=>qRegion('hunt',['meadow'])},
+  {k:'herb',t:n=>T(`${n} mantar topla`,`Gather ${n} mushrooms`),b:12,s:4,g:1,need:()=>qRegion('herb',['swamp'])},{k:'mine',t:n=>T(`${n} cevher ya da kristal kaz`,`Mine ${n} ore or crystals`),b:12,s:4,g:1,need:()=>qRegion('mine',['iron','snow'])},{k:'chest',t:n=>T(`Sahilde ${n} sandık aç`,`Open ${n} beach chests`),b:2,s:1,mx:4,need:()=>qRegion('chest',['coast'])},
+  /* p2m6: kalıcı ilerleme görevleri: yıldız kazan (her zaferin yıldızları sayılır, tekrar dahil: hep yapılabilir) · harita kazan (tekrar ve günün meydan okuması dahil) */
+  {k:'star',t:n=>T(`${n} yıldız kazan`,`Earn ${n} stars`),b:3,s:1,mx:5},{k:'map',t:n=>T(`${n} harita kazan`,`Win ${n} maps`),b:1,s:1,mx:2},
 ];
 // F8: görevler bugün yapılabilecek olandan üretilir: elle toplama yalnız bu/önceki seferin bölgesinde ya da oyuncunun son seferlerde yaptığı işte; "yükselt" kalan seviye kadar; yapılamaz hale gelen görev değiştirilir; alınmamış biten görevin ödülü ertesi gün verilir
-function qRegion(k,ids){ const u=(S.meta&&S.meta.qUse)||{}; return ids.some(id=>revealed(id)&&(REG[id].sefer>=S.level-1||(u[k]||0)>=S.level-1)); }
+/* p2m6: görev bölgesi = açılmış (oynanabilir) haritalardan birinde o bölge var: görev her zaman yapılabilir (o haritayı tekrar oynarsın) */
+function qRegion(k,ids){ const n=Math.min(LEVELS,(S.meta&&S.meta.unlocked)||1); for(let L=1;L<=n;L++) if(MAPS[L]&&MAPS[L].regs.some(r=>ids.includes(r))) return true; return false; }
 function upgradesLeft(){ let n=0; for(const pd of pads){ const d=pd.def; if(d.id==='tribute'||pd.locked||(d.grp&&!revealed(d.grp))) continue; let sh=false; try{ sh=d.show(); }catch(e){} if(sh&&d.max>0) n+=Math.max(0,d.max-padLevel(d)); } return n; }
-function questN(q){ const tier=Math.min(6,Math.floor((S.level-1)/2)); let n=q.b+q.s*(q.g?Math.min(2,tier):tier); if(q.mx) n=Math.min(q.mx,n); if(q.k==='buy') n=Math.min(n,Math.floor(upgradesLeft()*0.6)); return n; }
+const qTier=()=>Math.min(6,Math.floor((Math.max(1,(S.meta&&S.meta.unlocked)||1)-1)/2)); /* p2m6: görev kademesi açılmış haritaya göre (S.level değil: tekrar oynanan 1. harita görevi kolaylaştırmaz) */
+function questN(q){ const tier=qTier(); let n=q.b+q.s*(q.g?Math.min(2,tier):tier); if(q.mx) n=Math.min(q.mx,n); if(q.k==='buy') n=Math.min(n,Math.floor(upgradesLeft()*0.6)); return n; }
 function questOk(q){ return (!q.need||q.need())&&questN(q)>=(q.k==='buy'?3:1); }
 function ensureQuests(){ if(!S.meta) return null; const day=dayKey(); const Q=S.meta.quests;
   if(Q&&Q.day===day&&Array.isArray(Q.list)){ if(Date.now()-(ensureQuests.t||0)<4000) return Q; ensureQuests.t=Date.now(); for(let i=0;i<Q.list.length;i++){ const q=Q.list[i], d=QPOOL.find(x=>x.k===q.k); if(!d||q.claimed||q.have>=q.n) continue; const left=q.k==='buy'?upgradesLeft():1e9; if(questOk(d)&&left>=q.n-q.have) continue; const alt=QPOOL.filter(x=>questOk(x)&&!Q.list.some(y=>y.k===x.k)); if(alt.length){ const a=alt[Math.floor(Math.random()*alt.length)]; Q.list[i]={k:a.k,n:questN(a),have:0,claimed:false,rw:q.rw}; } else if(q.k==='buy') q.n=Math.max(q.have+1,Math.min(q.n,q.have+left)); } return Q; }
-  if(Q&&Array.isArray(Q.list)){ let cr=0; for(const q of Q.list) if(q.have>=q.n&&!q.claimed){ q.claimed=true; cr+=q.rw; S.coins+=Math.round(60+20*gw()); } if(cr>0){ S.meta.crowns+=cr; setTimeout(()=>toast(T(`📜 Dünün görevleri: +${cr} 👑`,`📜 Yesterday's quests: +${cr} 👑`),'good',true),3000); } }
+  if(Q&&Array.isArray(Q.list)){ let cr=0; for(const q of Q.list) if(q.have>=q.n&&!q.claimed){ q.claimed=true; cr+=q.rw; } /* p2m7: dünün görevi yalnız taç öder: koşu altını yeni haritanın başlangıç altınına eklenmesin (göçte 20 yerine ~620 altın) */ if(cr>0){ S.meta.crowns+=cr; setTimeout(()=>toast(T(`📜 Dünün görevleri: +${cr} 👑`,`📜 Yesterday's quests: +${cr} 👑`),'good',true),3000); } }
   const pool=QPOOL.filter(questOk); const pick=[]; while(pick.length<3&&pool.length){ pick.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); }
   S.meta.quests={day,list:pick.map((q,i)=>({k:q.k,n:questN(q),have:0,claimed:false,rw:2+(i===2?1:0)})),all:false}; return S.meta.quests; }
+/* p2m6: Günün Meydan Okuması — tohum = hash(dayKey()): açılmış (kazanılmış) haritalardan birinin teması + tek değiştirici. S.mode='daily', S.mod, S.dkey.
+   Ödül günde bir kez: 5 taç + günün kupası (meta.dtro sayacı, meta.dWon = gün). 2. harita kazanılınca açılır (meta.unlocked>=3): ilk iki harita kuralları öğretir, sonra ikinci bir günlük hedef.
+   Kara Kale (10. harita) havuzda yok: kale sonu/son kart akışı kampanyaya özel. Kampanyadaki yarım harita meydan okumaya geçince baştan başlar (meta.campL: dönülecek harita). */
+const DMODS={allGates:{i:'🚪',n:T('Dört Kapı','All Gates'),d:T('Düşman her gece dört kapıdan gelir · +80 başlangıç altını','Enemies use all four gates every night · +80 starting gold'),gold:80},
+  doubleRams:{i:'🐏',n:T('Koçbaşı Akını','Ram Rush'),d:T('İki kat koçbaşı surlarına yüklenir','Twice the battering rams hit your walls'),gold:0},
+  foggy:{i:'🌫️',n:T('Sisli','Foggy'),d:T('Kuleler %20 daha kısa görür','Towers see 20% less far'),gold:0},
+  noSoldiers:{i:'🚫',n:T('Askersiz','No Soldiers'),d:T('Asker tutulamaz: kuleler ve sen','No soldiers: only towers and you'),gold:0},
+  goldRush:{i:'💰',n:T('Altına Hücum','Gold Rush'),d:T('Düşmanlar %60 fazla altın düşürür · +100 başlangıç altını','Enemies drop 60% more gold · +100 starting gold'),gold:100},
+  nightOnly:{i:'🌙',n:T('Bitmeyen Gece','Endless Night'),d:T('Gündüzler kısa ve karanlık · +60 başlangıç altını','Short, dark days · +60 starting gold'),gold:60}};
+const DMOD_K=['allGates','doubleRams','foggy','noSoldiers','goldRush','nightOnly'], DAILY_CR=5, DAILY_AT=2; /* v44: 1. harita kazanılınca açılır (eski: 2. harita) */
+const dmod=k=>S.mode==='daily'&&S.mod===k;
+function hash32(str){ let h=2166136261>>>0; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } h^=h>>>13; h=Math.imul(h,0x5bd1e995)>>>0; h^=h>>>15; return h>>>0; }
+function dayKeyOf(off){ const d=new Date(); d.setDate(d.getDate()+(off||0)); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+/* v44: havuz GÜN BAŞINDA sabitlenir (meta.dpn): gün içinde harita açılınca bugünün ve yarının seçimi değişmez */
+function dailyPoolN(){ const m=S.meta||{}, dk=dayKeyOf(0), cur=Math.min(LEVELS-1,(m.unlocked||1)-1); if(!m.dpn||m.dpn.k!==dk||!(m.dpn.n>=1)) m.dpn={k:dk,n:Math.max(1,cur)}; return m.dpn.n; }
+function dailyPool(){ const n=dailyPoolN(), a=[]; for(let L=1;L<=n;L++) a.push(L); return a.length?a:[1]; }
+/* p2m6: değiştirici sırası 6 günlük bloklar: her blok altı değiştiricinin tohumlu bir karışımı (hepsi 6 günde bir kez; blok sınırında dünküyle aynıysa ilk ikisi yer değişir) → art arda aynı kural hiç gelmez.
+   Tema: hash(gün) ile kazanılmış haritalardan; dünküyle aynıysa bir sonrakine kayar */
+function dayNum(dk){ const p=String(dk).split('-').map(Number); return Math.round(Date.UTC(p[0],(p[1]||1)-1,p[2]||1)/864e5); }
+function modPerm(b){ const a=DMOD_K.slice(); let h=hash32('grovehold-mods|'+b); for(let i=a.length-1;i>0;i--){ h=Math.imul(h^(h>>>15),2246822519)>>>0; const j=h%(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function modOf(dn){ const b=Math.floor(dn/6), pos=dn-6*b, a=modPerm(b), pv=modPerm(b-1); if(a[0]===pv[5]) [a[0],a[1]]=[a[1],a[0]]; return a[pos]; }
+function themeIdx(dk,n){ return Math.floor(((hash32('grovehold-daily|'+dk)>>>8)%10007)/10007*n); }
+function dailyOf(dk){ const pool=dailyPool(), dn=dayNum(dk); let li=themeIdx(dk,pool.length); if(pool.length>1){ const d=new Date(Date.UTC(1970,0,1)+(dn-1)*864e5), yk=d.getUTCFullYear()+'-'+(d.getUTCMonth()+1)+'-'+d.getUTCDate(); if(li===themeIdx(yk,pool.length)) li=(li+1)%pool.length; } return {k:dk,L:pool[li],mod:modOf(dn)}; }
+function dailyToday(){ const dk=dayKeyOf(0), m=S.meta; if(!m.dc||m.dc.k!==dk||!MAPS[m.dc.L]||!DMODS[m.dc.mod]){ m.dc=(m.dnx&&m.dnx.k===dk&&MAPS[m.dnx.L]&&DMODS[m.dnx.mod])?{k:dk,L:m.dnx.L,mod:m.dnx.mod}:dailyOf(dk); } return m.dc; }
+/* v44: yarının önizlemesi bir kez hesaplanıp saklanır: yarın gerçekten o gelir */
+function dailyTomorrow(){ const tk=dayKeyOf(1), m=S.meta; if(!m.dnx||m.dnx.k!==tk||!MAPS[m.dnx.L]||!DMODS[m.dnx.mod]) m.dnx=dailyOf(tk); return m.dnx; } /* bugünkü seçim sabit kalır (gün içinde harita açılsa da) */
+const dailyOn=()=>((S.meta&&S.meta.unlocked)||1)>=DAILY_AT;
+const dailyDone=()=>S.meta.dWon===dayKeyOf(0);
+function dailyLbl(dc){ return `${mapIc(dc.L)} ${mapName(dc.L)} · ${DMODS[dc.mod].i} ${DMODS[dc.mod].n}`; }
+function campNext(){ const u=Math.max(1,Math.min(LEVELS+1,(S.meta.unlocked|0)||1)); return Math.max(1,Math.min(u,(S.meta.campL|0)||u)); }
+function startDaily(){ if(!dailyOn()||dailyDone()) return false; const dc=dailyToday(); if(S.mode!=='daily') S.meta.campL=S.won?Math.min(LEVELS+1,S.level+1):S.level; startMap(dc.L,false,{daily:dc}); return true; }
+/* p2m6: Sisli gün görünümü: sis yakına iner (yalnız bu modda; diğer haritalarda eski değer) */
+function applyDailyLook(){ if(!scene.fog) return; const f=dmod('foggy'); scene.fog.near=f?26:120; scene.fog.far=f?92:230; }
+/* p2m6: Kampanya sekmesindeki kutucuk: bugünün teması + değiştiricisi, ödül, yarının önizlemesi */
+function dailyHtml(){ if(!dailyOn()){ const dc=dailyToday(), md=DMODS[dc.mod]; return `<div class="rchest dtile lock"><div class="rch"><i>🎯</i><div><b>${T('Günün Meydan Okuması','Daily Challenge')}</b><small>${T('Bugün','Today')}: ${md.i} ${md.n} · 👑 +${DAILY_CR} · 🏆</small></div><button disabled>🔒 ${T('1. harita','Map 1')}</button></div><p class="dmod">${md.i} ${md.d}</p><small class="dtm">🔒 ${T('1. haritayı kazanınca açılır · her gün yeni harita + kural','Unlocks after Map 1 · a new map + twist every day')}</small></div>`; } /* v44: kilitliyken de bugünün kuralı ve ödülü görünür */
+  const dc=dailyToday(), md=DMODS[dc.mod], done=dailyDone(), on=S.mode==='daily'&&!S.won&&S.dkey===dc.k, nx=dailyTomorrow();
+  const left=(()=>{ const d=new Date(); d.setHours(24,0,0,0); return hm(d-Date.now()); })();
+  const busy=S.mode!=='daily'&&!S.won&&MAPS[S.level]&&S.wave>1;
+  const btn=done?`<button id="dPlay" disabled>✓ ${T('Bugün tamam','Done today')}</button>`:`<button id="dPlay">▶ ${on?T('Devam','Continue'):`👑 +${DAILY_CR}`}</button>`;
+  return `<div class="rchest dtile${done?' done':''}"><div class="rch"><i>🎯</i><div><b>${T('Günün Meydan Okuması','Daily Challenge')}</b><small>${mapIc(dc.L)} ${mapName(dc.L)} · ${md.i} ${md.n}</small></div>${btn}</div><p class="dmod">${md.i} ${md.d}${done?` · 🏆 ${T(`${S.meta.dtro|0} günlük kupa`,`${S.meta.dtro|0} daily ${(S.meta.dtro|0)===1?'trophy':'trophies'}`)}`:` · 🏆 ${T('günün kupası','daily trophy')}`}</p>${busy&&!done&&!on?`<p class="dwarn">⚠ ${T(`${S.level}. haritadaki ilerlemen baştan başlar`,`Your Map ${S.level} run restarts`)}</p>`:''}<small class="dtm">${T('Yarın','Tomorrow')}: ${dailyLbl(nx)} · ${T(`${left} sonra`,`in ${left}`)}</small></div>`; }
+/* p2m6: yarına sebep: oturumun ilk harita zaferinde kazanma kartında yarının hediyesi + Kraliyet Sandığı süresi + yarının meydan okuması */
+let sessWin=0;
+function tmrwHint(force){ try{ if(!S.meta||(sessWin&&!force)) return ''; sessWin=1; const k=dayKeyOf(0); const nx=S.meta.dailyDate===k?(S.meta.streak||0)+1:1, g=giftOf(nx), r=rcState();
+  const rows=[`🎁 ${T(`Yarın gel: +${g} 👑 hediye`,`Come back tomorrow: +${g} 👑 gift`)}`, r.full?`🧰 ${T('Kraliyet Sandığı dolu: Krallık\'ta aç','Royal Chest is full: open it in the Kingdom')}`:`🧰 ${T(`Kraliyet Sandığı ${hm(r.left)} sonra dolu`,`Royal Chest full in ${hm(r.left)}`)}`,
+    dailyOn()?`🎯 ${T('Yarın','Tomorrow')}: ${dailyLbl(dailyTomorrow())}`:`🎯 ${T('Günün Meydan Okuması 1. haritadan sonra','Daily Challenge unlocks after Map 1')}`];
+  return `<div class="tmrw">${rows.map(x=>`<div>${x}</div>`).join('')}</div>`; }catch(e){ return ''; } }
 function questText(q){ const d=QPOOL.find(x=>x.k===q.k); return d?d.t(q.n):q.k; }
 let questSaveT=0;
 // günlük görevler ilk seferin ortasından sonra açılır (ilk dakikalarda ekran sade kalsın)
-function questsOn(){ return S.level>=2||(S.wave||1)>=3; }
-function questEvent(k,amt){ if(S.meta&&S.started&&k!=='night'&&k!=='kill') (S.meta.qUse||(S.meta.qUse={}))[k]=S.level; if(!S.started||!S.meta||!questsOn()) return; const Q=ensureQuests(); if(!Q) return; for(const q of Q.list){ if(q.k!==k||q.have>=q.n) continue; q.have=Math.min(q.n,q.have+(amt||1)); if(q.have>=q.n){ toast(T('📜 Görev tamam!','📜 Quest complete!'),'good'); SFX.card(); const c=$('questChip'); if(c){ c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } save(); } } }
+function questsOn(){ return ((S.meta&&S.meta.unlocked)||1)>=2||(S.wave||1)>=3; } /* p2m6 */
+function questEvent(k,amt){ if(!S.started||!S.meta||!questsOn()) return; const Q=ensureQuests(); if(!Q) return; for(const q of Q.list){ if(q.k!==k||q.have>=q.n) continue; q.have=Math.min(q.n,q.have+(amt||1)); if(q.have>=q.n){ toast(T('📜 Görev tamam!','📜 Quest complete!'),'good'); SFX.card(); const c=$('questChip'); if(c){ c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } save(); } } }
 function renderQuestChip(){ const c=$('questChip'); if(!c) return; const Q=started&&S.started&&questsOn()?ensureQuests():null; if(!Q){ if(c.style.display!=='none'){ c.style.display='none'; hudRectT=-1e9; } return; } if(c.style.display!=='flex'){ c.style.display='flex'; hudRectT=-1e9; } const done=Q.list.filter(q=>q.have>=q.n).length, claim=Q.list.some(q=>q.have>=q.n&&!q.claimed); const t=T(`📜 Görev ${done}/3`,`📜 Daily ${done}/3`); if(c._t!==t){ c._t=t; $('questTxt').textContent=t; } c.classList.toggle('done',claim); }
+/* v44: biten görevler kaçmaz: harita zaferinde ve Krallık açılınca kendiliğinden alınır, taçlar HUD'a uçar (altın yalnız harita sürerken) */
+function claimQuests(inMap,from,to,noFly){ const Q=S.meta&&S.meta.quests; if(!Q||!Array.isArray(Q.list)||Q.day!==dayKey()) return null; let cr=0, gold=0; const g=Math.round(60+20*ew()); for(const q of Q.list){ if(q.claimed||!(q.have>=q.n)) continue; q.claimed=true; cr+=q.rw; if(inMap) gold+=g; } if(!cr) return null; let all=0; if(Q.list.every(x=>x.claimed)&&!Q.all){ Q.all=true; all=3; cr+=3; } S.meta.crowns+=cr; if(gold) S.coins+=gold; save();
+  const fr=from||$('questChip'); if(!noFly) flyIcons('👑',Math.min(8,cr),fr,to||$('kingBtn')); if(gold&&!noFly) flyIcons('💰',4,fr,$('coinChip')); setTimeout(()=>toast(T(`📜 Görev ödülü: +${cr} 👑${gold?` · +${gold} altın`:''}${all?' (hepsi bitti +3)':''}`,`📜 Quest rewards: +${cr} 👑${gold?` · +${gold} gold`:''}${all?' (all done +3)':''}`),'good',true),300); renderQuestChip(); return {cr,gold}; }
 function showQuests(){ if($('questCard')) return; const card=document.createElement('div'); card.className='intro'; card.id='questCard'; document.body.appendChild(card);
-  const render=()=>{ const Q=ensureQuests(); const gold=Math.round(60+20*gw()); const allDone=Q.list.every(q=>q.claimed);
-    card.innerHTML=`<div class="card"><h1>${T('Günün görevleri','Daily Quests')}</h1><p>${T('Her gün yenilenir. Bitirdiğin görevin ödülünü buradan al.','Resets daily. Claim your rewards here.')}</p>${Q.list.map((q,i)=>{ const ok=q.have>=q.n; return `<div class="q${ok?' ok':''}"><div class="qb"><b>${questText(q)}</b><div class="qbar"><i style="width:${Math.round(q.have/q.n*100)}%"></i></div><small>${Math.floor(q.have)}/${q.n}</small></div>${q.claimed?'<span class="rw">'+T('✓ Alındı','✓ Claimed')+'</span>':ok?`<button data-i="${i}" class="qget">👑 ${q.rw} + 💰 ${gold}</button>`:`<span class="rw">👑 ${q.rw}</span>`}</div>`; }).join('')}${allDone?'<p class="sub">'+T('Hepsini bitirdin — yarın yeni görevler gelecek.','All done — new quests tomorrow.')+'</p>':''}<button id="qClose">${T('Kapat','Close')}</button></div>`;
+  const render=()=>{ const Q=ensureQuests(); const gold=Math.round(60+20*ew()); const allDone=Q.list.every(q=>q.claimed);
+    card.innerHTML=`<div class="card"><h1>${T('Günün görevleri','Daily Quests')}</h1><p>${T('Her gün yenilenir. Bitirdiğin görevin ödülünü buradan al.','Resets daily. Claim your rewards here.')}</p>${Q.list.map((q,i)=>{ const ok=q.have>=q.n; return `<div class="q${ok?' ok':''}"><div class="qb"><b>${questText(q)}</b><div class="qbar"><i style="width:${Math.round(q.have/q.n*100)}%"></i></div><small>${Math.floor(q.have)}/${q.n}</small></div>${q.claimed?'<span class="rw">'+T('✓ Alındı','✓ Claimed')+'</span>':ok?`<button data-i="${i}" class="qget"><b>${T('AL','CLAIM')}</b> 👑 ${q.rw} + 💰 ${gold}</button>`:`<span class="rw">👑 ${q.rw}</span>`}</div>`; }).join('')}${allDone?'<p class="sub">'+T('Hepsini bitirdin — yarın yeni görevler gelecek.','All done — new quests tomorrow.')+'</p>':''}<button id="qClose">${T('Kapat','Close')}</button></div>`;
     card.querySelectorAll('.qget').forEach(b=>b.addEventListener('click',()=>{ audio(); const q=Q.list[+b.dataset.i]; if(q.claimed||q.have<q.n) return; q.claimed=true; S.meta.crowns+=q.rw; S.coins+=gold; coinPop(); SFX.fanfare(); celebrate(player.g.position.clone(),0.9); if(Q.list.every(x=>x.claimed)&&!Q.all){ Q.all=true; S.meta.crowns+=3; setTimeout(()=>toast(T('🏆 Görevler bitti: +3 👑','🏆 All quests done: +3 👑'),'good'),400); } save(); render(); }));
     $('qClose').addEventListener('click',()=>{ audio(); card.remove(); }); };
   render(); }
@@ -136,7 +196,7 @@ function updateShips(dt){ const t=performance.now()/1000; for(let i=ships.length
     if(!s.leaving||s.k<0.6) s.g.position.y=0.1+Math.sin(t*1.4)*0.12; s.g.rotation.z=Math.sin(t*1.1)*0.05; } }
 
 // ----- kış: 9. sefer (ve sonsuzda her 10'un 9'u): ağaç yavaş kesilir, gündüz kısa, dünya karlı -----
-function isWinter(){ return S.level%10===9; }
+function isWinter(){ return !!(MAPS[S.level]&&MAPS[S.level].winter)||S.level%10===9; } /* p2: kış haritası (MAPS.winter) ya da sonsuzda her 10'un 9'u */
 let winterOn=null, groundMesh=null, crownBase=null, winterToast=0;
 // F8: kış bütün haritada: ağaç tepeleri karlı, çatılar kırağılı, zemin karlı ama geceleri kararır; kış geceleri daha koyu ve mavi
 const NIGHT0={bg:NIGHT.bg.getHex(),sun:NIGHT.sun.getHex(),hemi:NIGHT.hemi.getHex(),sunI:NIGHT.sunI,hemiI:NIGHT.hemiI,exp:NIGHT.exp}, WG=new THREE.Color(0x46505c), WL=new THREE.Color(0x4a5660);
@@ -152,7 +212,7 @@ function winterTick(){ if(!winterOn) return; const k=1-night; if(groundMesh) gro
 let p7T=0;
 function updateP7(dt){ updateBossChests(dt); updateEArrows(dt); updateShips(dt); p7T-=dt; if(p7T<=0){ p7T=1; applyWinterLook(); } winterTick(); }
 // F8: kışın ilk iki gün uzun (uzak Karlı Geçit'e gidip dönmeye vakit), sonra kısa
-function dayLen(){ return isWinter()?(S.wave<=2?30:20):30; }
+const DAY_LEN=window.__dayLen||55; function dayLen(){ if(S.mode==='daily'&&S.mod==='nightOnly') return 30; /* p2m6: Bitmeyen Gece: kısa gündüz */ return isWinter()?(S.wave<=2?DAY_LEN-4:DAY_LEN-8):DAY_LEN; } /* p2m3: haritalar 8-12 dk: gündüz 30→55 sn (kış biraz kısa) */
 for(const s of SIDES) threatLbl[s].clampIn=true; /* F8: kapı tehdit etiketi (👑) ekran kenarında kesilmez */
 function clearP7Battle(){ for(const a of eArrows) scene.remove(a.m); eArrows.length=0; for(const s of ships){ scene.remove(s.g); freeOwned(s.g); } ships.length=0; if(!$("wheelCard")) clearBossChests(); }
 function resetP7(){ clearP7Battle(); clearBossChests(); document.querySelectorAll('.hpbar.tw').forEach(b=>b.remove()); comboN=0; }

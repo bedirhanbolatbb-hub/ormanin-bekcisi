@@ -47,7 +47,7 @@ function updateGatherers(list,nodes,dt,o){ for(const w of list){ const p=w.guy.g
     if(d>reach){ const sp=Math.min(d,3.4*dt); p.x+=dx/d*sp; p.z+=dz/d*sp; w.guy.g.rotation.y=Math.atan2(dx,dz); moving=true; }
     else if(w.tgt){ const n=w.tgt; w.guy.g.rotation.y=Math.atan2(dx,dz); w.t-=dt; w.sw-=dt; if(w.sw<=0){ w.sw=0.55; w.guy.swing=0.3; n.hit=0.18; burst(n.pos.clone().setY(0.5),3,o.chip,0.6); } if(w.t<=0){ n.claimed=null; n.alive=false; n.regrow=o.regrow; o.send(n.pos.clone().setY(0.7),o.yield()); w.tgt=null; } }
     animGuy(w.guy,dt,moving,1); } }
-function clearGatherers(list){ for(const w of list){ scene.remove(w.guy.g); if(w.tgt) w.tgt.claimed=null; } list.length=0; }
+function clearGatherers(list){ for(const w of list){ scene.remove(w.guy.g); disposeBaked(w.guy.g); if(w.tgt) w.tgt.claimed=null; } list.length=0; }
 // küçük yardımcılar
 function stackIM(geo,matl,n,place){ const im=new THREE.InstancedMesh(geo,matl,n); for(let i=0;i<n;i++){ place(i); m4.compose(vp,q,vs); im.setMatrixAt(i,m4); } im.count=0; im.castShadow=true; return im; }
 function smokePuff(list,at){ if(list.length>18) return; const m=new THREE.Mesh(G.sph,new THREE.MeshLambertMaterial({color:0xd8d4ce,transparent:true,opacity:0.7,depthWrite:false})); m.scale.setScalar(0.3); m.position.copy(at); m.castShadow=false; scene.add(m); list.push({m,t:0}); }
@@ -90,7 +90,7 @@ for(const n of mushNodes){ scene.remove(n.g); swamp.add(n.g); }
 const farmBeds=[]; (function(){ for(let i=0;i<3;i++){ const p=SW.at(SW.R.r-7.5,-3+i*2.6); const g=new THREE.Group(); const bed=mesh(G.box,M.woodDark,2.2,0.35,1.2); bed.position.y=0.18; const soil=mesh(G.box,mat(0x3a3024),2.0,0.1,1.0,false); soil.position.y=0.38; g.add(bed,soil); const im=stackIM(MUSH_GEO,M.mush,8,j=>{ vp.set(-0.8+(j%4)*0.52,0.42,-0.25+Math.floor(j/4)*0.5); q.identity(); vs.set(1.1,1.1,1.1); }); im.count=8; g.add(im); const gl=glow(0x7fffd0,2.8,0.35); gl.position.y=0.8; g.add(gl); g.position.copy(p); g.rotation.y=SW.ang; g.visible=false; swamp.add(g); farmBeds.push({g,im,t:rand(0,5)}); } })();
 const farmLbl=machLabel(SW.at(SW.R.r-7.5,-0.4),2.8);
 const herbCap=()=>30+15*rg('cauldron'); const potCap=()=>4+2*rg('cauldron'); const brewT=()=>4.2*Math.pow(0.78,rg('cauldron'));
-const potPrice=()=>(5+0.9*gw())*(1+0.12*rg('cauldron'));
+const potPrice=()=>(5+0.9*ew())*(1+0.12*rg('cauldron'));
 const farmRate=()=>{ const l=rg('farm'); return l<=0?0:l*(l>=3?2:1)/10; };
 const herbalists=[];
 let brewCd=2, potCd=0, farmT=0, fogWarnWave=-1;
@@ -113,7 +113,7 @@ function updateSwamp(dt){ const F=SW; const t=performance.now()/1000;
   farmLbl.hide=fl<=0; if(fl>0){ const k='f'+fl; if(farmLbl._k!==k){ farmLbl._k=k; farmLbl.el.innerHTML=''; } }
   shutLbl.hide=false; const k=(S.rg.herbIn||0)+'|'+(S.rg.potions||0)+'|'+rg('cauldron'); if(shutLbl._k!==k){ shutLbl._k=k; const full=(S.rg.potions||0)>=potCap(); shutLbl.el.innerHTML=`🧪 ${S.rg.potions||0}/${potCap()}${(S.rg.herbIn||0)<2?' <b class="full">⚠ 🍄</b>':''}`; } }
 // ----- gece sisi + fenerler: fenersiz kapıda kulelerin menzili kısalır -----
-const lampLit=s=>SIDES.indexOf(s)>=0&&SIDES.indexOf(s)<rg('lamp');
+const lampLit=s=>GORD.indexOf(s)>=0&&GORD.indexOf(s)<rg('lamp'); /* p2: fenerler haritanın kapı sırasıyla yanar */
 const fogOn=()=>revealed('swamp')&&waveActive;
 function fogK(t){ if(!fogOn()||t.isC) return 1; return lampLit(nearestSide(t.g.position.x,t.g.position.z))?1:0.72; }
 const lampPosts=[]; const fogSides={};
@@ -124,16 +124,16 @@ const fogIM=new THREE.InstancedMesh(G.sph,M.fogPuff.clone(),36); fogIM.frustumCu
 function placeLamps(){ for(const L of lampPosts){ const [x,z]=sidePos(L.s,L.a*3.4,1.4); L.g.position.set(x,0,z); L.g.rotation.y=Math.atan2(-SD[L.s].o[0],-SD[L.s].o[1])+(L.a>0?Math.PI:0); } }
 placeLamps();
 /* F6: sisli kapılar okunur: kapının üstünde 🌫️ etiketi (gündüz tehdit etiketinde, gece ayrı), mini haritada bulut, gece başlamadan uyarı */
-function fogGates(){ return revealed('swamp')?SIDES.slice(0,sidesActive()).filter(s=>!lampLit(s)):[]; }
+function fogGates(){ return revealed('swamp')?actSides().filter(s=>!lampLit(s)):[]; }
 const fogLbl={}; for(const s of SIDES){ const L=addLabel(new THREE.Vector3(),'',6.4); L.near=-1; L.hide=true; L.el.classList.add('fogLbl'); L.el.innerHTML=T('🌫️ Sis','🌫️ Fog')+'<small>🏹 −28%</small>'; fogLbl[s]=L; }
 let fogDayWarn=-1;
 function fogMarks(){ const fg=fogGates(); for(const s of SIDES){ const L=fogLbl[s]; L.hide=!(fg.includes(s)&&threatLbl[s].hide&&!runOver); if(!L.hide){ const [x,z]=sidePos(s,0,2.6); L.pos.set(x,0,z); } }
   if(fg.length&&!waveActive&&!runOver&&waveT<15&&!modalOpen()&&fogDayWarn!==S.level*10+S.wave){ fogDayWarn=S.level*10+S.wave; const nm=fg.map(s=>SIDE_TR[s]).join(', '); toast(T(`🌫️ Bu gece sis: ${nm} — kuleler az görür. 🏮 Fener kur`,`🌫️ Fog tonight: ${nm} — towers see less. 🏮 Build Lanterns`),'bad'); } }
 function updateFog(dt){ const t=performance.now()/1000; const on=revealed('swamp'); fogMarks();
   for(const L of lampPosts){ const vis=on&&lampLit(L.s); if(vis&&!L.g.visible){ L.g.visible=true; L.pop=0; } if(!vis) L.g.visible=false; if(L.pop<1){ L.pop=Math.min(1,L.pop+dt*2.5); L.g.scale.setScalar(Math.max(0.01,L.pop*(1+0.3*Math.sin(L.pop*Math.PI)))); } L.gl.material.opacity=0.35+0.45*night+0.08*Math.sin(t*7+L.a); L.pool.material.opacity=0.28*night; }
-  for(const s of SIDES){ const F=fogSides[s]; const want=on&&!lampLit(s)&&SIDES.indexOf(s)<sidesActive()?0.28+0.5*night:0; /* F4: fenersiz kapıda sis gündüz de görünür (gece koyulaşır): hangi kapının fener istediği belli */ F.k=lerp(F.k,want,Math.min(1,dt*1.5)); }
+  for(const s of SIDES){ const F=fogSides[s]; const want=on&&!lampLit(s)&&GORD.indexOf(s)<sidesActive()?0.28+0.5*night:0; /* F4: fenersiz kapıda sis gündüz de görünür (gece koyulaşır): hangi kapının fener istediği belli */ F.k=lerp(F.k,want,Math.min(1,dt*1.5)); }
   { let mk=0; for(const s of SIDES) mk=Math.max(mk,fogSides[s].k); fogIM.visible=mk>0.01; if(fogIM.visible){ fogIM.material.opacity=mk; let i=0; for(const s of SIDES){ const F=fogSides[s], sc=F.k>0.01?F.k/mk:0.0001; for(const P of F.puffs){ const [x,z]=sidePos(s,P.a*(H+2)+Math.sin(t*0.3+P.ph)*1.5,4+P.b*12); vp.set(x,0.5+Math.sin(t*0.7+P.ph)*0.2,z); q.identity(); vs.set(P.sx*sc,P.sy*sc,P.sz*sc); m4.compose(vp,q,vs); fogIM.setMatrixAt(i++,m4); } } fogIM.instanceMatrix.needsUpdate=true; } }
-  if(fogOn()&&fogWarnWave!==S.level*10+S.wave){ fogWarnWave=S.level*10+S.wave; const dark=SIDES.slice(0,sidesActive()).filter(s=>!lampLit(s)); if(dark.length) { const nm=dark.map(s=>SIDE_TR[s]).join(', '); setTimeout(()=>toast(T(`🌫️ Sis çöktü: ${nm} — 🏮 fener kur`,`🌫️ Fog rolled in: ${nm} — 🏮 build Lanterns`),'bad'),2400); } }
+  if(fogOn()&&fogWarnWave!==S.level*10+S.wave){ fogWarnWave=S.level*10+S.wave; const dark=actSides().filter(s=>!lampLit(s)); if(dark.length) { const nm=dark.map(s=>SIDE_TR[s]).join(', '); setTimeout(()=>toast(T(`🌫️ Sis çöktü: ${nm} — 🏮 fener kur`,`🌫️ Fog rolled in: ${nm} — 🏮 build Lanterns`),'bad'),2400); } }
   // iksir: sur %70'in altındaysa otacının iksiri uçar, suru onarır
   potCd-=dt; if(waveActive&&potCd<=0&&S.gateHp<D.gateMax()*0.9&&drinkPotion()) potCd=3.2; }
 // iksir: gece sur %90'ın altına inince kendiliğinden, ya da HUD'daki 🧪 düğmesine dokununca suru onarır (F4)
@@ -229,8 +229,8 @@ function makeBoat(){ const g=new THREE.Group(); const hull=mesh(G.box,M.woodDark
   g.add(hull,bow,rim,mast,sail,stripe,flag,cargo); const i=boats.length, dock=berth(i); g.position.copy(dock); scene.add(g); const b={g,sail,cargo,i,state:'load',t:1.5+3.5*i,isle:i%ISLES.length,k:0,from:dock.clone(),to:dock.clone()}; boats.push(b); return b; }
 // F8: her teknenin kendi iskele yanaşma yeri (iskelenin iki yanı), ikinci tekne 3.5 sn sonra kalkar: iki tekne üst üste görünmez
 function berth(i){ const perp=new THREE.Vector3(CU.z,0,-CU.x); return PIER_B.clone().addScaledVector(CU,1.4).addScaledVector(perp,(i%2?1:-1)*2.1); }
-let whSellT=0; const seaFishPrice=()=>(4+0.8*gw())*(1+0.1*rg('harbor'));
-const boatSpd=()=>3.2+0.7*rg('boat'); const tripValue=()=>(24+5*gw())*(1+0.2*rg('harbor'))*(1+0.15*Math.max(0,rg('boat')-1));
+let whSellT=0; const seaFishPrice=()=>(4+0.8*ew())*(1+0.1*rg('harbor'));
+const boatSpd=()=>3.2+0.7*rg('boat'); const tripValue=()=>(24+5*ew())*(1+0.2*rg('harbor'))*(1+0.15*Math.max(0,rg('boat')-1));
 const boatWantN=()=>rg('boat')<=0?0:(rg('harbor')>=3?2:1);
 function isleDock(i){ const I=ISLES[i]; return I.clone().add(PIER_B.clone().sub(I).normalize().multiplyScalar(i===2?5:4)); }
 function updateBoats(dt){ const t=performance.now()/1000; while(boats.length<boatWantN()) makeBoat();
@@ -248,7 +248,7 @@ function chestGuide(p,priSc){ if(waveActive||runOver||!revealed('coast')) return
   const d=Math.hypot(best.g.position.x-p.x,best.g.position.z-p.z), near=d<40, idle=priSc<8, Q=S.meta&&S.meta.quests, qOpen=!!(Q&&Array.isArray(Q.list)&&questsOn()&&Q.list.some(x=>x.k==='chest'&&x.have<x.n));
   if(!(near||chestCall>0||(idle&&(qOpen||best.rar!=='common')))) return null; if(!near&&waveT<2*d/Math.max(4,D.speed())+5) return null;
   const c=best; return {t:c.g.position.clone(),text:T(RAR[c.rar].n+' sandık! Sahilde aç',RAR[c.rar].n+' chest! Open it on the beach'),v:()=>!c.open&&chests.includes(c)}; }
-const chestMax=()=>2+Math.min(4,Math.ceil(rg('lighthouse')/2)); const chestEvery=()=>30*Math.pow(0.87,rg('lighthouse'));
+const chestMax=()=>2+Math.min(4,Math.ceil(rg('lighthouse')/2)); const chestEvery=()=>40*Math.pow(0.87,rg('lighthouse')); /* p2m3: 30→40 sn */
 function rollRar(){ const lh=rg('lighthouse'); const w={common:60-4*lh,rare:28+1*lh,epic:10+2*lh,legend:2+1*lh}; let tot=0; for(const k in w) tot+=w[k]; let r=Math.random()*tot; for(const k in w){ r-=w[k]; if(r<=0) return k; } return 'common'; }
 // F8: sahildeki (açılmamış) sandıklar kayıtta durur: S.rg.beach=[{r:nadirlik,a:açı}]; yeniden yüklemede aynı yerde aynı nadirlikte geri gelir
 function saveBeach(){ if(S.rg) S.rg.beach=chests.filter(c=>!c.open).map(c=>({r:c.rar,a:Math.round(c.a*1000)/1000})); }
@@ -259,8 +259,8 @@ function spawnChest(instant,rar0,a0){ const a=typeof a0==='number'?a0:(Math.rand
   g.rotation.y=Math.atan2(-u.x,-u.z)+rand(-.4,.4); g.position.copy(instant?land:sea); scene.add(g); chests.push({g,lidG,gl,beam,rar,a,land,sea,k:instant?1:0,open:0,gone:0}); saveBeach(); }
 // F8: ödül sefere göre büyür (altın ×(1+0.12·sefer)); kıt kaynak (kereste/demir), bazen taç ve bu sefer için güç kartı
 function chestCard(){ const dk=S.level*10+S.wave; if(S.rg.cCard===dk) return ''; const ks=['arrow','rate','range','powder','wall','sword','drill'].filter(cardUseful); if(!ks.length) return ''; S.rg.cCard=dk; const k=ks[Math.floor(Math.random()*ks.length)]; S.cards[k]=(S.cards[k]||0)+1; if(k==='wall') S.gateHp=D.gateMax(); return ' · 🃏 '+CARDS[k].i+' '+CARDS[k].n; }
-function openChest(c){ c.open=0.001; questEvent('chest',1); if(chestCall>0) chestCall--; const pos=c.g.position.clone(); const R=RAR[c.rar]; const w=gw(), L=S.level; const book=S.book.chest||(S.book.chest={}); book[c.rar]=(book[c.rar]||0)+1; let txt='';
-  const gold=Math.round((20+6*w)*(1+0.12*L)*({common:1,rare:1.6,epic:2.6,legend:5}[c.rar])); const n=Math.min(24,8+Math.round(gold/25)); dropCoins(pos.clone().setY(1),n,gold/n,2.2,1.4); txt='💰 '+gold;
+function openChest(c){ c.open=0.001; questEvent('chest',1); if(chestCall>0) chestCall--; const pos=c.g.position.clone(); const R=RAR[c.rar]; const w=ew(), L=S.level; const book=S.meta.book.chest||(S.meta.book.chest={}); book[c.rar]=(book[c.rar]||0)+1; let txt='';
+  const gold=Math.round((15+4*w)*({common:1,rare:1.6,epic:2.6,legend:5}[c.rar])); /* p2m3: ew zaten haritayı içeriyor (eski ×(1+0.12·sefer) çift sayıyordu): 8. haritada sandıklar haritaya ~7000 altın döküyordu */ const n=Math.min(24,8+Math.round(gold/25)); dropCoins(pos.clone().setY(1),n,gold/n,2.2,1.4); txt='💰 '+gold;
   const plank=m=>{ const p=Math.round((6+2*L)*m); S.planks=(S.planks||0)+p; return T(` · +${p} kereste`,` · +${p} planks`); }, stone=m=>{ const s=Math.round((10+5*L)*m); S.stone+=s; setStonePile(Math.min(18,S.stone)); return T(` · +${s} taş`,` · +${s} stone`); }, iron=m=>{ const fe=Math.round((3+1.5*L)*m); S.iron=(S.iron||0)+fe; return T(` · +${fe} demir`,` · +${fe} iron`); }, crown=k=>{ const dk=S.level*10+S.wave; if(S.rg.cCrD!==dk){ S.rg.cCrD=dk; S.rg.cCr=0; } k=Math.min(k,2-(S.rg.cCr||0)); if(k<=0) return ''; S.rg.cCr=(S.rg.cCr||0)+k; S.meta.crowns+=k; return T(` · 👑 +${k} taç`,` · 👑 +${k} crown${k>1?'s':''}`); }; /* F8: sandıktan gün başına en çok 2 taç ve 1 kart (sahilde beklemek taç/kart çiftliği olmasın) */
   const res=m=>revealed('iron')&&Math.random()<0.5?iron(m):revealed('river')&&Math.random()<0.6?plank(m):stone(m);
   if(c.rar==='common'&&Math.random()<0.35) txt+=res(0.5);
@@ -305,7 +305,7 @@ const jewLbl=machLabel(JEW,4.3); const cdLbl=machLabel(CDRILL,5.0);
 const snowPile=makePile(SN.at(SN.R.r+6.6,7.2),()=>Math.round((340+240*rg('jeweler'))*(1+0.12*S.level))); snowPile.id='snowPile';
 const crysNodes=spotsIn(SN,9,2.2,SN.R.r-1.5,[[JEW,4.6],[CDRILL,3.6],[JEW_FRONT,2.4]]).map(p=>makeNode(p,g=>{ for(let i=0;i<4;i++){ const c=itemMesh(CRYS_GEO,i%2?M.crys:M.crysDeep); c.scale.setScalar(rand(1.4,2.4)); const a=i/4*6.283; c.position.set(Math.cos(a)*0.3,0.4,Math.sin(a)*0.3); c.rotation.set(rand(-.5,.5),rand(0,3),rand(-.5,.5)); g.add(c); } const base=mesh(G.cyl,M.crysRing,0.85,0.06,0.85,false); base.position.y=0.03; g.add(base); const gl=glow(0x5aa8ff,2.2,0.5); gl.position.y=0.7; g.add(gl); }));
 for(const n of crysNodes){ scene.remove(n.g); snowArea.add(n.g); }
-const crysCap=()=>30+15*rg('jeweler'); const jewSellT=()=>2.6*Math.pow(0.8,rg('jeweler')); const crysPrice=()=>(6+1.1*gw())*(1+0.12*rg('jeweler'));
+const crysCap=()=>30+15*rg('jeweler'); const jewSellT=()=>2.6*Math.pow(0.8,rg('jeweler')); const crysPrice=()=>(6+1.1*ew())*(1+0.12*rg('jeweler'));
 const cdRate=()=>{ const l=rg('cdrill'); return l<=0?0:l*(l>=3?1.5:1)/8; };
 const cminers=[]; let jewT=0, cdAcc=0;
 // kar yağışı: bölgede her zaman, 9. seferde her yerde
@@ -350,7 +350,7 @@ const balG=new THREE.Group(); balG.position.copy(BAL); balG.visible=false; scene
   balTop.add(post,stock,arm,armL,armR,balBolt,tip,fl,fp); balG.add(balTop); })();
 const balRange=()=>24+(S.lv.ballista||0), balRate=()=>3.0-0.25*(S.lv.ballista||0), balDmg=()=>D.towerDmg(12)*(6+3*(S.lv.ballista||0));
 let doomNight=false;
-function updateBallista(dt){ const dT=(S.level===10&&!(S.book&&S.book.boss&&S.book.boss[10]))?1:0; DOOM+=(dT-DOOM)*Math.min(1,dt*(DOOM>1?0.6:0.8)); /* F9b: son sefer ışığı */
+function updateBallista(dt){ const dT=(S.level===10&&!(S.meta.book&&S.meta.book.boss&&S.meta.book.boss[10]))?1:0; DOOM+=(dT-DOOM)*Math.min(1,dt*(DOOM>1?0.6:0.8)); /* F9b: son sefer ışığı */
   if(waveActive&&!doomNight&&dT&&S.wave===1){ gateAlert(T('🏰 Kara Kral\'ın ordusu kaleden çıktı!','🏰 The Black King\'s army marches from the castle!'),true); } doomNight=waveActive;
   const l=S.lv.ballista||0; balG.visible=l>0; if(l>0){ balG.scale.setScalar(0.9+0.05*l); }
   for(let i=bolts.length-1;i>=0;i--){ const b=bolts[i], t=b.target; if(t.dead){ scene.remove(b.m); bolts.splice(i,1); continue; } const to=t.g.position.clone(); to.y=1.2; const d=to.clone().sub(b.m.position), dl=d.length(); if(dl<1.0){ scene.remove(b.m); bolts.splice(i,1); damageEnemy(t,b.dmg,'bolt'); burst(to,10,M.woodDark,1.1,1.3); sfxAt(to).hit(); continue; } b.m.position.addScaledVector(d.normalize(),Math.min(dl,40*dt)); b.m.lookAt(to); }
@@ -362,7 +362,7 @@ makePad({id:'ballista', grp:'dark', ord:1, name:T('Kale Balistası','Siege Balli
   onBuy:()=>{ celebrate(BAL.clone(),1.2); camShake=0.4; toast(T('🎯 Kale Balistası: Kuzey yolunu dövüyor','🎯 Siege Ballista: pounding the North road'),'good'); }});
 PAD_IC.ballista='🎯';
 let castleFreed=null;
-function updateCastle(dt){ const t=performance.now()/1000; const freed=(!!(S.book&&S.book.boss&&S.book.boss[10])||S.level>10)&&!castleHold; /* F9a: zafer anında kamera varınca döner */ if(freed!==castleFreed){ castleFreed=freed; for(const w of evilWins) w.material=freed?M.warm:M.evil; for(const f of evilFlags) f.material=freed?M.flag:M.enemy; /* F9a: kurtulunca altın sancak (eskiden kırmızıdan kırmızıya) */ castle.userData.eg.material.color.setHex(freed?0xffc060:0xff3a2a); }
+function updateCastle(dt){ const t=performance.now()/1000; const freed=(!!(S.meta.book&&S.meta.book.boss&&S.meta.book.boss[10])||S.level>10)&&!castleHold; /* F9a: zafer anında kamera varınca döner */ if(freed!==castleFreed){ castleFreed=freed; for(const w of evilWins) w.material=freed?M.warm:M.evil; for(const f of evilFlags) f.material=freed?M.flag:M.enemy; /* F9a: kurtulunca altın sancak (eskiden kırmızıdan kırmızıya) */ castle.userData.eg.material.color.setHex(freed?0xffc060:0xff3a2a); }
   castle.userData.eg.material.opacity=(freed?0.3:0.25+0.2*night)+0.08*Math.sin(t*2); }
 // ----- Kara Kral: canı yarıya inince öfkelenir, muhafız çağırır -----
 /* F9b: öfke 3 sn önceden okunur (durur, yerde büyüyen kırmızı halka, afiş, geri sayım); sonra kara kalkan (kule %30, oyuncunun kılıcı kırar) ve
@@ -397,22 +397,24 @@ function updateEnding(dt){ const m=endM; if(!m) return; m.t+=dt; const p=player.
   if(m.b&&m.t<5.2&&Math.floor(m.t/0.45)!==m.fw){ m.fw=Math.floor(m.t/0.45); const q=new THREE.Vector3(C[0]+rand(-11,11),rand(9,15),C[1]+rand(-7,7)); burst(q,18,Math.random()<0.5?M.gold:M.banner,2.2,1.4); tone(500+rand(0,500),900,0.12,'triangle',0.03); }
   if(m.t>=5.6){ for(const f of evilFlags){ f.scale.y=1; if(f.userData.y0!==undefined) f.position.y=f.userData.y0; } endM=null; castleHold=false; zoomTarget=m.z0; recenter(); const cb=m.cb; setTimeout(()=>cb&&cb(),300); } }
 // ----- oyun sonu kartı: orman kurtarıldı (gerçek sayaçlar) → sonsuz kuşatma tanıtımı → Gece 1 -----
-function showEndCard(st,gain,first){ const b=S.book, sm=o=>Object.values(o||{}).reduce((a,v)=>a+v,0), X=(S.meta&&S.meta.st)||{}; const towersN=S.towers.filter(t=>t.lvl>0).length;
-  const rows=[[T('Atlatılan gece','Nights survived'),Math.max(X.nights||0,LEVELS*WAVES)],[T('Yenilen düşman','Enemies defeated'),S.kills||0],[T('Yenilen patron','Bosses defeated'),Object.keys(b.boss||{}).length],[T('Kurulan kule','Towers built'),towersN],[T('Tutulan balık','Fish caught'),Math.max(X.fish||0,sm(b.fish))],[T('Avlanan hayvan','Animals hunted'),Math.max(X.meat||0,sm(b.hunt))],[T('Açılan sandık','Chests opened'),sm(b.chest)],[T('Kesilen ağaç','Trees chopped'),S.treesCut||0]].filter(r=>r[1]>0);
+function showEndCard(st,gain,first){ const b=S.meta.book, sm=o=>Object.values(o||{}).reduce((a,v)=>a+v,0), X=(S.meta&&S.meta.st)||{}; const towersN=S.towers.filter(t=>t.lvl>0).length;
+  let stT=0; for(let L=1;L<=LEVELS;L++) stT+=popc(smOf(L)); /* v44: yanlış "Atlatılan gece 50" yerine gerçek kampanya özeti (yıldız, patron); kart 720 px'e sığar: en çok 4 satır */
+  const rows=[[T('Kampanya yıldızı','Campaign stars'),stT,`★ ${stT}/${LEVELS*3}`],[T('Yenilen patron','Bosses defeated'),Object.keys(b.boss||{}).length],[T('Tutulan balık','Fish caught'),Math.max(X.fish||0,sm(b.fish))],[T('Avlanan hayvan','Animals hunted'),Math.max(X.meat||0,sm(b.hunt))],[T('Açılan sandık','Chests opened'),sm(b.chest)]].filter(r=>r[1]>0).slice(0,4);
   const card=document.createElement('div'); card.className='intro'; card.id='winCard';
-  card.innerHTML=`<div class="card result end"><div class="bigstars">${[1,2,3].map(i=>`<span class="st${i<=st?' on':''}" style="animation-delay:${0.25+i*0.35}s">★</span>`).join('')}</div><h1>${T('Ormanı kurtardın!','You saved the forest!')}</h1><p class="boss">${T('Kara Kral yenildi · Kara Kale artık senin','The Black King is defeated · the Black Castle is yours')}</p><div class="away">${rows.map(r=>`<div><span>${r[0]}</span><b>${Math.round(r[1]).toLocaleString(LANG==='tr'?'tr':'en')}</b></div>`).join('')}</div><div class="crowns">${T(`👑 +${gain} taç`,`👑 +${gain} crown${gain===1?'':'s'}`)}${first?T(' · ilk zafer bonusu',' · first win bonus'):''}</div><button id="winNext">${T('Sonsuz Kuşatma →','Endless Siege →')}</button><button id="winMap" class="ghost">${T('Krallık','Kingdom')}</button></div>`;
-  document.body.appendChild(card); for(let i=0;i<5;i++) setTimeout(()=>{ celebrate(new THREE.Vector3(rand(-10,10),0,rand(-10,10)),1.4); confetti(); },400+i*700); SFX.win();
+  const P=S.post||{}, mk=P.m||((1<<Math.max(1,Math.min(3,st|0)))-1); /* p2m4: yıldızlar hedef maskesinden */
+  card.innerHTML=`<div class="card result end"><div class="bigstars">${[0,1,2].map(i=>`<span class="st${mk&(1<<i)?' on':''}" style="animation-delay:${0.25+(i+1)*0.35}s">★</span>`).join('')}</div><h1>${T('Ormanı kurtardın!','You saved the forest!')}</h1><p class="boss">${T('Kara Kral yenildi · Kara Kale artık senin','The Black King is defeated · the Black Castle is yours')}</p>${objRows(mk,{nw:mk&~(P.pm||0),mg:P.mg,rt:P.rt})}<div class="away endst">${rows.map(r=>`<div><span>${r[0]}</span><b>${r[2]||Math.round(r[1]).toLocaleString(LANG==='tr'?'tr':'en')}</b></div>`).join('')}</div><div class="crowns">👑 +<b data-to="${gain}">${fmtN(gain)}</b>${first?T(' · ilk zafer',' · first clear'):''}</div>${P.lc>0?`<div class="lgold">${T(`Kalan altın ${fmtN(P.lg)} → +${P.lc} 👑`,`Leftover gold ${fmtN(P.lg)} → +${P.lc} 👑`)}</div>`:''}<p class="sub">♾ ${T('Sonsuz Kuşatma açıldı','Endless Siege unlocked')}</p><button id="winNext">${T('Sonsuz Kuşatma →','Endless Siege →')}</button><button id="winMap" class="ghost">${T('Krallık','Kingdom')}</button></div>`;
+  document.body.appendChild(card); countUp(card,900); setTimeout(()=>{ if(card.isConnected) claimQuests(false,$('questChip'),card.querySelector('.crowns')||card.querySelector('h1')); },1500); /* v44 */ for(let i=0;i<5;i++) setTimeout(()=>{ celebrate(new THREE.Vector3(rand(-10,10),0,rand(-10,10)),1.4); confetti(); },400+i*700); SFX.win();
   $('winNext').addEventListener('click',()=>{ audio(); endlessIntro(card); });
-  $('winMap').addEventListener('click',()=>{ audio(); card.remove(); nextSefer(true); showMap(); }); }
+  $('winMap').addEventListener('click',()=>{ audio(); card.remove(); nextMap(true); showMap(); }); } /* p2 */
 function endlessIntro(card){ const n1=eNight(LEVELS+1,1);
   card.innerHTML=`<div class="card result endless"><h1>♾ ${ENAME()}</h1><p class="boss">${T('Orman güvende, ama Kara Kral\'ın orduları gelmeye devam ediyor.','The forest is safe, but the Black King\'s armies keep coming.')}</p><ul class="egoal"><li><i>🌙</i><span>${T('<b>Olabildiğince çok gece dayan.</b> Her gece biraz daha güçlüler.','<b>Survive as many nights as you can.</b> Each night is a little stronger.')}</span></li><li><i>💀</i><span>${T('Her 5. gece bir patron gelir.','A boss comes every 5th night.')}</span></li><li><i>🏅</i><span>${T('Her 5 gecede: 👑 taç + 🃏 güç kartı.','Every 5 nights: 👑 crowns + a 🃏 power card.')}</span></li><li><i>⬆</i><span>${T('Her patrondan sonra kuleler, sur ve askerler daha üst seviyelere geliştirilebilir.','After every boss, Towers, Walls and Soldiers can be upgraded further.')}</span></li><li><i>🏆</i><span>${T('Kaybedersen aynı gece baştan başlar. Rekorunu geç!','Lose and the same night starts over. Beat your record!')}</span></li></ul><button id="winNext">${T(`Başla · Gece ${n1} →`,`Begin · Night ${n1} →`)}</button></div>`;
-  $('winNext').addEventListener('click',()=>{ audio(); card.remove(); const go=()=>nextSefer(); cgAd('midgame',go,go); }); }
-function chestBook(){ const b=S.book.chest||{}; return `<h3 class="bkh">🎁 ${T('Sandıklar','Chests')}</h3><div class="book">${Object.keys(RAR).map(k=>{ const n=b[k]||0; return `<div class="bk${n?'':' no'}"><i style="background:#${RAR[k].c.toString(16).padStart(6,'0')};border-radius:3px"></i><b>${n?T(RAR[k].n+' sandık',RAR[k].n+' chest'):'???'}</b><small>${n?'×'+n:''}</small></div>`; }).join('')}</div>`; }
+  $('winNext').addEventListener('click',()=>{ audio(); card.remove(); const go=()=>nextMap(); cgAd('midgame',go,go); }); } /* p2 */
+function chestBook(){ const b=S.meta.book.chest||{}; return `<h3 class="bkh">🎁 ${T('Sandıklar','Chests')}</h3><div class="book">${Object.keys(RAR).map(k=>{ const n=b[k]||0; return `<div class="bk${n?'':' no'}"><i style="background:#${RAR[k].c.toString(16).padStart(6,'0')};border-radius:3px"></i><b>${n?T(RAR[k].n+' sandık',RAR[k].n+' chest'):'???'}</b><small>${n?'×'+n:''}</small></div>`; }).join('')}</div>`; }
 
 // ----- alanlar (satın alma noktaları) -----
 const padAt=(F,s)=>()=>{ const v=F.at(F.R.r+7.2,s); return [v.x,v.z]; };
 const P6=[
-  {id:'lamp', grp:'swamp', ord:1, name:T('Fener','Lantern'), desc:T('Sisli kapıda kuleler tam görür','Towers see clearly in fog'), res:'gold', pos:padAt(SW,-8.2), kind:'up', key:'lamp', cost:l=>Math.round(140*Math.pow(1.5,l)), max:4, show:()=>revealed('swamp'), onBuy:()=>{ const L=lampPosts.filter(L=>lampLit(L.s)).slice(-2); for(const x of L) celebrate(x.g.position.clone(),0.7); toast(T('🏮 '+SIDE_TR[SIDES[rg('lamp')-1]]+' kapısı aydınlandı','🏮 '+({N:'North',E:'East',S:'South',W:'West'})[SIDES[rg('lamp')-1]]+' Gate lit up'),'good'); }},
+  {id:'lamp', grp:'swamp', ord:1, name:T('Fener','Lantern'), desc:T('Sisli kapıda kuleler tam görür','Towers see clearly in fog'), res:'gold', pos:padAt(SW,-8.2), kind:'up', key:'lamp', cost:l=>Math.round(140*Math.pow(1.5,l)), max:4, show:()=>revealed('swamp'), onBuy:()=>{ const L=lampPosts.filter(L=>lampLit(L.s)).slice(-2); for(const x of L) celebrate(x.g.position.clone(),0.7); toast(T('🏮 '+SIDE_TR[GORD[rg('lamp')-1]]+' kapısı aydınlandı','🏮 '+({N:'North',E:'East',S:'South',W:'West'})[GORD[rg('lamp')-1]]+' Gate lit up'),'good'); }},
   {id:'herbalist', grp:'swamp', ord:2, name:T('Otacı','Herbalist'), desc:T('Senin yerine mantar toplar','Picks mushrooms for you'), res:'gold', pos:padAt(SW,-5.4), kind:'up', key:'herbalist', cost:l=>Math.round(240*Math.pow(1.7,l)), max:3, show:()=>revealed('swamp'), onBuy:()=>{ const w=addGatherer(herbalists,SHUT_FRONT.clone(),M.moss); celebrate(w.guy.g.position.clone(),1); }},
   {id:'farm', grp:'swamp', ord:3, lock:T('Bir otacı','1 Herbalist'), name:T('Mantar Tarlası','Mushroom Farm'), desc:T('Makine: mantar kendiliğinden yetişir','Machine: auto-grows mushrooms'), res:'gold', pos:padAt(SW,-2.6), kind:'up', key:'farm', cost:l=>Math.round(420*Math.pow(1.75,l)), max:5, show:()=>revealed('swamp')&&rg('herbalist')>=1, onBuy:()=>{ const b=farmBeds[Math.min(2,rg('farm')-1)]; celebrate(b.g.position.clone(),1.4); camShake=0.4; if(SWP.post) powerOn(SWP.post,b.g.position.clone()); }},
   {id:'cauldron', grp:'swamp', ord:4, name:T('İksir Kazanı','Potion Cauldron'), desc:T('İksir gece suru onarır','Potions mend walls at night'), res:'gold', pos:padAt(SW,1.4), kind:'up', key:'cauldron', cost:l=>Math.round(200*Math.pow(1.6,l)), max:5, show:()=>revealed('swamp'), onBuy:()=>{ celebrate(CAUL.clone(),1.2); if(SWP.post) powerOn(SWP.post); }},
@@ -484,4 +486,4 @@ function updateRegions6(dt){ mineCd-=dt; fullWarnT-=dt; vis6T-=dt; if(vis6T<=0){
   updateP7(dt);
   if(revealed('swamp')){ updateSwamp(dt); updateFlies(); } if(revealed('iron')) updateIron(dt); if(revealed('coast')) updateCoast(dt); if(revealed('snow')) updateSnow(dt); }
 function initRegions6(){ vis6(); restoreBeach(); placeLamps(); for(let i=herbalists.length;i<rg('herbalist');i++) addGatherer(herbalists,SHUT_FRONT.clone(),M.moss); for(let i=miners.length;i<rg('miner');i++) addGatherer(miners,FORGE_FRONT.clone(),M.iron); for(let i=cminers.length;i<rg('cminer');i++) addGatherer(cminers,JEW_FRONT.clone(),mat(0x3d63c9)); if(revealed('iron')&&!carts.some(c=>c.kind==='iron')) addCart('iron'); }
-function resetRegions6(){ clearGatherers(herbalists); clearGatherers(miners); clearGatherers(cminers); for(const b of boats) scene.remove(b.g); boats.length=0; for(const c of chests) scene.remove(c.g); chests.length=0; for(const n of [...mushNodes,...oreNodes,...crysNodes]){ n.alive=true; n.pop=1; n.claimed=null; n.hp=0; } castleFreed=null; resetP7(); }
+function resetRegions6(){ clearGatherers(herbalists); clearGatherers(miners); clearGatherers(cminers); for(const b of boats){ scene.remove(b.g); disposeBaked(b.g); } boats.length=0; for(const c of chests){ scene.remove(c.g); disposeBaked(c.g); } chests.length=0; for(const n of [...mushNodes,...oreNodes,...crysNodes]){ n.alive=true; n.pop=1; n.claimed=null; n.hp=0; } castleFreed=null; resetP7(); }

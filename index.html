@@ -408,6 +408,8 @@ body.fresh .lockLbl{opacity:0!important}
 .sn{color:#5d5545}.sn span{font-size:12px}.sn small{font-size:12px}
 button:focus-visible,.chip:focus-visible{outline:3px solid #ffd23f;outline-offset:2px}
 .intro button:focus-visible{outline:3px solid #2b3a2e;box-shadow:0 0 0 6px #ffd23f}
+.chip.quest.done::before{content:'';position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#e23b3b;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)} /* v44: alınacak görev: kırmızı nokta */
+.qget b{font-weight:900;margin-right:4px;letter-spacing:.5px}
 .chip.quest{position:relative}.chip.quest::after,.kingTip::after{content:'';position:absolute;inset:-8px}
 .intro .upr button{min-height:44px}
 .upr b{display:flex;gap:6px;align-items:baseline}.upr b span{margin-left:auto;white-space:nowrap}
@@ -434,6 +436,106 @@ body.calm .banner.out{opacity:0}body.calm .confetti{display:none}
 /* dönüş kartı: kısa ekranda düğme her zaman görünür, ayrıntı satırları gizlenir */
 #awayCard #awayOk{position:sticky;bottom:0;z-index:2;box-shadow:0 -6px 14px rgba(0,0,0,.12)}
 @media (max-height:480px){#awayCard .away{display:none}#awayCard p.sub{display:none}}
+
+/* p2m4: kazanma kartı (3 hedef = 3 yıldız, taç sayacı, sıradaki harita) ve harita ayrıntısı */
+.objs{list-style:none;margin:4px 0 12px;padding:0;display:flex;flex-direction:column;gap:5px;text-align:left}
+.objs li{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;background:#f3ecdc;border-radius:12px;padding:6px 10px;font-weight:700;font-size:14px;line-height:1.25;color:var(--ink-soft)}
+.objs li i{font-style:normal;width:22px;height:22px;border-radius:50%;background:#cfc5ad;color:#fff;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.objs li.on{background:#eaf6e2;color:var(--ink)}.objs li.on i{background:var(--green)}
+.objs li em{font-style:normal;font-family:var(--font-display);font-weight:800;font-size:12px;background:var(--coin);color:var(--coin-ink);border-radius:8px;padding:1px 7px}
+.objs li small{font-size:12px;color:var(--ink-soft);white-space:nowrap}
+.result .crowns small{font-family:var(--font-body);font-size:13px;font-weight:700;color:#8a5a00;margin-left:4px}
+.result .crowns b{font-size:1.15em}
+.nextreg.teaser{text-align:left}.nextreg.teaser small{display:block;font-size:13px;margin-top:2px;color:#41607e}
+.win2 .brow,.mdet .brow{display:flex;gap:8px;align-items:stretch}.intro .win2 .brow button,.intro .mdet .brow button{flex:1;margin-top:8px;white-space:nowrap}
+.intro .win2 .brow button.ghost,.intro .mdet .brow button.ghost{border:2px solid var(--line);font-size:17px}
+.win2 .hint.kh{font-size:13px;padding:6px 10px;margin-bottom:10px}
+/* p2m4/p2m5: Krallık sekmeleri, harita düğmeleri, ayrıntı, Yurt (sandık, ağaç, kupalar) */
+.ktabs{display:flex;gap:4px;background:#eee4cf;border-radius:14px;padding:4px;margin:10px 0 6px}
+.intro .ktabs button{flex:1;margin:0;padding:8px 6px;font-size:17px;background:transparent;color:var(--ink-soft);border-radius:11px;position:relative;min-height:44px}
+.intro .ktabs button.on{background:#fff;color:var(--green);box-shadow:0 2px 0 rgba(0,0,0,.08)}
+.kdot{position:absolute;top:6px;right:8px;width:10px;height:10px;border-radius:50%;background:#e2483d;box-shadow:0 0 0 2px #fff}
+.intro #cont{font-size:18px}
+.intro .sefers button+button{margin-top:0}
+.intro button.sn{width:auto;margin:0;padding:6px 3px;border-radius:12px;background:#eee4cf;color:#5d5545;font-family:var(--font-body);font-size:inherit;font-weight:inherit;min-height:60px;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+.intro button.sn.done{background:var(--green);color:#fff}.intro button.sn.cur{background:#e8961a;color:#3a2600}
+.intro button.sn.lock{opacity:.6;cursor:default;box-shadow:none}
+.intro button.sn.sel{box-shadow:0 0 0 3px var(--coin),0 0 0 5px #2b3a2e}
+.intro button.sn.endl{grid-column:1/-1;min-height:44px}
+.sn span{overflow:hidden;text-overflow:ellipsis}
+.mdet{background:#fff;border:2px solid var(--line);border-radius:16px;padding:10px 12px;margin:12px 0 4px}
+.mdh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.mdh b{font-family:var(--font-display);font-size:18px;color:var(--ink)}.mdh span{color:var(--coin);font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:0 1px 0 #b8860b}
+.intro p.mdl{font-size:13px;margin:2px 0 8px}
+.mdet .objs{margin-bottom:6px}.mdet .objs li{padding:4px 8px;font-size:13px}
+.intro .mdet button{padding:11px;font-size:18px}
+.rchest{background:linear-gradient(#fff8e1,#ffefc2);border:2px solid #f0d58a;border-radius:16px;padding:10px 12px;margin:8px 0;text-align:left}
+.rch{display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center}.rch i{font-style:normal;font-size:30px;text-align:center}
+.rch b{display:block;font-family:var(--font-display);font-size:18px;color:#8a5a00}.rch small{display:block;font-weight:700;font-size:13px;color:var(--ink-soft)}
+.intro .rchest button{width:auto;margin:0;padding:8px 14px;font-size:17px;background:var(--coin);color:var(--coin-ink);min-height:44px;white-space:nowrap}
+.intro .rchest button:disabled{background:#eee4cf;color:#9a9282;font-size:14px}
+.rchest .prog{position:relative;height:20px;border-radius:10px;background:#f3e3b5;overflow:hidden;margin-top:8px;text-align:center}
+.rchest .prog i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f7c75a,#e8961a)}
+.rchest .prog span{position:relative;font-family:var(--font-display);font-weight:800;font-size:13px;line-height:20px;color:var(--ink)}
+.rchest.full{box-shadow:0 0 0 3px rgba(255,210,63,.6)}.rchest.full .rch i{animation:pulse 1.2s ease-in-out infinite}
+#awayCard .rchest{margin:6px 0 10px}
+#awayCard .abtn{position:sticky;bottom:0;z-index:2;display:flex;gap:8px;background:var(--panel);padding-top:4px}#awayCard .abtn button{flex:1;margin:0;font-size:17px;white-space:nowrap;padding-left:8px;padding-right:8px}#awayCard .abtn #awayOk{position:static;box-shadow:none}
+.crowns.big.pop{animation:pulse .6s ease-in-out 2}
+.upr b{flex-wrap:wrap;column-gap:8px;row-gap:2px}.upr b .un{margin-left:0;white-space:nowrap;color:var(--ink);font-size:inherit}.upr b .pips{margin-left:auto}
+.intro .hint.kh{background:#fff6d6;color:#8a5a00;border-radius:12px;padding:8px 10px;font-size:13px}
+.intro button.sn.open{background:#fff;color:var(--green);box-shadow:inset 0 0 0 2px var(--green)}
+.tree{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.intro .upr button{white-space:nowrap}
+.br{display:flex;flex-direction:column;gap:6px}.br h3{margin:2px 0 0;font-family:var(--font-display);font-size:15px;color:var(--ink-soft)}
+.pips{display:inline-flex;gap:3px;align-items:center}.pips em{width:9px;height:9px;border-radius:50%;background:#e2d8c0}.pips em.on{background:var(--coin);box-shadow:0 0 0 1px #b8860b}
+.upr.max{background:#f1fae9}.upr.bought{animation:pulse .5s ease-in-out}
+.ksub{font-size:12px!important;margin:0 0 6px!important}
+.troph{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.tp{position:relative;background:#fff;border:2px solid var(--line);border-radius:12px;padding:4px 2px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.tp i{font-style:normal;font-size:22px;filter:grayscale(1);opacity:.45}.tp b{font-family:var(--font-display);font-size:13px;line-height:1}.tp small{font-size:11px;font-weight:800;color:var(--ink-soft)}
+.tp.gold{background:#fff6d6;border-color:#f0d58a}.tp.gold i{filter:none;opacity:1}.tp.no{opacity:.5}
+.tp em{position:absolute;top:-6px;right:-4px;font-style:normal;font-size:12px;background:var(--coin);color:var(--coin-ink);border-radius:50%;width:18px;height:18px;line-height:18px;box-shadow:0 0 0 2px #fff}
+.kstreak{text-align:center;margin-top:12px}
+@media (min-width:700px) and (min-height:521px){ .card.map{max-width:760px} .troph{grid-template-columns:repeat(10,1fr)} .sefers{grid-template-columns:repeat(10,1fr)} }
+@media (orientation:landscape) and (max-height:520px){
+  .card.result.win2{max-width:740px;display:grid;grid-template-columns:1fr 1fr;column-gap:18px;align-items:center}
+  .win2 .objs{margin-bottom:0}.win2 .objs li{padding:4px 8px;font-size:13px}
+  .win2 .crowns{margin-bottom:6px}.win2 .nextreg{margin-bottom:4px}
+  .intro .win2 .brow button{margin-top:6px}
+  .troph{grid-template-columns:repeat(10,1fr)}
+  .ktabs{margin:6px 0 4px}.intro .ktabs button{padding:5px;font-size:15px;min-height:38px}
+  .intro button.sn{min-height:52px}
+  .mdet{margin-top:8px;padding:8px 10px}
+  .card.end .objs{flex-direction:row;gap:5px;margin:0 0 6px}.card.end .objs li{flex:1;padding:3px 6px;font-size:12px;grid-template-columns:20px 1fr;gap:5px}.card.end .objs li i{width:20px;height:20px}.card.end .objs li em,.card.end .objs li small,.card.end p.sub{display:none}
+}
+@media (min-width:700px) and (min-height:521px),(orientation:landscape) and (max-height:520px){
+  .tree{grid-template-columns:repeat(3,minmax(0,1fr))} .tree .upr{grid-template-columns:28px minmax(0,1fr);gap:4px 8px;align-content:start;padding:8px}
+  .tree .upr i{font-size:22px} .tree .upr b{font-size:15px;flex-wrap:wrap;row-gap:2px} .intro .tree .upr button{grid-column:1/-1;width:100%;min-height:38px;padding:6px}
+}
+/* p2m6: Günün Meydan Okuması kutucuğu, yarın ipucu (kazanma kartı), meydan okuma kazanma kartı */
+.rchest.dtile{background:linear-gradient(#eef3ff,#dfe8ff);border-color:#b9c8f2;margin:8px 0 4px}
+.dtile .rch b{color:#2c3f7a}.intro .dtile button{background:#3d63c9;color:#fff}.intro .dtile button:disabled{background:#d7dff5;color:#5b6a95;font-size:14px}
+.dtile .dmod{margin:6px 0 0;font-size:13px;font-weight:700;color:#2c3f7a;text-align:left}
+.dtile .dwarn{margin:4px 0 0;font-size:12px;font-weight:700;color:#a5541b;text-align:left}
+.dtile .dtm{display:block;margin-top:4px;font-size:12px;font-weight:700;color:#5b6a95;text-align:left}
+.dtile.lock{background:#f1efe9;border-color:#ddd6c6}.dtile.lock .rch b{color:#6b6556}.dtile.done{box-shadow:none}
+.tmrw{background:#eef3ff;border:2px solid #c7d3f5;border-radius:12px;padding:5px 10px;margin:0 0 8px;text-align:left;font-weight:700;font-size:13px;line-height:1.35;color:#2c3f7a}
+.dwin .bigstars .st{font-size:46px}
+@media (orientation:landscape) and (max-height:520px){ .tmrw{font-size:12px;padding:3px 8px;margin-bottom:4px;line-height:1.25} .win2 .tmrw~.nextreg small{display:none} .dtile .dmod,.dtile .dtm{font-size:11px;margin-top:2px} .card.result.dwin{max-width:520px} }
+body.calm .rchest.full .rch i,body.calm .crowns.big.pop,body.calm .upr.bought{animation:none}
+/* ===== v44 (sona taşındı: önceki kuralları ezsin) ===== */
+/* v44: altın harcama düğmesi (Kuleleri Güçlendir): Geceyi başlat'ın üstünde */
+.ochBtn{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;border:0;border-radius:14px;padding:7px 14px;background:linear-gradient(#7a4fd0,#4b2d94);color:#fff;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:0 3px 0 #2c1a5c,var(--shadow);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.flyIc{position:fixed;z-index:60;font-style:normal;font-size:24px;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.upr.best{outline:3px solid #ffd23f;outline-offset:-1px;background:#fff8dc}.bestTag{font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#e8961a;border-radius:8px;padding:1px 6px;margin:0 4px;white-space:nowrap}
+.goldBump{position:fixed;z-index:7;transform:translateY(-50%);font-family:var(--font-display);font-weight:900;font-size:18px;color:#ffd23f;text-shadow:0 2px 0 #7a5200,0 0 4px rgba(0,0,0,.6);pointer-events:none;opacity:0;transition:opacity .35s;white-space:nowrap}.goldBump.on{opacity:1}
+.card.result.end .away.endst{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}.card.result.end .away.endst>div{margin:0}
+/* v44: telefonda sol HUD sütunu gece uzamaz: çipler iki-üç sütuna sarılır; balık paneli küçük (alt üçte biri kapatmaz) */
+@media (max-width:600px){ .hud .left{flex-direction:row;flex-wrap:wrap;align-content:flex-start;max-width:min(205px,52vw);gap:5px}
+  .fishUI{width:min(230px,62vw);padding:6px 10px;gap:4px;border-radius:14px;bottom:calc(118px + env(safe-area-inset-bottom,0px))}.fishUI .fbar{height:14px}.fishUI button{padding:6px 20px;font-size:17px;border-radius:11px}.fishUI small{font-size:11px} }
+.nightBtn.idleHint{box-shadow:0 0 0 4px #ffd23f,0 0 18px 6px rgba(255,210,63,.75),0 4px 0 #121a38}
+.lgold{margin:2px 0 6px;font-weight:800;color:#8a5a00;font-size:14px}
+.ochBtn span{background:var(--coin);color:var(--coin-ink);border-radius:10px;padding:1px 8px;font-size:13px}.ochBtn small{font-size:11px;opacity:.85;font-weight:700}
+@media (max-width:600px){.ochBtn{left:auto;right:calc(12px + env(safe-area-inset-right,0px));transform:none;bottom:calc(176px + env(safe-area-inset-bottom,0px));font-size:13px;padding:6px 10px}}
+@media (orientation:landscape) and (max-height:520px){.ochBtn{left:auto;right:calc(12px + env(safe-area-inset-right,0px));transform:none;bottom:calc(58px + env(safe-area-inset-bottom,0px));font-size:13px;padding:6px 10px}}
 </style>
 
 <canvas id="c"></canvas>
@@ -454,6 +556,7 @@ body.calm .banner.out{opacity:0}body.calm .confetti{display:none}
 <div class="bossBar" id="bossBar" style="display:none"><b><span id="bossNm"></span><span id="bossPct"></span></b><div class="bar"><i></i></div></div>
 <div class="bossPtr" id="bossPtr" style="display:none"><span></span><i>💀</i></div>
 <button class="nightBtn" id="nightBtn" style="display:none">🌙 Geceyi başlat</button>
+<button class="ochBtn" id="ochBtn" style="display:none"></button>
 <div class="placeBar" id="placeBar" style="display:none"><span data-en="👆 Tap to move">👆 Taşımak için dokun</span><button id="placeOk" class="ok" data-en="Place here ✓">Buraya kur ✓</button><button id="placeCancel">✕</button></div>
 <div class="joy" id="joy"><i></i></div>
 <canvas class="mini" id="mini" width="132" height="132" aria-label="Mini harita" data-en-aria="Minimap"></canvas>
