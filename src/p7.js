@@ -9,7 +9,7 @@ function flashOn(e){ const now=performance.now(); if(e.flT0&&now-e.flT0<300) ret
 function flashOff(e){ if(e.fm) for(const f of e.fm) f[0].material=f[1]; }
 let comboN=0, comboAt=-9;
 function comboKill(e){ comboN=gameT-comboAt<1.4?comboN+1:1; comboAt=gameT; const k=Math.min(14,comboN-1); tone(400*(1+0.07*k),80+20*k,0.2,'sawtooth',0.05); if(k>=3) tone(900+80*k,1300+90*k,0.08,'triangle',0.035);
-  if(comboN>=5&&comboN%5===0){ const bonus=Math.round((4+ew()*0.8)*comboN/5); dropCoins(e.g.position.clone().setY(1.2),Math.min(10,3+comboN/5),bonus/Math.min(10,3+comboN/5),2,1.2); floatText(e.g.position,T(`SERİ ×${comboN}! +${bonus}`,`COMBO ×${comboN}! +${bonus}`),'green'); camShake=Math.max(camShake,0.2); } }
+  if(comboN>=5&&comboN%5===0){ const bonus=Math.round((4+ew()*0.8)*comboN/5); dropCoins(e.g.position.clone().setY(1.2),Math.min(10,3+comboN/5),bonus/Math.min(10,3+comboN/5),2,1.2); camShake=Math.max(camShake,0.2); } }
 
 // ----- patron sandığı: patron ölünce yere büyük altın sandık düşer, sefer sonunda çark döner -----
 const bossChests=[];
@@ -210,7 +210,7 @@ function winterTick(){ if(!isWinter()) return; const k=1-night; if(groundMesh) g
 
 // ----- ana döngü ve sıfırlama -----
 let p7T=0;
-function updateP7(dt){ updateBossChests(dt); updateEArrows(dt); updateShips(dt); p7T-=dt; if(p7T<=0){ p7T=1; applyWinterLook(); } winterTick(); updateTheme(dt); updateArtCorpses(dt); }
+function updateP7(dt){ updateBossChests(dt); updateEArrows(dt); updateShips(dt); p7T-=dt; if(p7T<=0){ p7T=1; applyWinterLook(); } winterTick(); updateTheme(dt); updateArtCorpses(dt); updateSkills(dt); updateCamp(dt); }
 // F8: kışın ilk iki gün uzun (uzak Karlı Geçit'e gidip dönmeye vakit), sonra kısa
 const DAY_LEN=window.__dayLen||55; function dayLen(){ if(S.mode==='daily'&&S.mod==='nightOnly') return 30; /* p2m6: Bitmeyen Gece: kısa gündüz */ return isWinter()?(S.wave<=2?DAY_LEN-4:DAY_LEN-8):DAY_LEN; } /* p2m3: haritalar 8-12 dk: gündüz 30→55 sn (kış biraz kısa) */
 for(const s of SIDES) threatLbl[s].clampIn=true; /* F8: kapı tehdit etiketi (👑) ekran kenarında kesilmez */

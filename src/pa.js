@@ -56,7 +56,7 @@ function artTemplate(spec){ const key=spec.c+'|'+(spec.hide||[]).join(',')+'|'+(
   return ART_TPL[key]={root:src,lib:spec.lib||'h'}; }
 /* makeGuy ile aynı arayüz: g, root, kollar/bacaklar (boş tutamak: eski kod dokunabilir), tool, back… + mixer */
 function artGuy(kind,spec){ spec=spec||ART_ROLES[kind]; if(Array.isArray(spec)) spec=spec[Math.floor(Math.random()*spec.length)]; const T0=artTemplate(spec); const inst=SkeletonUtils.clone(T0.root); const g=new THREE.Group(), root=new THREE.Group(); g.add(root);
-  const s=ART_K*(spec.s||1); inst.scale.setScalar(s); root.add(inst); let sm=null; inst.traverse(o=>{ if(o.isSkinnedMesh) sm=o; });
+  const s=ART_K*(spec.s||1); inst.scale.set(s*0.86,s*1.07,s*0.86); /* v47: daha ince, daha uzun (top gibi değil) */ root.add(inst); let sm=null; inst.traverse(o=>{ if(o.isSkinnedMesh) sm=o; });
   const dummy=()=>{ const h=new THREE.Group(); h.visible=false; root.add(h); return h; }; const legL=dummy(), legR=dummy(), armL=dummy(), armR=dummy(), tool=dummy(), head=dummy(); tool.add(new THREE.Object3D(),new THREE.Object3D(),new THREE.Object3D());
   const back=new THREE.Group(); back.position.set(0,0.62,-0.42); root.add(back);
   const logMesh=new THREE.InstancedMesh(G.log,M.log,LOG_MAX); logSlots.forEach((m,i)=>logMesh.setMatrixAt(i,m)); logMesh.count=0; logMesh.castShadow=true; logMesh.frustumCulled=false; back.add(logMesh);

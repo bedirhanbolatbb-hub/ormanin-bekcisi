@@ -155,12 +155,13 @@ const HERO_K=30; /* v43: kahraman okunun 1. seferdeki taban hasarı (sim ölçü
 const heroScale=()=>{ const L=Math.max(1,S.level|0), G=l=>1+0.16*(l-1)*0.85; return Math.pow(L>LEVELS?G(LEVELS)*Math.pow(1.21,L-LEVELS-1):G(L),0.75); }; /* p2m3: üs 0.6→0.75: 9-10. haritada kahraman payı %16'ya düşüyordu */ /* p2m3: kahraman ölçeği harita büyümesinden (MAP_K'sız): eskiden refDps oranı MAP_K'yı da içeriyordu, 8-10. haritada kahraman payı %14'e düşmüştü */
 const heroK=()=>1+1.5*Math.max(0,(S.level|0)-1);
 const hasPerk=k=>cc({arrows:'rate',mason:'mend',gold:'trade',lumber:'lumber',magnet:'magnet',cannon:'powder',trample:'trample'}[k]||k)>0;
+const TOWER_K=window.__twk||0.8, HERO_B=window.__hb||1.3; /* v47: kuleler tek başına geceyi kazanamaz, kahraman savaşın kalbi */
 const D = {
   chopRate:()=>4.0*(1+0.3*cc('axe'))*(isWinter()?0.72:1), treeHits:()=>1, logsPerTree:()=>4+2*cc('lumber'),
   cap:()=>40+15*S.lv.feet+10*mu('saddle'), speed:()=>(8.4+0.5*S.lv.feet)*(1+0.15*cc('pony')), magnet:()=>6*(1+0.45*cc('magnet'))*(1+0.15*mu('magnet')), lootPrice:()=>(8+ew()*1.0+3*S.lv.trader)*(1+0.3*cc('trade')), buyTime:()=>Math.max(0.25,0.7-0.08*S.lv.trader),
   swordDmg:()=>9*heroK()*(1+0.4*cc('sword')), swordRange:()=>2.9+0.3*cc('sword'), /* v43: kılıç yalnız midilli ezmesinin hasar tabanı */
-  heroDmg:()=>(window.__hk||HERO_K)*heroScale()*(1+0.4*cc('sword'))*(1+0.12*mu('bow')), heroRange:()=>(window.__hr||11.5)+0.6*Math.min(4,cc('sword'))+0.5*mu('quiver'), heroRate:()=>2.1*(1+0.1*Math.min(4,cc('sword')))*(1+0.08*mu('quiver')), /* v43: kahraman yayı: hasar, menzil, saniyede atış */
-  gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.08*mu('wall'))*(1+0.12*(S.lv.ironWall||0))), towerDmg:l=>(5+3*(l-1))*ochK()*(1+0.25*cc('arrow'))*(1+0.06*mu('arrow'))*(1+0.1*(S.lv.ironArrow||0)), towerRange:()=>(17+3*cc('range'))*(S.mode==='daily'&&S.mod==='foggy'?0.8:1) /* p2m6: Sisli */, towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>(14+7*(l-1))*ochK()*(1+0.4*cc('powder'))*(1+0.06*mu('arrow')), soldierDmg:()=>8*(1+0.4*cc('drill')),
+  heroDmg:()=>HERO_B*heroLvK()*(window.__hk||HERO_K)*heroScale()*(1+0.4*cc('sword'))*(1+0.12*mu('bow')), heroRange:()=>(window.__hr||11.5)+0.6*Math.min(4,cc('sword'))+0.5*mu('quiver'), heroRate:()=>2.1*(1+0.1*Math.min(4,cc('sword')))*(1+0.08*mu('quiver')), /* v43: kahraman yayı: hasar, menzil, saniyede atış */
+  gateMax:()=>Math.round((150+120*S.lv.wall)*(1+0.25*cc('wall'))*(1+0.08*mu('wall'))*(1+0.12*(S.lv.ironWall||0))), towerDmg:l=>TOWER_K*(5+3*(l-1))*ochK()*(1+0.25*cc('arrow'))*(1+0.06*mu('arrow'))*(1+0.1*(S.lv.ironArrow||0)), towerRange:()=>(17+3*cc('range'))*(S.mode==='daily'&&S.mod==='foggy'?0.8:1) /* p2m6: Sisli */, towerRate:()=>1+0.2*cc('rate'), cannonDmg:l=>TOWER_K*(14+7*(l-1))*ochK()*(1+0.4*cc('powder'))*(1+0.06*mu('arrow')), soldierDmg:()=>8*(1+0.4*cc('drill')),
 };
 // Kapı sayısı: bölümün gecesine ve bölüm numarasına göre açılır
 // F7: kapılar seferler arasında yeniden kapanmaz: 1. sefer 1-1-2-3-3 (patron gecesinde yeni kapı yok), 2. sefer 1. seferin 3 kapısıyla başlar (4. kapı 3. gecede), sonra hep 4
@@ -330,7 +331,7 @@ scene.background=new THREE.Color(0xe8dcc0);
 scene.fog=new THREE.Fog(0xe8dcc0,120,230);
 const camera=new THREE.PerspectiveCamera(36,1,0.5,360);
 const YAW=0.55;
-const camOff=new THREE.Vector3(Math.sin(YAW)*30,44,Math.cos(YAW)*30);
+const camOff=new THREE.Vector3(Math.sin(YAW)*33,40,Math.cos(YAW)*33); /* v47: kamera biraz yatık: karakterler tepeden top gibi değil, boylu görünür */
 const hemi=new THREE.HemisphereLight(0xfff4e0,0x8f7a55,0.5); scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff1d2,1.25);
 const DAY={bg:new THREE.Color(0xe8dcc0),sun:new THREE.Color(0xfff1d2),hemi:new THREE.Color(0xfff4e0),sunI:1.25,hemiI:0.5,exp:1.12}, NIGHT={bg:new THREE.Color(0x3b4160),sun:new THREE.Color(0x8fa6ff),hemi:new THREE.Color(0x6f7fb8),sunI:0.55,hemiI:0.32,exp:0.95}; let night=0; const tmpC=new THREE.Color();
