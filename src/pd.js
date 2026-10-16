@@ -19,7 +19,7 @@ const BBLOG=(function(){
       if(st.card==='failCard'&&last.card!=='failCard') ev('gh_fail');
       if(st.card==='winCard'&&last.card!=='winCard') ev('gh_map_win');
     }
-    try{ const g=document.querySelector('.guide:not(.off)'); const tx=g&&g.offsetParent?g.textContent.trim().slice(0,60):''; if(tx&&!guideSeen[tx]&&guideN<15){ guideSeen[tx]=1; guideN++; ev('gh_guide',{step:String(guideN),txt:tx}); } }catch(_){ }
+    try{ const g=document.querySelector('.guide:not(.off)'); const tx=g&&g.getBoundingClientRect().width>0&&getComputedStyle(g).display!=='none'?g.textContent.trim().slice(0,60):''; if(tx&&!guideSeen[tx]&&guideN<15){ guideSeen[tx]=1; guideN++; ev('gh_guide',{step:String(guideN),txt:tx}); } }catch(_){ }
     if(!document.hidden&&st.card==='none'){ aliveT++; if(aliveT%120===0) ev('gh_alive'); }
     last=st; }
   function start(){ init(); if(!ok) return; let ret='new'; try{ ret=(+S.lastSeen||0)>0||(S.meta&&(S.meta.unlocked|0)>1)?'back':'new'; }catch(_){ }
