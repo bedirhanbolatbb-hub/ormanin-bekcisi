@@ -55,7 +55,7 @@ const NPC = {
     return n;
   },
   go(n, pts, spd, cb) { n.path = pts.map(p => [p[0], p[1]]); n.spd = spd || 2.2; n.cb = cb || null; return n; },
-  say(n, text, dur) { if (!n.bub) n.bub = UI.bubble(text); else n.bub.textContent = text; n.bubT = dur || 3; },
+  say(n, text, dur) { if (!n.bub) n.bub = UI.bubble(text); else { n.bub.textContent = text; n.bub._w = 0; } n.bubT = dur || 3; },
   kill(n, puff) { if (n.state === 'out') return; n.state = 'out'; n.t = 0; if (puff) FX.puff(n.x, 0.6, n.z, 6, 0.8); },
   cheer(n, dur) { n.cheerT = dur || 2; },
   update(dt) {

@@ -64,7 +64,7 @@ const GAME = {
     const lk = !free && this.toolLocked(t);
     if (lk) { AUD.deny(); UI.hint(T.name + ' arrives after ' + lk.N + ' jobs in this town (' + lk.n + '/' + lk.N + ')', 3); return false; }
     if (!free && !had && (T.gift || UI.shownCoins() + 1e-6 < c || !this.spend(c))) { AUD.deny(); return false; }
-    this.owned[t] = 1; AUD.newTool(); STREAK.heat = 1;
+    this.owned[t] = 1; AUD.newTool(); AUD.buzz([30, 60, 30, 60, 70]); STREAK.heat = 1;
     PL.setTool(t, true); PL.celebrate = 1.0; PL.bump = 1;
     const p = T.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.confetti(p.x, 1.5, p.z, 70); FX.sparkle(p.x, 0.8, p.z, 34, 1.5); FX.puff(p.x, 0.4, p.z, 16, 1.6);
@@ -122,7 +122,7 @@ const GAME = {
     if (!silent) {
       let n = 0;
       for (let i = 0; i < pts.length && n < 40; i += 3, n++) { FX.puff(pts[i], pts[i + 2] * 0.6, pts[i + 1], 2, 0.8); if (n % 2 === 0) FX.sparkle(pts[i], 0.2, pts[i + 1], 2, 0.3); }
-      if (!a.quiet) { AUD.complete(); PL.celebrate = 1.3; const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position; FX.confetti(p.x, 1.6, p.z, 40); }
+      if (!a.quiet) { AUD.complete(); AUD.buzz([20, 50, 30]); PL.celebrate = 1.3; const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position; FX.confetti(p.x, 1.6, p.z, 40); }
     }
     const src = CH.onDone ? CH.onDone(a, silent) : null;
     if (!silent) {
@@ -141,7 +141,7 @@ const GAME = {
   },
   // ---- chapter flow ----
   finishChapter() {
-    this.ended = true;
+    this.ended = true; STREAK.reset(); AUD.hype = 0;
     const st = this.time <= CH.par[0] ? 3 : this.time <= CH.par[1] ? 2 : 1;
     const rec = this.chapters[CH.id] || (this.chapters[CH.id] = { stars: 0, best: 0 });
     this.lastStars = st; this.lastNew = st > rec.stars;
@@ -253,17 +253,23 @@ const STREAK = {
   t: 0, heat: 0, lv: 0, mul: 1, LV: [0, 5, 14, 28], MUL: [1, 2, 3, 4], COL: ['#ffd34d', '#ffa21e', '#ff5a3c', '#d75cff'], _fx: 0, _v: new V3(),
   reset() { this.t = 0; this.heat = 0; this.lv = 0; this.mul = 1; },
   update(dt) {
+    AUD.hype = this.lv;
     if (CAM.hero > 0 || CAM.intro > 0.05 || CAM.show || QS.has('nostreak')) return;
     const st = PL.stats(), on = PL.carveRate > st.w * st.spd * 0.06;
     if (on) { this.t += dt; this.heat = 1; }
-    else if (this.t > 0) { this.heat -= dt / (this.lv ? 3.0 : 1.4); if (this.heat <= 0) this.reset(); }
+    else if (this.t > 0) {
+      this.heat -= dt / (this.lv ? 3.0 : 1.4);
+      if (this.heat <= 0) { if (this.lv >= 2 && !STORE.get('plowtown_sl')) { STORE.set('plowtown_sl', '1'); UI.hint('Streak lost! Keep plowing to build it again', 3.5); } this.reset(); }
+    }
     let lv = 0; for (let i = 1; i < this.LV.length; i++) if (this.t >= this.LV[i]) lv = i;
     const tr = PL.kind === 'truck', p = tr ? PL.truck.position : PL.kid.root.position;
     if (lv > this.lv) {
       this.lv = lv; this.mul = this.MUL[lv];
       UI.floatText(this._v.set(p.x, tr ? 4.4 : 2.5, p.z), 'STREAK x' + this.mul + '!', this.COL[lv], 40);
-      FX.sparkle(p.x, tr ? 1.6 : 0.9, p.z, 14 + lv * 8, tr ? 1.8 : 1.0, lv >= 3 ? [0.9, 0.5, 1] : lv >= 2 ? [1, 0.6, 0.3] : [1, 0.85, 0.4]);
-      AUD.streak(lv); UI.streakPop();
+      const sc = lv >= 3 ? [0.9, 0.5, 1] : lv >= 2 ? [1, 0.6, 0.3] : [1, 0.85, 0.4];
+      FX.sparkle(p.x, tr ? 1.6 : 0.9, p.z, 14 + lv * 8, tr ? 1.8 : 1.0, sc); FX.ring(p.x, 0.5, p.z, tr ? 2.6 : 1.3, 26 + lv * 6, sc);
+      AUD.streak(lv); AUD.buzz(18 + lv * 6); UI.streakPop();
+      if (lv === 1 && !STORE.get('plowtown_sh')) { STORE.set('plowtown_sh', '1'); UI.hint('Keep plowing without stopping for x2, x3, x4 coins!', 4); }
     }
     // a sparkly trail at the blade while the streak is hot
     if (this.lv >= 2 && on) {

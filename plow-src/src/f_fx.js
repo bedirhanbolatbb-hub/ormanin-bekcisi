@@ -91,6 +91,10 @@ const FX = {
   sparkle(x, y, z, n, r, c) {
     for (let i = 0; i < n; i++) this.emit(this.add, { x: x + rnd(-r, r), y: y + rnd(0, r), z: z + rnd(-r, r), vx: rnd(-0.5, 0.5), vy: rnd(0.4, 1.6), vz: rnd(-0.5, 0.5), life: rnd(0.5, 1.0), s0: rnd(0.15, 0.3), s1: 0.02, a0: 1, a1: 0, fl: 1, dr: 1.5, c: c || [1, 0.92, 0.6] });
   },
+  // a flat burst ring racing outward (streak level-ups)
+  ring(x, y, z, r, n, c) {
+    for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); this.emit(this.add, { x: x + ca * r * 0.25, y, z: z + sa * r * 0.25, vx: ca * r * 2.4, vy: rnd(0.2, 0.8), vz: sa * r * 2.4, life: 0.6, s0: 0.42, s1: 0.06, a0: 1, a1: 0, dr: 2.2, fl: 1, c }); }
+  },
   confetti(x, y, z, n) {
     const cols = [[1, 0.35, 0.35], [1, 0.8, 0.25], [0.35, 0.85, 0.5], [0.35, 0.65, 1], [0.9, 0.45, 1]];
     for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(2, 6); this.emit(this.norm, { x, y, z, vx: Math.cos(a) * s * 0.6, vy: rnd(4, 9), vz: Math.sin(a) * s * 0.6, life: rnd(1.4, 2.4), s0: 0.16, s1: 0.12, a0: 1, a1: 0.6, gr: 7, dr: 1.6, fl: 1, c: cols[i % 5] }); }

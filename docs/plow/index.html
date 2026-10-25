@@ -583,11 +583,24 @@ const AUD = {
       if (S.bass === 'waltz') { if (inBar === 0) this._pluck(mf(chord[0] - 12), t, 0.12, 360); else chord.forEach(m => this._pluck(mf(m), t, 0.035, 1400)); }
       if (S.shaker) this._tick(t, inBar % 2 ? 0.012 : 0.02, 7000);
       if (S.hat && inBar % 2 === 1) this._tick(t, 0.03, 8000);
+      // the plow streak pumps the music up: hats, then a kick, then a driving bass
+      const hy = this.hype || 0, beat = spb % 3 === 0 ? 3 : 2;
+      if (hy >= 1 && !S.hat && inBar % beat !== 0) this._tick(t, 0.026, 8600);
+      if (hy >= 2 && inBar % beat === 0) this._kick(t, inBar === 0 ? 0.2 : 0.14);
+      if (hy >= 3 && S.bass !== 'drive') this._pluck(mf(chord[0] - (inBar % 2 ? 0 : 12)), t, 0.05, 620);
       const m = S.mel[st % S.mel.length];
       if (m > 0 && (S.gap === undefined || (st % (S.mel.length)) < S.mel.length - S.gap)) this['_' + (S.inst || 'box')](mf(m), t, S.melV || 0.16);
       this._musT += step; this._musStep++;
     }
   },
+  _kick(t, v) {
+    const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.13);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.2);
+    o.connect(g); g.connect(this.mus); o.start(t); o.stop(t + 0.22);
+  },
+  // a short buzz on phones that can (big moments only)
+  buzz(p) { if (this.muted || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { } },
   _pluck(f, t, v, cut) {
     const ctx = this.ctx, o = ctx.createOscillator(), o2 = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
     o.type = 'triangle'; o.frequency.value = f; o2.type = 'square'; o2.frequency.value = f * 1.002; fl.type = 'lowpass'; fl.frequency.value = cut || 2400;
@@ -3323,6 +3336,10 @@ const FX = {
   sparkle(x, y, z, n, r, c) {
     for (let i = 0; i < n; i++) this.emit(this.add, { x: x + rnd(-r, r), y: y + rnd(0, r), z: z + rnd(-r, r), vx: rnd(-0.5, 0.5), vy: rnd(0.4, 1.6), vz: rnd(-0.5, 0.5), life: rnd(0.5, 1.0), s0: rnd(0.15, 0.3), s1: 0.02, a0: 1, a1: 0, fl: 1, dr: 1.5, c: c || [1, 0.92, 0.6] });
   },
+  // a flat burst ring racing outward (streak level-ups)
+  ring(x, y, z, r, n, c) {
+    for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); this.emit(this.add, { x: x + ca * r * 0.25, y, z: z + sa * r * 0.25, vx: ca * r * 2.4, vy: rnd(0.2, 0.8), vz: sa * r * 2.4, life: 0.6, s0: 0.42, s1: 0.06, a0: 1, a1: 0, dr: 2.2, fl: 1, c }); }
+  },
   confetti(x, y, z, n) {
     const cols = [[1, 0.35, 0.35], [1, 0.8, 0.25], [0.35, 0.85, 0.5], [0.35, 0.65, 1], [0.9, 0.45, 1]];
     for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(2, 6); this.emit(this.norm, { x, y, z, vx: Math.cos(a) * s * 0.6, vy: rnd(4, 9), vz: Math.sin(a) * s * 0.6, life: rnd(1.4, 2.4), s0: 0.16, s1: 0.12, a0: 1, a1: 0.6, gr: 7, dr: 1.6, fl: 1, c: cols[i % 5] }); }
@@ -3486,7 +3503,7 @@ const GAME = {
     const lk = !free && this.toolLocked(t);
     if (lk) { AUD.deny(); UI.hint(T.name + ' arrives after ' + lk.N + ' jobs in this town (' + lk.n + '/' + lk.N + ')', 3); return false; }
     if (!free && !had && (T.gift || UI.shownCoins() + 1e-6 < c || !this.spend(c))) { AUD.deny(); return false; }
-    this.owned[t] = 1; AUD.newTool(); STREAK.heat = 1;
+    this.owned[t] = 1; AUD.newTool(); AUD.buzz([30, 60, 30, 60, 70]); STREAK.heat = 1;
     PL.setTool(t, true); PL.celebrate = 1.0; PL.bump = 1;
     const p = T.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.confetti(p.x, 1.5, p.z, 70); FX.sparkle(p.x, 0.8, p.z, 34, 1.5); FX.puff(p.x, 0.4, p.z, 16, 1.6);
@@ -3544,7 +3561,7 @@ const GAME = {
     if (!silent) {
       let n = 0;
       for (let i = 0; i < pts.length && n < 40; i += 3, n++) { FX.puff(pts[i], pts[i + 2] * 0.6, pts[i + 1], 2, 0.8); if (n % 2 === 0) FX.sparkle(pts[i], 0.2, pts[i + 1], 2, 0.3); }
-      if (!a.quiet) { AUD.complete(); PL.celebrate = 1.3; const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position; FX.confetti(p.x, 1.6, p.z, 40); }
+      if (!a.quiet) { AUD.complete(); AUD.buzz([20, 50, 30]); PL.celebrate = 1.3; const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position; FX.confetti(p.x, 1.6, p.z, 40); }
     }
     const src = CH.onDone ? CH.onDone(a, silent) : null;
     if (!silent) {
@@ -3563,7 +3580,7 @@ const GAME = {
   },
   // ---- chapter flow ----
   finishChapter() {
-    this.ended = true;
+    this.ended = true; STREAK.reset(); AUD.hype = 0;
     const st = this.time <= CH.par[0] ? 3 : this.time <= CH.par[1] ? 2 : 1;
     const rec = this.chapters[CH.id] || (this.chapters[CH.id] = { stars: 0, best: 0 });
     this.lastStars = st; this.lastNew = st > rec.stars;
@@ -3675,17 +3692,23 @@ const STREAK = {
   t: 0, heat: 0, lv: 0, mul: 1, LV: [0, 5, 14, 28], MUL: [1, 2, 3, 4], COL: ['#ffd34d', '#ffa21e', '#ff5a3c', '#d75cff'], _fx: 0, _v: new V3(),
   reset() { this.t = 0; this.heat = 0; this.lv = 0; this.mul = 1; },
   update(dt) {
+    AUD.hype = this.lv;
     if (CAM.hero > 0 || CAM.intro > 0.05 || CAM.show || QS.has('nostreak')) return;
     const st = PL.stats(), on = PL.carveRate > st.w * st.spd * 0.06;
     if (on) { this.t += dt; this.heat = 1; }
-    else if (this.t > 0) { this.heat -= dt / (this.lv ? 3.0 : 1.4); if (this.heat <= 0) this.reset(); }
+    else if (this.t > 0) {
+      this.heat -= dt / (this.lv ? 3.0 : 1.4);
+      if (this.heat <= 0) { if (this.lv >= 2 && !STORE.get('plowtown_sl')) { STORE.set('plowtown_sl', '1'); UI.hint('Streak lost! Keep plowing to build it again', 3.5); } this.reset(); }
+    }
     let lv = 0; for (let i = 1; i < this.LV.length; i++) if (this.t >= this.LV[i]) lv = i;
     const tr = PL.kind === 'truck', p = tr ? PL.truck.position : PL.kid.root.position;
     if (lv > this.lv) {
       this.lv = lv; this.mul = this.MUL[lv];
       UI.floatText(this._v.set(p.x, tr ? 4.4 : 2.5, p.z), 'STREAK x' + this.mul + '!', this.COL[lv], 40);
-      FX.sparkle(p.x, tr ? 1.6 : 0.9, p.z, 14 + lv * 8, tr ? 1.8 : 1.0, lv >= 3 ? [0.9, 0.5, 1] : lv >= 2 ? [1, 0.6, 0.3] : [1, 0.85, 0.4]);
-      AUD.streak(lv); UI.streakPop();
+      const sc = lv >= 3 ? [0.9, 0.5, 1] : lv >= 2 ? [1, 0.6, 0.3] : [1, 0.85, 0.4];
+      FX.sparkle(p.x, tr ? 1.6 : 0.9, p.z, 14 + lv * 8, tr ? 1.8 : 1.0, sc); FX.ring(p.x, 0.5, p.z, tr ? 2.6 : 1.3, 26 + lv * 6, sc);
+      AUD.streak(lv); AUD.buzz(18 + lv * 6); UI.streakPop();
+      if (lv === 1 && !STORE.get('plowtown_sh')) { STORE.set('plowtown_sh', '1'); UI.hint('Keep plowing without stopping for x2, x3, x4 coins!', 4); }
     }
     // a sparkly trail at the blade while the streak is hot
     if (this.lv >= 2 && on) {
@@ -4139,7 +4162,7 @@ const NPC = {
     return n;
   },
   go(n, pts, spd, cb) { n.path = pts.map(p => [p[0], p[1]]); n.spd = spd || 2.2; n.cb = cb || null; return n; },
-  say(n, text, dur) { if (!n.bub) n.bub = UI.bubble(text); else n.bub.textContent = text; n.bubT = dur || 3; },
+  say(n, text, dur) { if (!n.bub) n.bub = UI.bubble(text); else { n.bub.textContent = text; n.bub._w = 0; } n.bubT = dur || 3; },
   kill(n, puff) { if (n.state === 'out') return; n.state = 'out'; n.t = 0; if (puff) FX.puff(n.x, 0.6, n.z, 6, 0.8); },
   cheer(n, dur) { n.cheerT = dur || 2; },
   update(dt) {
@@ -4494,18 +4517,25 @@ const UI = {
     if (!el._on) { el.classList.add('on'); el._on = 1; el.querySelector('.ci').innerHTML = ICONS.coin; }
     const t = '+' + fmt(rate) + '/s'; if (el._t !== t) { el.querySelector('b').textContent = t; el._t = t; el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); }
   },
-  hint(t, dur) { const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; },
-  unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; },
+  hint(t, dur) {
+    // on phones the hint sits where the big banners pop: wait for the banner to finish
+    const wait = (this._bnUntil || 0) - performance.now();
+    if (wait > 0 && innerWidth <= 640) { clearTimeout(this._hq); this._hqT = t; this._hq = setTimeout(() => { this._hqT = null; this.hint(t, dur); }, wait + 60); return; }
+    const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3;
+  },
+  unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; if (this._hqT && this._hqT.startsWith(pre)) { clearTimeout(this._hq); this._hqT = null; } },
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },
   banner(title, sub, ico, dur) {
+    if (this._hintT > 0) { this._hintT = 0; $('hint').classList.remove('on'); }
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;
     el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
-    clearTimeout(this._bnT); this._bnT = setTimeout(() => el.classList.remove('on'), (dur || 2.2) * 1000);
+    clearTimeout(this._bnT); this._bnT = setTimeout(() => el.classList.remove('on'), (dur || 2.2) * 1000); this._bnUntil = performance.now() + (dur || 2.2) * 1000;
   },
   bubble(text) { const d = document.createElement('div'); d.className = 'bubble'; d.textContent = text; $('bubbles').appendChild(d); return d; },
   placeBubble(d, wp, vis) {
-    const p = this._v.copy(wp).project(CAM.cam);
-    d.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
+    const p = this._v.copy(wp).project(CAM.cam), hw = (d._w || (d._w = d.offsetWidth || 120)) / 2;
+    const x = clamp((p.x + 1) / 2 * innerWidth, hw + 6, Math.max(hw + 6, innerWidth - hw - 6));
+    d.style.transform = `translate(${x.toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
     d.style.opacity = vis && p.z < 1 ? 1 : 0;
   },
   // ---- floating texts (+coins, WIDER!, ...) ----
@@ -4543,8 +4573,10 @@ const UI = {
       const p = this._v.set(T.wx, T.wy, T.wz).project(CAM.cam); if (p.z > 1) continue;
       const sx = (p.x + 1) / 2 * innerWidth, sy = (1 - p.y) / 2 * innerHeight;
       const sc = k < 0.15 ? easeOutBack(k / 0.15) : 1, a = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
-      g.save(); g.globalAlpha = a; g.translate(sx, sy - T.oy - 60 * easeOutCubic(k)); g.scale(sc, sc);
       g.font = `800 ${T.size}px "Baloo 2", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      // keep texts fully on screen (near the edges they slide inward)
+      const hw = (T.w || (T.w = g.measureText(T.text).width + T.size * 0.4)) / 2, cx = innerWidth > hw * 2 + 16 ? clamp(sx, hw + 8, innerWidth - hw - 8) : innerWidth / 2;
+      g.save(); g.globalAlpha = a; g.translate(cx, Math.max(T.size * 0.7, sy - T.oy - 60 * easeOutCubic(k))); g.scale(sc, sc);
       g.lineWidth = Math.max(4, T.size * 0.2); g.strokeStyle = '#2b3a55'; g.lineJoin = 'round'; g.strokeText(T.text, 0, 0);
       g.fillStyle = T.color; g.fillText(T.text, 0, 0); g.restore();
     }
@@ -4935,13 +4967,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4.1'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.2'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.1'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.2'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {

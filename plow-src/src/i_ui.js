@@ -199,18 +199,25 @@ const UI = {
     if (!el._on) { el.classList.add('on'); el._on = 1; el.querySelector('.ci').innerHTML = ICONS.coin; }
     const t = '+' + fmt(rate) + '/s'; if (el._t !== t) { el.querySelector('b').textContent = t; el._t = t; el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); }
   },
-  hint(t, dur) { const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; },
-  unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; },
+  hint(t, dur) {
+    // on phones the hint sits where the big banners pop: wait for the banner to finish
+    const wait = (this._bnUntil || 0) - performance.now();
+    if (wait > 0 && innerWidth <= 640) { clearTimeout(this._hq); this._hqT = t; this._hq = setTimeout(() => { this._hqT = null; this.hint(t, dur); }, wait + 60); return; }
+    const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3;
+  },
+  unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; if (this._hqT && this._hqT.startsWith(pre)) { clearTimeout(this._hq); this._hqT = null; } },
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },
   banner(title, sub, ico, dur) {
+    if (this._hintT > 0) { this._hintT = 0; $('hint').classList.remove('on'); }
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;
     el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
-    clearTimeout(this._bnT); this._bnT = setTimeout(() => el.classList.remove('on'), (dur || 2.2) * 1000);
+    clearTimeout(this._bnT); this._bnT = setTimeout(() => el.classList.remove('on'), (dur || 2.2) * 1000); this._bnUntil = performance.now() + (dur || 2.2) * 1000;
   },
   bubble(text) { const d = document.createElement('div'); d.className = 'bubble'; d.textContent = text; $('bubbles').appendChild(d); return d; },
   placeBubble(d, wp, vis) {
-    const p = this._v.copy(wp).project(CAM.cam);
-    d.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
+    const p = this._v.copy(wp).project(CAM.cam), hw = (d._w || (d._w = d.offsetWidth || 120)) / 2;
+    const x = clamp((p.x + 1) / 2 * innerWidth, hw + 6, Math.max(hw + 6, innerWidth - hw - 6));
+    d.style.transform = `translate(${x.toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
     d.style.opacity = vis && p.z < 1 ? 1 : 0;
   },
   // ---- floating texts (+coins, WIDER!, ...) ----
@@ -248,8 +255,10 @@ const UI = {
       const p = this._v.set(T.wx, T.wy, T.wz).project(CAM.cam); if (p.z > 1) continue;
       const sx = (p.x + 1) / 2 * innerWidth, sy = (1 - p.y) / 2 * innerHeight;
       const sc = k < 0.15 ? easeOutBack(k / 0.15) : 1, a = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
-      g.save(); g.globalAlpha = a; g.translate(sx, sy - T.oy - 60 * easeOutCubic(k)); g.scale(sc, sc);
       g.font = `800 ${T.size}px "Baloo 2", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      // keep texts fully on screen (near the edges they slide inward)
+      const hw = (T.w || (T.w = g.measureText(T.text).width + T.size * 0.4)) / 2, cx = innerWidth > hw * 2 + 16 ? clamp(sx, hw + 8, innerWidth - hw - 8) : innerWidth / 2;
+      g.save(); g.globalAlpha = a; g.translate(cx, Math.max(T.size * 0.7, sy - T.oy - 60 * easeOutCubic(k))); g.scale(sc, sc);
       g.lineWidth = Math.max(4, T.size * 0.2); g.strokeStyle = '#2b3a55'; g.lineJoin = 'round'; g.strokeText(T.text, 0, 0);
       g.fillStyle = T.color; g.fillText(T.text, 0, 0); g.restore();
     }

@@ -200,11 +200,24 @@ const AUD = {
       if (S.bass === 'waltz') { if (inBar === 0) this._pluck(mf(chord[0] - 12), t, 0.12, 360); else chord.forEach(m => this._pluck(mf(m), t, 0.035, 1400)); }
       if (S.shaker) this._tick(t, inBar % 2 ? 0.012 : 0.02, 7000);
       if (S.hat && inBar % 2 === 1) this._tick(t, 0.03, 8000);
+      // the plow streak pumps the music up: hats, then a kick, then a driving bass
+      const hy = this.hype || 0, beat = spb % 3 === 0 ? 3 : 2;
+      if (hy >= 1 && !S.hat && inBar % beat !== 0) this._tick(t, 0.026, 8600);
+      if (hy >= 2 && inBar % beat === 0) this._kick(t, inBar === 0 ? 0.2 : 0.14);
+      if (hy >= 3 && S.bass !== 'drive') this._pluck(mf(chord[0] - (inBar % 2 ? 0 : 12)), t, 0.05, 620);
       const m = S.mel[st % S.mel.length];
       if (m > 0 && (S.gap === undefined || (st % (S.mel.length)) < S.mel.length - S.gap)) this['_' + (S.inst || 'box')](mf(m), t, S.melV || 0.16);
       this._musT += step; this._musStep++;
     }
   },
+  _kick(t, v) {
+    const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.13);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.2);
+    o.connect(g); g.connect(this.mus); o.start(t); o.stop(t + 0.22);
+  },
+  // a short buzz on phones that can (big moments only)
+  buzz(p) { if (this.muted || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { } },
   _pluck(f, t, v, cut) {
     const ctx = this.ctx, o = ctx.createOscillator(), o2 = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
     o.type = 'triangle'; o.frequency.value = f; o2.type = 'square'; o2.frequency.value = f * 1.002; fl.type = 'lowpass'; fl.frequency.value = cut || 2400;
