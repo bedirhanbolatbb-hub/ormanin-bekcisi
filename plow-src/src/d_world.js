@@ -367,7 +367,7 @@ function buildWorld(scene) {
       decor('picket', fx, zc, Math.PI / 2, 1, yardY(fx + sx * 0.2, zc));
     }
     // mailbox by the driveway
-    decor('mailbox', sx * 6.05, L.drive.z1 + 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.1, L.drive.z1 + 0.55));
+    decor('mailbox', sx * 6.05, L.drive.z0 - 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.1, L.drive.z0 - 0.55));
     // trees between lots and behind
     const r = mulberry(L.c * 7 + sx * 13 + 100);
     const kinds = ['fir_a', 'fir_b', 'fir_c', 'spruce_s', 'fir_a', 'birch'];

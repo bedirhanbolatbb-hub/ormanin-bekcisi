@@ -39,8 +39,8 @@ const CAM = {
   update(dt, snap) {
     const t = PL.tool, asp = innerWidth / innerHeight;
     const port = asp < 0.9;
-    const base = port ? (t === 'truck' ? 15 : t === 'blower' ? 11.5 : 10.5) : (t === 'truck' ? 18 : t === 'blower' ? 14 : 13);
-    const wantW = port ? (t === 'truck' ? 13 : t === 'blower' ? 9.5 : 8.2) : (t === 'truck' ? 20 : t === 'blower' ? 14 : 12.5);
+    const base = port ? (t === 'truck' ? 15 : t === 'blower' ? 11.5 : 10.5) : (t === 'truck' ? 18 : t === 'blower' ? 13 : 11.8);
+    const wantW = port ? (t === 'truck' ? 13 : t === 'blower' ? 9.5 : 8.2) : (t === 'truck' ? 20 : t === 'blower' ? 13 : 11.5);
     const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * asp);
     const d = Math.max(base, (wantW / 2) / Math.tan(hf / 2) * 0.82);
     this.d = snap ? d : damp(this.d, d, 2.2, dt);

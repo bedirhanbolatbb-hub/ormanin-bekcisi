@@ -115,9 +115,9 @@ function poseShovel(S, w, toss) {
 
 // ---------- player ----------
 const PL = {
-  x: -2.6, z: 47.8, h: -Math.PI / 2 - 0.35, vx: 0, vz: 0, spd: 0, tool: 'shovel', loads: { sled: 0, truck: 0 },
+  x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', loads: { sled: 0, truck: 0 },
   scoop: 0, toss: 0, tossCD: 0, dumping: null, full: false, fullT: 0, carveRate: 0, moveAmt: 0, blowing: 0,
-  sledX: -1.4, sledZ: 48.2, sledH: -Math.PI / 2, sledBump: 0, sledVis: 0, pileVis: 0, celebrate: 0, breathT: 2,
+  sledX: -4.7, sledZ: 46.6, sledH: -Math.PI / 2, sledBump: 0, sledVis: 0, pileVis: 0, celebrate: 0, breathT: 2,
   init(scene) {
     this.scene = scene;
     this.kid = makePerson({});

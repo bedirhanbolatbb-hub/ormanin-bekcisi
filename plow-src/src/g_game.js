@@ -150,7 +150,7 @@ const GAME = {
       PL.x = o.x; PL.z = o.z; PL.h = o.h || Math.PI;
       if (o.tool && this.owned[o.tool]) { PL.tool = o.tool; }
       if (PL.tool === 'truck') { if (!PL.truckFree(PL.x, PL.z, PL.h)) { const s2 = PL.findTruckSpot(PL.x, PL.z); PL.x = s2.x; PL.z = s2.z; PL.h = s2.h; } }
-      else if (!PL.kidFree(PL.x, PL.z)) { PL.x = -2.6; PL.z = 47.8; }
+      else if (!PL.kidFree(PL.x, PL.z)) { PL.x = -6.0; PL.z = 46.4; }
       PL.sledX = PL.x - Math.sin(PL.h) * 1.4; PL.sledZ = PL.z - Math.cos(PL.h) * 1.4;
       PL.applyTool();
       return true;

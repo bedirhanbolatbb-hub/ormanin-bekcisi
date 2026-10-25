@@ -1151,7 +1151,7 @@ function buildWorld(scene) {
       decor('picket', fx, zc, Math.PI / 2, 1, yardY(fx + sx * 0.2, zc));
     }
     // mailbox by the driveway
-    decor('mailbox', sx * 6.05, L.drive.z1 + 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.1, L.drive.z1 + 0.55));
+    decor('mailbox', sx * 6.05, L.drive.z0 - 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.1, L.drive.z0 - 0.55));
     // trees between lots and behind
     const r = mulberry(L.c * 7 + sx * 13 + 100);
     const kinds = ['fir_a', 'fir_b', 'fir_c', 'spruce_s', 'fir_a', 'birch'];
@@ -1343,9 +1343,9 @@ function poseShovel(S, w, toss) {
 
 // ---------- player ----------
 const PL = {
-  x: -2.6, z: 47.8, h: -Math.PI / 2 - 0.35, vx: 0, vz: 0, spd: 0, tool: 'shovel', loads: { sled: 0, truck: 0 },
+  x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', loads: { sled: 0, truck: 0 },
   scoop: 0, toss: 0, tossCD: 0, dumping: null, full: false, fullT: 0, carveRate: 0, moveAmt: 0, blowing: 0,
-  sledX: -1.4, sledZ: 48.2, sledH: -Math.PI / 2, sledBump: 0, sledVis: 0, pileVis: 0, celebrate: 0, breathT: 2,
+  sledX: -4.7, sledZ: 46.6, sledH: -Math.PI / 2, sledBump: 0, sledVis: 0, pileVis: 0, celebrate: 0, breathT: 2,
   init(scene) {
     this.scene = scene;
     this.kid = makePerson({});
@@ -2011,7 +2011,7 @@ const GAME = {
       PL.x = o.x; PL.z = o.z; PL.h = o.h || Math.PI;
       if (o.tool && this.owned[o.tool]) { PL.tool = o.tool; }
       if (PL.tool === 'truck') { if (!PL.truckFree(PL.x, PL.z, PL.h)) { const s2 = PL.findTruckSpot(PL.x, PL.z); PL.x = s2.x; PL.z = s2.z; PL.h = s2.h; } }
-      else if (!PL.kidFree(PL.x, PL.z)) { PL.x = -2.6; PL.z = 47.8; }
+      else if (!PL.kidFree(PL.x, PL.z)) { PL.x = -6.0; PL.z = 46.4; }
       PL.sledX = PL.x - Math.sin(PL.h) * 1.4; PL.sledZ = PL.z - Math.cos(PL.h) * 1.4;
       PL.applyTool();
       return true;
@@ -2412,8 +2412,8 @@ const CAM = {
   update(dt, snap) {
     const t = PL.tool, asp = innerWidth / innerHeight;
     const port = asp < 0.9;
-    const base = port ? (t === 'truck' ? 15 : t === 'blower' ? 11.5 : 10.5) : (t === 'truck' ? 18 : t === 'blower' ? 14 : 13);
-    const wantW = port ? (t === 'truck' ? 13 : t === 'blower' ? 9.5 : 8.2) : (t === 'truck' ? 20 : t === 'blower' ? 14 : 12.5);
+    const base = port ? (t === 'truck' ? 15 : t === 'blower' ? 11.5 : 10.5) : (t === 'truck' ? 18 : t === 'blower' ? 13 : 11.8);
+    const wantW = port ? (t === 'truck' ? 13 : t === 'blower' ? 9.5 : 8.2) : (t === 'truck' ? 20 : t === 'blower' ? 13 : 11.5);
     const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * asp);
     const d = Math.max(base, (wantW / 2) / Math.tan(hf / 2) * 0.82);
     this.d = snap ? d : damp(this.d, d, 2.2, dt);
