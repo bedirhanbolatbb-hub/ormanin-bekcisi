@@ -121,6 +121,12 @@ const AUD = {
     this._nz('highpass', 3500, 1800, 1.1, 0.12, 0.05, 0.4); this._nz('bandpass', 600, 200, 0.5, 0.18, 0, 0.7);
     this._tone('sine', 120, 60, 0.25, 0.22);
   },
+  cash() {
+    if (!this.ok || this.muted) return;
+    this._nz('bandpass', 2600, 1300, 0.16, 0.12, 0, 1.4);
+    this._bell(1568, 0.07, 0.03, 0.35); this._bell(2093, 0.065, 0.1, 0.5);
+    this._nz('highpass', 4800, 2600, 0.28, 0.045, 0.06, 0.5);
+  },
   sizzle() { if (!this.ok || this.muted) return; this._nz('highpass', 5000, 2500, 0.35, 0.06, 0, 0.5); },
   full() { if (!this.ok || this.muted) return; this._tone('triangle', 520, 500, 0.12, 0.13); this._tone('triangle', 390, 370, 0.18, 0.13, 0.13); },
   buy() {

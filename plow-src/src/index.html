@@ -56,6 +56,14 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .tc-bar i{display:block;height:100%;width:0;background:var(--gold);}
 .toolcard.can{animation:tcg 1.1s infinite;box-shadow:0 5px 0 #d69a00,0 10px 28px rgba(255,194,61,.6),inset 0 0 0 3px var(--gold);}
 .toolcard.can .ui-cost{background:#ff8a1e;}
+.toolcard.gift{background:linear-gradient(#eaf6ff,#fff);}
+.toolcard.gift .ui-ico{background:#cfe9ff;}
+.toolcard.gift .ui-lbl{color:#1f6fb3;}
+.toolcard.gift .tc-bar i{background:#4aa8ff;}
+.toolcard.gift .ui-cost{background:#4aa8ff;}
+.toolcard.gift .ui-cost .ci{display:none;}
+.toolcard.gift .ui-cost{padding:1px 9px;}
+.toolcard.gift .ui-cost b{color:#fff;font-size:13px;}
 @keyframes tcg{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(-2deg)}}
 #tools{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:8px;}
 .tool{width:56px;height:56px;border-radius:16px;background:var(--card);box-shadow:0 4px 0 #c9d5e4,0 8px 18px rgba(43,58,85,.18);padding:7px;opacity:.75;}
@@ -66,10 +74,11 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #loadTag{position:absolute;left:0;top:0;display:none;align-items:center;gap:6px;background:rgba(255,255,255,.95);border-radius:999px;padding:3px 9px 3px 4px;box-shadow:0 3px 10px rgba(43,58,85,.25);}
 #loadTag.on{display:flex;}
 #loadTag .lb{width:54px;height:9px;border-radius:5px;background:#dfe7f1;overflow:hidden;}
-#loadTag .lb i{display:block;height:100%;background:linear-gradient(90deg,#9fd0ff,#5aa9f5);}
+#loadTag .lb i{display:block;height:100%;background:linear-gradient(90deg,#ffe27a,#f5a623);}
+#loadTag .ci{width:18px;height:18px;display:block;}#loadTag .ci svg{width:100%;height:100%;display:block;}
+#loadTag.paid{animation:paid .35s ease-out;}
+@keyframes paid{0%{transform-origin:center}40%{filter:brightness(1.3)}100%{filter:none}}
 #loadTag b{font-family:'Baloo 2',sans-serif;font-size:14px;line-height:16px;}
-#loadTag.full{background:var(--red);color:#fff;animation:fullp .6s infinite;}
-#loadTag.full .lb i{background:#fff;}
 @keyframes fullp{50%{scale:1.12;}}
 #hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:rgba(30,42,64,.82);color:#fff;font-weight:800;font-size:17px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;}
 #hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -130,12 +139,12 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   <button id="btnMute" aria-label="sound"></button>
   <div id="tools"></div>
   <div id="ups"></div>
-  <div id="loadTag"><div class="lb"><i></i></div><b></b></div>
+  <div id="loadTag"><span class="ci"></span><div class="lb"><i></i></div><b></b></div>
   <div id="hint"></div>
   <div id="toast"></div>
   <div id="banner"></div>
   <div id="bubbles"></div>
-  <div id="endcard"><div class="ec"><h2>Maple Lane is saved!</h2><p>Every home is warm and lit again.</p><p id="endStats"></p><p>Pine Street opens soon. Keep plowing for coins!</p><button onclick="document.getElementById('endcard').classList.remove('on')">Keep playing</button></div></div>
+  <div id="endcard"><div class="ec"><h2>Maple Lane is saved!</h2><p>Every home is warm and lit again.</p><p id="endStats"></p><p>Snowstorms keep coming: plow them for coins and save up for the Snow Groomer! Pine Street opens soon.</p><button onclick="document.getElementById('endcard').classList.remove('on')">Keep playing</button></div></div>
 </div>
 <div id="loading"><div class="flakes" id="flakes"></div><div class="logo">PLOW TOWN<small>SNOW CREW</small></div><div class="lbar"><i id="loadbar"></i></div><div id="loadmsg">Loading the town…</div></div>
 <script>(function(){var f=document.getElementById('flakes');for(var i=0;i<40;i++){var e=document.createElement('i');var s=3+Math.random()*7;e.style.left=Math.random()*100+'%';e.style.width=e.style.height=s+'px';e.style.animationDuration=(4+Math.random()*6)+'s';e.style.animationDelay=(-Math.random()*8)+'s';f.appendChild(e);}})();</script>

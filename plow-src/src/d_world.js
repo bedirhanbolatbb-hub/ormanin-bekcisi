@@ -15,9 +15,9 @@ function defineLayout() {
   PAVED.push({ r: rect(-3.5, -50, 3.5, 50), kind: 'asphalt', d: 0.5, key: 'street' });
   PAVED.push({ r: rect(-5.3, -50, -3.5, 50), kind: 'walk', d: 0.38, key: 'walkW' });
   PAVED.push({ r: rect(3.5, -50, 5.3, 50), kind: 'walk', d: 0.38, key: 'walkE' });
-  PAVED.push({ r: rect(-10, 50, 10, 59), kind: 'apron', d: 0.12, key: 'apron' });
-  PAVED.push({ r: rect(-9.5, -59, 9.5, -50), kind: 'asphalt', d: 0.46, key: 'north' });
-  PAVED.push({ r: rect(5.3, -21, 17.5, 1), kind: 'cobble', d: 0.42, key: 'plaza' });
+  PAVED.push({ r: rect(-11, 50, 11, 61), kind: 'apron', d: 0.12, key: 'apron' });
+  PAVED.push({ r: rect(-11, -61.5, 11, -50), kind: 'asphalt', d: 0.46, key: 'north' });
+  PAVED.push({ r: rect(5.3, -22.4, 19.6, 2.4), kind: 'cobble', d: 0.42, key: 'plaza' });
   // lots: side -1 west, +1 east
   const defs = [
     { side: -1, c: 38, model: 'cabin', s: 1.22, who: 'Grandma Rose', key: 'rose', car: null, smoke: [1.40, 4.6, -0.47] },
@@ -139,9 +139,18 @@ function place(key, x, z, rotY, s, y) {
 }
 // static decor batching: collects meshes, merges per material
 const DECOR = { items: [] };
+// mark the ground under an object as solid, so big machines never swing through it
+function solidUnder(o, pad, paved) {
+  o.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(o), T = SNOW.T, H = SNOW.H;
+  SNOW.paint(bb.min.x - pad, bb.min.z - pad, bb.max.x + pad, bb.max.z + pad, (k) => { if (T[k] === 0) T[k] = 2; else if (paved && T[k] === 1) { T[k] = 2; H[k] = 0; } });
+}
+function solidDisc(x, z, r) { const T = SNOW.T; SNOW.paint(x - r, z - r, x + r, z + r, (k, px, pz) => { if (T[k] === 0 && (px - x) ** 2 + (pz - z) ** 2 <= r * r) T[k] = 2; }); }
 function decor(key, x, z, rotY, s, y, opts) {
   const o = place(key, x, z, rotY, s, y);
   o.updateMatrixWorld(true);
+  if (opts && opts.solid !== undefined) solidUnder(o, opts.solid, opts.paved);
+  if (opts && opts.trunk) solidDisc(x, z, opts.trunk);
   o.traverse(c => { if (c.isMesh) DECOR.items.push({ geo: c.geometry, mat: c.material, m: c.matrixWorld.clone(), cast: !(opts && opts.noShadow) }); });
   return o;
 }
@@ -249,12 +258,9 @@ function buildWorld(scene) {
   };
   const pav = key => PAVED.find(p => p.key === key).r;
   for (const L of LOTS) mk(L.key, L.who, [L.drive, L.path], { lot: L });
-  mk('walkW1', 'West sidewalk', [rect(-5.3, 1, -3.5, 50)]);
-  mk('walkE1', 'East sidewalk', [rect(3.5, 1, 5.3, 50)]);
-  mk('walkW2', 'North-west sidewalk', [rect(-5.3, -50, -3.5, 1)]);
-  mk('walkE2', 'North-east sidewalk', [rect(3.5, -50, 5.3, 1)]);
-  mk('street1', 'Maple Lane (south)', [rect(-3.5, 0, 3.5, 50)]);
-  mk('street2', 'Maple Lane (north)', [rect(-3.5, -50, 3.5, 0)]);
+  // a street job = the road plus both sidewalks (fence to fence): wide blades clear it in a few long passes
+  mk('street1', 'Maple Lane (south)', [rect(-5.3, 0, 5.3, 50)]);
+  mk('street2', 'Maple Lane (north)', [rect(-5.3, -50, 5.3, 0)]);
   mk('north', 'Bakery parking', [pav('north')]);
   mk('plaza', 'Town square', [pav('plaza')]);
   mk('apron', 'Crew yard', [pav('apron')]);
@@ -304,7 +310,7 @@ function buildWorld(scene) {
         nm.color.setRGB(0.16, 0.2, 0.27); nm.emissive.setRGB(0, 0, 0); nm.emissiveIntensity = 0; c.material = nm; wins.push(nm);
       }
     });
-    scene.add(o);
+    scene.add(o); solidUnder(o, 0.15, false);
     const house = { lot: L, obj: o, wins, lit: 0, litT: 0, door: new V3(L.side * (front - 0.3), 0, L.c), smoke: null, x: cx, z: L.c };
     if (L.smoke) { const v = new V3(L.smoke[0], L.smoke[1], L.smoke[2]).multiplyScalar(L.s); v.applyEuler(new THREE.Euler(0, rot, 0)); house.smoke = v.add(new V3(cx, 0, L.c)); }
     L.house = house; WORLD.houses.push(house);
@@ -326,28 +332,21 @@ function buildWorld(scene) {
     }
   }
   // 6) bakery + crew kiosk + plaza
-  const bak = place('bakery', 0, -62.2, 0, 2.0, 0); scene.add(bak);
+  const bak = place('bakery', 0, -64.8, 0, 2.0, 0); scene.add(bak); solidUnder(bak, 0.15, false);
   const bakWins = []; bak.traverse(c => { if (c.isMesh && c.material.emissive && c.material.emissive.r > 0.1) { const nm = c.material.clone(); nm.userData = {}; xray(nm); nm.userData.lit = { color: nm.color.clone(), emissive: nm.emissive.clone() }; nm.color.setRGB(0.16, 0.2, 0.27); nm.emissive.setRGB(0, 0, 0); c.material = nm; bakWins.push(nm); } });
-  WORLD.bakery = { obj: bak, wins: bakWins, lit: 0, litT: 0, door: new V3(0, 0, -58.9), smoke: null, x: 0, z: -62.2 };
-  const kiosk = place('kiosk', 12.6, 54.6, -Math.PI / 2, 1.2, 0); scene.add(kiosk);
+  WORLD.bakery = { obj: bak, wins: bakWins, lit: 0, litT: 0, door: new V3(0, 0, -61.4), smoke: null, x: 0, z: -64.8 };
+  const kiosk = place('kiosk', 13.4, 54.6, -Math.PI / 2, 1.2, 0); scene.add(kiosk); solidUnder(kiosk, 0.1, false);
   WORLD.kiosk = kiosk;
   const crewSign = makeSign('SNOW CREW', '#2a6fd6'); crewSign.position.set(12.4, 5.6, 56.6); crewSign.rotation.x = -0.25; crewSign.scale.setScalar(1.5); scene.add(crewSign);
   // plaza
-  const tree = place('xmastree', 12.0, -10, 0, 2.6, 0); scene.add(tree);
+  // the square is an open ring around the big tree: room for the biggest machines; benches and the cocoa stand sit on its edge
+  const tree = place('xmastree', 12.4, -10, 0, 2.6, 0); scene.add(tree);
   const tm = []; tree.traverse(c => { if (c.isMesh && c.material.emissive && (c.material.emissive.r + c.material.emissive.g) > 0.05) { const nm = c.material.clone(); nm.userData = {}; xray(nm); nm.userData.lit = { e: nm.emissive.clone(), i: nm.emissiveIntensity }; nm.emissiveIntensity = 0; c.material = nm; tm.push(nm); } });
   WORLD.tree = { obj: tree, mats: tm, lit: 0 };
-  SNOW.paint(10.6, -11.4, 13.4, -8.6, (k) => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  decor('bench_a', 12, -5.2, Math.PI, 1, 0); decor('bench_a', 12, -14.8, 0, 1, 0);
-  decor('bench_a', 7.2, -10, Math.PI / 2, 1, 0);
-  SNOW.paint(11, -5.6, 13, -4.8, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  SNOW.paint(11, -15.2, 13, -14.4, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  SNOW.paint(6.8, -11, 7.6, -9, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  const cocoa = place('cocoa', 15.8, -18.6, -Math.PI / 4, 1.2, 0); scene.add(cocoa);
-  SNOW.paint(13.6, -20.8, 17.5, -16.4, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
+  SNOW.paint(11.5, -10.9, 13.3, -9.1, (k) => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
+  decor('bench_a', 20.4, -5.5, -Math.PI / 2, 1, 0, { solid: 0.05 }); decor('bench_a', 20.4, -14.5, -Math.PI / 2, 1, 0, { solid: 0.05 });
+  const cocoa = place('cocoa', 21.2, -19.8, -Math.PI / 2.6, 1.2, 0); scene.add(cocoa); solidUnder(cocoa, 0.1, false);
   // 7) melters
-  WORLD.melters.push(makeMelter(-4.2, 55.4, 0.4));
-  WORLD.melters.push(makeMelter(7.3, -1.6, -Math.PI * 0.5));
-  WORLD.melters.push(makeMelter(7.4, -55.6, -Math.PI * 0.6));
   for (const M of WORLD.melters) {
     SNOW.paint(M.x - 1.35, M.z - 1.35, M.x + 1.35, M.z + 1.35, (k, x, z) => { if ((x - M.x) ** 2 + (z - M.z) ** 2 < 1.9 && T[k] === 1) { T[k] = 2; H[k] = 0; } });
     // zone center: offset toward the road
@@ -359,15 +358,15 @@ function buildWorld(scene) {
   // 8) decor: fences, lamps, mailboxes, trees, snowmen
   const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
   for (const L of LOTS) {
-    const sx = L.side, fx = sx * 5.62;
+    const sx = L.side, fx = sx * 5.95;
     const z0 = L.c - 10.8, z1 = L.c + 10.8;
     const gaps = [[L.drive.z0 - 0.2, L.drive.z1 + 0.2], [L.path.z0 - 0.3, L.path.z1 + 0.3]];
     for (let z = z0; z < z1 - 0.5; z += 2.0) {
       const zc = z + 1.0; if (gaps.some(g => zc + 1.0 > g[0] && zc - 1.0 < g[1])) continue;
-      decor('picket', fx, zc, Math.PI / 2, 1, yardY(fx + sx * 0.2, zc));
+      decor('picket', fx, zc, Math.PI / 2, 1, yardY(fx + sx * 0.2, zc), { solid: 0.02 });
     }
     // mailbox by the driveway
-    decor('mailbox', sx * 6.05, L.drive.z0 - 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.1, L.drive.z0 - 0.55));
+    decor('mailbox', sx * 6.45, L.drive.z0 - 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.5, L.drive.z0 - 0.55), { solid: 0.05 });
     // trees between lots and behind
     const r = mulberry(L.c * 7 + sx * 13 + 100);
     const kinds = ['fir_a', 'fir_b', 'fir_c', 'spruce_s', 'fir_a', 'birch'];
@@ -375,7 +374,7 @@ function buildWorld(scene) {
       const tx = sx * (7.5 + r() * 15.5), tz = L.c - (9.4 + r() * 1.3);
       if (Math.abs(tx) < 7) continue;
       const k = kinds[(r() * kinds.length) | 0];
-      decor(k, tx, tz, r() * TAU, 0.9 + r() * 0.6, yardY(tx, tz));
+      decor(k, tx, tz, r() * TAU, 0.9 + r() * 0.6, yardY(tx, tz), { trunk: 0.45 });
     }
     for (let t = 0; t < 3; t++) { const tx = sx * (19.5 + r() * 3.5), tz = L.c - 8 + r() * 16; decor(kinds[(r() * 3) | 0], tx, tz, r() * TAU, 1.1 + r() * 0.7, yardY(tx, tz)); }
   }
@@ -384,22 +383,22 @@ function buildWorld(scene) {
     for (const sx of [-1, 1]) {
       const zz = z + (sx > 0 ? 7.6 : 0); if (zz > 49) continue;
       if (LOTS.some(L => L.side === sx && zz > L.drive.z0 - 0.8 && zz < L.drive.z1 + 0.8)) continue;
-      if (sx > 0 && zz < 1 && zz > -21) continue;
-      const lamp = decor('lamp_a', sx * 6.15, zz, 0, 1.05, yardY(sx * 6.2, zz));
-      WORLD.lamps.push(new V3(sx * 6.15, 3.0 + yardY(sx * 6.2, zz), zz));
+      if (sx > 0 && zz < 3 && zz > -23) continue;
+      const lamp = decor('lamp_a', sx * 6.55, zz, 0, 1.05, yardY(sx * 6.6, zz), { trunk: 0.3 });
+      WORLD.lamps.push(new V3(sx * 6.55, 3.0 + yardY(sx * 6.6, zz), zz));
     }
   }
   // plaza lamps & garlands
-  decor('lamp_b', 6.0, -20.2, 0, 1.2, 0); decor('lamp_b', 17.0, 0.4, 0, 1.2, 0); decor('lamp_b', 17.0, -20.2, 0, 1.2, 0);
-  decor('garland', 17.2, -10, Math.PI / 2, 1.6, 0.2);
+  for (const [lx, lz] of [[5.9, -22.0], [19.3, 2.0], [19.3, -22.0]]) { decor('lamp_b', lx, lz, 0, 1.2, 0); SNOW.paint(lx - 0.25, lz - 0.25, lx + 0.25, lz + 0.25, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } else if (T[k] === 0) T[k] = 2; }); }
+  decor('garland', 19.9, -10, Math.PI / 2, 1.6, 0.2);
   // apron decor
-  decor('saltbin', -9.2, 58.6, 0.2, 1.4, 0.0); decor('shovel_b', 4.2, 59.4, -0.3, 1.1, 0);
-  decor('cone', 9.4, 50.6, 0, 1, 0); decor('cone', -9.4, 50.4, 0, 1, 0);
-  decor('trailsign', 4.8, 58.8, Math.PI, 1.2, 0);
+  decor('saltbin', -10.2, 60.4, 0.2, 1.4, 0.0, { solid: 0.05, paved: true }); decor('shovel_b', 4.2, 61.4, -0.3, 1.1, 0);
+  decor('cone', 10.4, 50.6, 0, 1, 0); decor('cone', -10.4, 50.4, 0, 1, 0);
+  decor('trailsign', 4.8, 61.6, Math.PI, 1.2, 0);
   // north: barrier to "Pine Street"
-  for (let z = -58.5; z <= -50.5; z += 1.4) decor('cone', -9.9, z, 0, 1.1, 0);
-  decor('slowsign', -10.6, -54.5, Math.PI / 2, 1.3, yardY(-10.6, -54.5));
-  const nextSign = makeSign('PINE ST. SOON', '#5a6b80'); nextSign.position.set(-12.5, 2.4, -54.5); nextSign.rotation.y = Math.PI / 2; nextSign.scale.setScalar(1.6); scene.add(nextSign);
+  for (let z = -61; z <= -50.5; z += 1.5) decor('cone', -11.4, z, 0, 1.1, 0);
+  decor('slowsign', -12.1, -56, Math.PI / 2, 1.3, yardY(-12.1, -56));
+  const nextSign = makeSign('PINE ST. SOON', '#5a6b80'); nextSign.position.set(-14, 2.4, -56); nextSign.rotation.y = Math.PI / 2; nextSign.scale.setScalar(1.6); scene.add(nextSign);
   // yard props (some lots already have a snowman/sled)
   decor('snowman_a', 18.5, 31.0, -1.2, 1.0, yardY(18.5, 31));
   decor('sled', -18.0, 20.2, 0.6, 1.0, yardY(-18, 20.2));

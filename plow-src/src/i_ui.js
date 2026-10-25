@@ -26,14 +26,14 @@ const UI = {
   flyers: [], pending: 0, joy: null,
   init() {
     this.cv = $('fx2d'); this.g = this.cv.getContext('2d');
-    $('coinIco').innerHTML = ICONS.coin;
+    $('coinIco').innerHTML = ICONS.coin; $('loadTag').querySelector('.ci').innerHTML = ICONS.coin;
     $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd;
     $('btnMute').onclick = (e) => { e.stopPropagation(); AUD.init(); AUD.setMuted(!AUD.muted); $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd; STORE.set('plowtown_mute', AUD.muted ? '1' : '0'); };
     const ups = $('ups');
     ups.innerHTML = '';
     this.upBtns = [];
     for (let i = 0; i < 3; i++) {
-      const b = document.createElement('button'); b.className = 'up'; b.innerHTML = `<div class="ui-ico">${[ICONS.w, ICONS.cap, ICONS.spd][i]}</div><div class="ui-lbl"></div><div class="ui-dots"></div><div class="ui-cost"><span class="ci">${ICONS.coin}</span><b></b></div>`;
+      const b = document.createElement('button'); b.className = 'up'; b.innerHTML = `<div class="ui-ico">${[ICONS.w, ICONS.spd, ICONS.coin][i]}</div><div class="ui-lbl"></div><div class="ui-dots"></div><div class="ui-cost"><span class="ci">${ICONS.coin}</span><b></b></div>`;
       b.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); GAME.buyUp(i); });
       ups.appendChild(b); this.upBtns.push(b);
     }
@@ -50,14 +50,8 @@ const UI = {
     if (b) { b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 6000); }
   },
   refreshTools() {
-    const box = $('tools'); box.innerHTML = '';
-    const owned = [GAME.best('hand'), GAME.best('truck')].filter(Boolean);
-    box.style.display = owned.length > 1 ? 'flex' : 'none';
-    for (const t of owned) {
-      const b = document.createElement('button'); b.className = 'tool' + (PL.tool === t ? ' on' : ''); b.innerHTML = ICONS[t]; b.dataset.t = t;
-      b.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); if (PL.tool !== t) { PL.setTool(t); this.refreshTools(); GAME.save(); } });
-      box.appendChild(b);
-    }
+    // you always use your newest tool: no switching back to smaller ones
+    const box = $('tools'); box.innerHTML = ''; box.style.display = 'none';
   },
   _lastGoal: -1, _lastCoinTxt: '', _hintT: 0, _uiT: 0,
   update(dt) {
@@ -84,7 +78,17 @@ const UI = {
     }
     const nt = GAME.nextTool(), tb = this.toolBtn;
     if (!nt) { tb.style.display = 'none'; }
+    else if (TIER[nt].gift) {
+      // the plow truck is a gift from the town once every driveway is clear
+      const n = GAME.handDone(), N = HAND_AREAS.length, f = n / N;
+      tb.style.display = n >= 3 ? '' : 'none';
+      if (tb._t !== nt) { tb.querySelector('.ui-ico').innerHTML = ICONS[nt]; tb.querySelector('.ui-lbl').textContent = TIER[nt].name; tb._t = nt; }
+      tb.querySelector('.ui-cost b').textContent = 'FREE ' + n + '/' + N;
+      tb.querySelector('.tc-bar i').style.width = (f * 100).toFixed(1) + '%';
+      tb.classList.remove('can'); tb.classList.add('gift');
+    }
     else {
+      tb.classList.remove('gift');
       const c = TIER[nt].cost, f = clamp(shown / c, 0, 1);
       const vis = f >= 0.35 || GOALS[GAME.goalIdx()].tool === nt;
       tb.style.display = vis ? '' : 'none';
@@ -106,7 +110,7 @@ const UI = {
       const el = $('goal'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
     }
     let f = 1, lab = '';
-    if (g.a) { const a = WORLD.areaByKey[g.a]; f = SNOW.prog(a); lab = Math.floor(f * 100) + '%'; }
+    if (g.a) { const a = WORLD.areaByKey[g.a]; f = a.done ? 1 : Math.min(1, SNOW.prog(a) / doneAt(a)); lab = Math.floor(f * 100) + '%'; }
     else if (g.tool) { const c = TIER[g.tool].cost; f = clamp(shown / c, 0, 1); lab = fmt(Math.min(shown, c)) + '/' + fmt(c); }
     else if (STORM.phase === 'bonus') { f = STORM.multT / 90; lab = 'x2 ' + Math.ceil(STORM.multT) + 's'; }
     else if (STORM.phase === 'storm') { f = STORM.t / 12; lab = 'storm'; }
@@ -118,20 +122,18 @@ const UI = {
   _updLoadTag() {
     const el = $('loadTag');
     const st = PL.stats(), f = PL.load / st.cap;
-    if (f <= 0.02 && !PL.dumping) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
+    if (f <= 0.02) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
     if (!el._on) { el.classList.add('on'); el._on = 1; }
     const p = PL.kind === 'truck' ? this._v.set(PL.x, 2.6 + PL.geo.halfW * 0.9, PL.z) : this._v.set(PL.x, 1.75, PL.z);
     p.project(CAM.cam);
     el.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
-    const full = f >= 0.999;
-    el.classList.toggle('full', full);
     el.querySelector('i').style.width = (clamp(f, 0, 1) * 100).toFixed(1) + '%';
-    el.querySelector('b').textContent = full ? 'FULL!' : Math.floor(PL.load) + '/' + Math.floor(st.cap);
+    const v = '+' + fmt(Math.floor(PL.load * GAME.price())); if (el._v !== v) { el.querySelector('b').textContent = v; el._v = v; }
   },
-  onFull() {
-    if (!GAME.firstFull) { GAME.firstFull = true; this.hint(PL.kind === 'truck' ? 'Blade is full! Push it into a MELTER' : 'Sled is full! Empty it at the MELTER', 5); }
+  onPayout() {
+    if (GAME.payouts === 1) this.hint(PL.kind === 'truck' ? 'A full blade turns into coins!' : 'A full sled turns into coins!', 3);
+    const el = $('loadTag'); if (el) { el.classList.remove('paid'); void el.offsetWidth; el.classList.add('paid'); }
   },
-  onDump() { if (GAME.dumps === 0) this.hint('Snow melts into coins!', 3); },
   onUpgrade(i) { const b = this.upBtns[i]; b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); },
   hint(t, dur) { const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; },
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },

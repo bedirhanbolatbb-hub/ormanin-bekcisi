@@ -63,6 +63,14 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .tc-bar i{display:block;height:100%;width:0;background:var(--gold);}
 .toolcard.can{animation:tcg 1.1s infinite;box-shadow:0 5px 0 #d69a00,0 10px 28px rgba(255,194,61,.6),inset 0 0 0 3px var(--gold);}
 .toolcard.can .ui-cost{background:#ff8a1e;}
+.toolcard.gift{background:linear-gradient(#eaf6ff,#fff);}
+.toolcard.gift .ui-ico{background:#cfe9ff;}
+.toolcard.gift .ui-lbl{color:#1f6fb3;}
+.toolcard.gift .tc-bar i{background:#4aa8ff;}
+.toolcard.gift .ui-cost{background:#4aa8ff;}
+.toolcard.gift .ui-cost .ci{display:none;}
+.toolcard.gift .ui-cost{padding:1px 9px;}
+.toolcard.gift .ui-cost b{color:#fff;font-size:13px;}
 @keyframes tcg{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(-2deg)}}
 #tools{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:8px;}
 .tool{width:56px;height:56px;border-radius:16px;background:var(--card);box-shadow:0 4px 0 #c9d5e4,0 8px 18px rgba(43,58,85,.18);padding:7px;opacity:.75;}
@@ -73,10 +81,11 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #loadTag{position:absolute;left:0;top:0;display:none;align-items:center;gap:6px;background:rgba(255,255,255,.95);border-radius:999px;padding:3px 9px 3px 4px;box-shadow:0 3px 10px rgba(43,58,85,.25);}
 #loadTag.on{display:flex;}
 #loadTag .lb{width:54px;height:9px;border-radius:5px;background:#dfe7f1;overflow:hidden;}
-#loadTag .lb i{display:block;height:100%;background:linear-gradient(90deg,#9fd0ff,#5aa9f5);}
+#loadTag .lb i{display:block;height:100%;background:linear-gradient(90deg,#ffe27a,#f5a623);}
+#loadTag .ci{width:18px;height:18px;display:block;}#loadTag .ci svg{width:100%;height:100%;display:block;}
+#loadTag.paid{animation:paid .35s ease-out;}
+@keyframes paid{0%{transform-origin:center}40%{filter:brightness(1.3)}100%{filter:none}}
 #loadTag b{font-family:'Baloo 2',sans-serif;font-size:14px;line-height:16px;}
-#loadTag.full{background:var(--red);color:#fff;animation:fullp .6s infinite;}
-#loadTag.full .lb i{background:#fff;}
 @keyframes fullp{50%{scale:1.12;}}
 #hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:rgba(30,42,64,.82);color:#fff;font-weight:800;font-size:17px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;}
 #hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -137,12 +146,12 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   <button id="btnMute" aria-label="sound"></button>
   <div id="tools"></div>
   <div id="ups"></div>
-  <div id="loadTag"><div class="lb"><i></i></div><b></b></div>
+  <div id="loadTag"><span class="ci"></span><div class="lb"><i></i></div><b></b></div>
   <div id="hint"></div>
   <div id="toast"></div>
   <div id="banner"></div>
   <div id="bubbles"></div>
-  <div id="endcard"><div class="ec"><h2>Maple Lane is saved!</h2><p>Every home is warm and lit again.</p><p id="endStats"></p><p>Pine Street opens soon. Keep plowing for coins!</p><button onclick="document.getElementById('endcard').classList.remove('on')">Keep playing</button></div></div>
+  <div id="endcard"><div class="ec"><h2>Maple Lane is saved!</h2><p>Every home is warm and lit again.</p><p id="endStats"></p><p>Snowstorms keep coming: plow them for coins and save up for the Snow Groomer! Pine Street opens soon.</p><button onclick="document.getElementById('endcard').classList.remove('on')">Keep playing</button></div></div>
 </div>
 <div id="loading"><div class="flakes" id="flakes"></div><div class="logo">PLOW TOWN<small>SNOW CREW</small></div><div class="lbar"><i id="loadbar"></i></div><div id="loadmsg">Loading the town…</div></div>
 <script>(function(){var f=document.getElementById('flakes');for(var i=0;i<40;i++){var e=document.createElement('i');var s=3+Math.random()*7;e.style.left=Math.random()*100+'%';e.style.width=e.style.height=s+'px';e.style.animationDuration=(4+Math.random()*6)+'s';e.style.animationDelay=(-Math.random()*8)+'s';f.appendChild(e);}})();</script>
@@ -392,6 +401,12 @@ const AUD = {
     this._nz('highpass', 3500, 1800, 1.1, 0.12, 0.05, 0.4); this._nz('bandpass', 600, 200, 0.5, 0.18, 0, 0.7);
     this._tone('sine', 120, 60, 0.25, 0.22);
   },
+  cash() {
+    if (!this.ok || this.muted) return;
+    this._nz('bandpass', 2600, 1300, 0.16, 0.12, 0, 1.4);
+    this._bell(1568, 0.07, 0.03, 0.35); this._bell(2093, 0.065, 0.1, 0.5);
+    this._nz('highpass', 4800, 2600, 0.28, 0.045, 0.06, 0.5);
+  },
   sizzle() { if (!this.ok || this.muted) return; this._nz('highpass', 5000, 2500, 0.35, 0.06, 0, 0.5); },
   full() { if (!this.ok || this.muted) return; this._tone('triangle', 520, 500, 0.12, 0.13); this._tone('triangle', 390, 370, 0.18, 0.13, 0.13); },
   buy() {
@@ -520,6 +535,7 @@ const SNOW = {
   },
   type(x, z) { const k = this.idx(x, z); return k < 0 ? 0 : this.T[k]; },
   walk(x, z) { const k = this.idx(x, z); if (k < 0) return false; const t = this.T[k]; return t === 1 || t === 3; },
+  solid(x, z) { const k = this.idx(x, z); return k < 0 || this.T[k] === 2; },
   depth(x, z) { // bilinear snow depth
     const fx = (x - this.X0) / this.C, fz = (z - this.Z0) / this.C;
     const i = Math.floor(fx), j = Math.floor(fz);
@@ -807,9 +823,9 @@ function defineLayout() {
   PAVED.push({ r: rect(-3.5, -50, 3.5, 50), kind: 'asphalt', d: 0.5, key: 'street' });
   PAVED.push({ r: rect(-5.3, -50, -3.5, 50), kind: 'walk', d: 0.38, key: 'walkW' });
   PAVED.push({ r: rect(3.5, -50, 5.3, 50), kind: 'walk', d: 0.38, key: 'walkE' });
-  PAVED.push({ r: rect(-10, 50, 10, 59), kind: 'apron', d: 0.12, key: 'apron' });
-  PAVED.push({ r: rect(-9.5, -59, 9.5, -50), kind: 'asphalt', d: 0.46, key: 'north' });
-  PAVED.push({ r: rect(5.3, -21, 17.5, 1), kind: 'cobble', d: 0.42, key: 'plaza' });
+  PAVED.push({ r: rect(-11, 50, 11, 61), kind: 'apron', d: 0.12, key: 'apron' });
+  PAVED.push({ r: rect(-11, -61.5, 11, -50), kind: 'asphalt', d: 0.46, key: 'north' });
+  PAVED.push({ r: rect(5.3, -22.4, 19.6, 2.4), kind: 'cobble', d: 0.42, key: 'plaza' });
   // lots: side -1 west, +1 east
   const defs = [
     { side: -1, c: 38, model: 'cabin', s: 1.22, who: 'Grandma Rose', key: 'rose', car: null, smoke: [1.40, 4.6, -0.47] },
@@ -931,9 +947,18 @@ function place(key, x, z, rotY, s, y) {
 }
 // static decor batching: collects meshes, merges per material
 const DECOR = { items: [] };
+// mark the ground under an object as solid, so big machines never swing through it
+function solidUnder(o, pad, paved) {
+  o.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(o), T = SNOW.T, H = SNOW.H;
+  SNOW.paint(bb.min.x - pad, bb.min.z - pad, bb.max.x + pad, bb.max.z + pad, (k) => { if (T[k] === 0) T[k] = 2; else if (paved && T[k] === 1) { T[k] = 2; H[k] = 0; } });
+}
+function solidDisc(x, z, r) { const T = SNOW.T; SNOW.paint(x - r, z - r, x + r, z + r, (k, px, pz) => { if (T[k] === 0 && (px - x) ** 2 + (pz - z) ** 2 <= r * r) T[k] = 2; }); }
 function decor(key, x, z, rotY, s, y, opts) {
   const o = place(key, x, z, rotY, s, y);
   o.updateMatrixWorld(true);
+  if (opts && opts.solid !== undefined) solidUnder(o, opts.solid, opts.paved);
+  if (opts && opts.trunk) solidDisc(x, z, opts.trunk);
   o.traverse(c => { if (c.isMesh) DECOR.items.push({ geo: c.geometry, mat: c.material, m: c.matrixWorld.clone(), cast: !(opts && opts.noShadow) }); });
   return o;
 }
@@ -1041,12 +1066,9 @@ function buildWorld(scene) {
   };
   const pav = key => PAVED.find(p => p.key === key).r;
   for (const L of LOTS) mk(L.key, L.who, [L.drive, L.path], { lot: L });
-  mk('walkW1', 'West sidewalk', [rect(-5.3, 1, -3.5, 50)]);
-  mk('walkE1', 'East sidewalk', [rect(3.5, 1, 5.3, 50)]);
-  mk('walkW2', 'North-west sidewalk', [rect(-5.3, -50, -3.5, 1)]);
-  mk('walkE2', 'North-east sidewalk', [rect(3.5, -50, 5.3, 1)]);
-  mk('street1', 'Maple Lane (south)', [rect(-3.5, 0, 3.5, 50)]);
-  mk('street2', 'Maple Lane (north)', [rect(-3.5, -50, 3.5, 0)]);
+  // a street job = the road plus both sidewalks (fence to fence): wide blades clear it in a few long passes
+  mk('street1', 'Maple Lane (south)', [rect(-5.3, 0, 5.3, 50)]);
+  mk('street2', 'Maple Lane (north)', [rect(-5.3, -50, 5.3, 0)]);
   mk('north', 'Bakery parking', [pav('north')]);
   mk('plaza', 'Town square', [pav('plaza')]);
   mk('apron', 'Crew yard', [pav('apron')]);
@@ -1096,7 +1118,7 @@ function buildWorld(scene) {
         nm.color.setRGB(0.16, 0.2, 0.27); nm.emissive.setRGB(0, 0, 0); nm.emissiveIntensity = 0; c.material = nm; wins.push(nm);
       }
     });
-    scene.add(o);
+    scene.add(o); solidUnder(o, 0.15, false);
     const house = { lot: L, obj: o, wins, lit: 0, litT: 0, door: new V3(L.side * (front - 0.3), 0, L.c), smoke: null, x: cx, z: L.c };
     if (L.smoke) { const v = new V3(L.smoke[0], L.smoke[1], L.smoke[2]).multiplyScalar(L.s); v.applyEuler(new THREE.Euler(0, rot, 0)); house.smoke = v.add(new V3(cx, 0, L.c)); }
     L.house = house; WORLD.houses.push(house);
@@ -1118,28 +1140,21 @@ function buildWorld(scene) {
     }
   }
   // 6) bakery + crew kiosk + plaza
-  const bak = place('bakery', 0, -62.2, 0, 2.0, 0); scene.add(bak);
+  const bak = place('bakery', 0, -64.8, 0, 2.0, 0); scene.add(bak); solidUnder(bak, 0.15, false);
   const bakWins = []; bak.traverse(c => { if (c.isMesh && c.material.emissive && c.material.emissive.r > 0.1) { const nm = c.material.clone(); nm.userData = {}; xray(nm); nm.userData.lit = { color: nm.color.clone(), emissive: nm.emissive.clone() }; nm.color.setRGB(0.16, 0.2, 0.27); nm.emissive.setRGB(0, 0, 0); c.material = nm; bakWins.push(nm); } });
-  WORLD.bakery = { obj: bak, wins: bakWins, lit: 0, litT: 0, door: new V3(0, 0, -58.9), smoke: null, x: 0, z: -62.2 };
-  const kiosk = place('kiosk', 12.6, 54.6, -Math.PI / 2, 1.2, 0); scene.add(kiosk);
+  WORLD.bakery = { obj: bak, wins: bakWins, lit: 0, litT: 0, door: new V3(0, 0, -61.4), smoke: null, x: 0, z: -64.8 };
+  const kiosk = place('kiosk', 13.4, 54.6, -Math.PI / 2, 1.2, 0); scene.add(kiosk); solidUnder(kiosk, 0.1, false);
   WORLD.kiosk = kiosk;
   const crewSign = makeSign('SNOW CREW', '#2a6fd6'); crewSign.position.set(12.4, 5.6, 56.6); crewSign.rotation.x = -0.25; crewSign.scale.setScalar(1.5); scene.add(crewSign);
   // plaza
-  const tree = place('xmastree', 12.0, -10, 0, 2.6, 0); scene.add(tree);
+  // the square is an open ring around the big tree: room for the biggest machines; benches and the cocoa stand sit on its edge
+  const tree = place('xmastree', 12.4, -10, 0, 2.6, 0); scene.add(tree);
   const tm = []; tree.traverse(c => { if (c.isMesh && c.material.emissive && (c.material.emissive.r + c.material.emissive.g) > 0.05) { const nm = c.material.clone(); nm.userData = {}; xray(nm); nm.userData.lit = { e: nm.emissive.clone(), i: nm.emissiveIntensity }; nm.emissiveIntensity = 0; c.material = nm; tm.push(nm); } });
   WORLD.tree = { obj: tree, mats: tm, lit: 0 };
-  SNOW.paint(10.6, -11.4, 13.4, -8.6, (k) => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  decor('bench_a', 12, -5.2, Math.PI, 1, 0); decor('bench_a', 12, -14.8, 0, 1, 0);
-  decor('bench_a', 7.2, -10, Math.PI / 2, 1, 0);
-  SNOW.paint(11, -5.6, 13, -4.8, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  SNOW.paint(11, -15.2, 13, -14.4, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  SNOW.paint(6.8, -11, 7.6, -9, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  const cocoa = place('cocoa', 15.8, -18.6, -Math.PI / 4, 1.2, 0); scene.add(cocoa);
-  SNOW.paint(13.6, -20.8, 17.5, -16.4, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
+  SNOW.paint(11.5, -10.9, 13.3, -9.1, (k) => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
+  decor('bench_a', 20.4, -5.5, -Math.PI / 2, 1, 0, { solid: 0.05 }); decor('bench_a', 20.4, -14.5, -Math.PI / 2, 1, 0, { solid: 0.05 });
+  const cocoa = place('cocoa', 21.2, -19.8, -Math.PI / 2.6, 1.2, 0); scene.add(cocoa); solidUnder(cocoa, 0.1, false);
   // 7) melters
-  WORLD.melters.push(makeMelter(-4.2, 55.4, 0.4));
-  WORLD.melters.push(makeMelter(7.3, -1.6, -Math.PI * 0.5));
-  WORLD.melters.push(makeMelter(7.4, -55.6, -Math.PI * 0.6));
   for (const M of WORLD.melters) {
     SNOW.paint(M.x - 1.35, M.z - 1.35, M.x + 1.35, M.z + 1.35, (k, x, z) => { if ((x - M.x) ** 2 + (z - M.z) ** 2 < 1.9 && T[k] === 1) { T[k] = 2; H[k] = 0; } });
     // zone center: offset toward the road
@@ -1151,15 +1166,15 @@ function buildWorld(scene) {
   // 8) decor: fences, lamps, mailboxes, trees, snowmen
   const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
   for (const L of LOTS) {
-    const sx = L.side, fx = sx * 5.62;
+    const sx = L.side, fx = sx * 5.95;
     const z0 = L.c - 10.8, z1 = L.c + 10.8;
     const gaps = [[L.drive.z0 - 0.2, L.drive.z1 + 0.2], [L.path.z0 - 0.3, L.path.z1 + 0.3]];
     for (let z = z0; z < z1 - 0.5; z += 2.0) {
       const zc = z + 1.0; if (gaps.some(g => zc + 1.0 > g[0] && zc - 1.0 < g[1])) continue;
-      decor('picket', fx, zc, Math.PI / 2, 1, yardY(fx + sx * 0.2, zc));
+      decor('picket', fx, zc, Math.PI / 2, 1, yardY(fx + sx * 0.2, zc), { solid: 0.02 });
     }
     // mailbox by the driveway
-    decor('mailbox', sx * 6.05, L.drive.z0 - 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.1, L.drive.z0 - 0.55));
+    decor('mailbox', sx * 6.45, L.drive.z0 - 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.5, L.drive.z0 - 0.55), { solid: 0.05 });
     // trees between lots and behind
     const r = mulberry(L.c * 7 + sx * 13 + 100);
     const kinds = ['fir_a', 'fir_b', 'fir_c', 'spruce_s', 'fir_a', 'birch'];
@@ -1167,7 +1182,7 @@ function buildWorld(scene) {
       const tx = sx * (7.5 + r() * 15.5), tz = L.c - (9.4 + r() * 1.3);
       if (Math.abs(tx) < 7) continue;
       const k = kinds[(r() * kinds.length) | 0];
-      decor(k, tx, tz, r() * TAU, 0.9 + r() * 0.6, yardY(tx, tz));
+      decor(k, tx, tz, r() * TAU, 0.9 + r() * 0.6, yardY(tx, tz), { trunk: 0.45 });
     }
     for (let t = 0; t < 3; t++) { const tx = sx * (19.5 + r() * 3.5), tz = L.c - 8 + r() * 16; decor(kinds[(r() * 3) | 0], tx, tz, r() * TAU, 1.1 + r() * 0.7, yardY(tx, tz)); }
   }
@@ -1176,22 +1191,22 @@ function buildWorld(scene) {
     for (const sx of [-1, 1]) {
       const zz = z + (sx > 0 ? 7.6 : 0); if (zz > 49) continue;
       if (LOTS.some(L => L.side === sx && zz > L.drive.z0 - 0.8 && zz < L.drive.z1 + 0.8)) continue;
-      if (sx > 0 && zz < 1 && zz > -21) continue;
-      const lamp = decor('lamp_a', sx * 6.15, zz, 0, 1.05, yardY(sx * 6.2, zz));
-      WORLD.lamps.push(new V3(sx * 6.15, 3.0 + yardY(sx * 6.2, zz), zz));
+      if (sx > 0 && zz < 3 && zz > -23) continue;
+      const lamp = decor('lamp_a', sx * 6.55, zz, 0, 1.05, yardY(sx * 6.6, zz), { trunk: 0.3 });
+      WORLD.lamps.push(new V3(sx * 6.55, 3.0 + yardY(sx * 6.6, zz), zz));
     }
   }
   // plaza lamps & garlands
-  decor('lamp_b', 6.0, -20.2, 0, 1.2, 0); decor('lamp_b', 17.0, 0.4, 0, 1.2, 0); decor('lamp_b', 17.0, -20.2, 0, 1.2, 0);
-  decor('garland', 17.2, -10, Math.PI / 2, 1.6, 0.2);
+  for (const [lx, lz] of [[5.9, -22.0], [19.3, 2.0], [19.3, -22.0]]) { decor('lamp_b', lx, lz, 0, 1.2, 0); SNOW.paint(lx - 0.25, lz - 0.25, lx + 0.25, lz + 0.25, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } else if (T[k] === 0) T[k] = 2; }); }
+  decor('garland', 19.9, -10, Math.PI / 2, 1.6, 0.2);
   // apron decor
-  decor('saltbin', -9.2, 58.6, 0.2, 1.4, 0.0); decor('shovel_b', 4.2, 59.4, -0.3, 1.1, 0);
-  decor('cone', 9.4, 50.6, 0, 1, 0); decor('cone', -9.4, 50.4, 0, 1, 0);
-  decor('trailsign', 4.8, 58.8, Math.PI, 1.2, 0);
+  decor('saltbin', -10.2, 60.4, 0.2, 1.4, 0.0, { solid: 0.05, paved: true }); decor('shovel_b', 4.2, 61.4, -0.3, 1.1, 0);
+  decor('cone', 10.4, 50.6, 0, 1, 0); decor('cone', -10.4, 50.4, 0, 1, 0);
+  decor('trailsign', 4.8, 61.6, Math.PI, 1.2, 0);
   // north: barrier to "Pine Street"
-  for (let z = -58.5; z <= -50.5; z += 1.4) decor('cone', -9.9, z, 0, 1.1, 0);
-  decor('slowsign', -10.6, -54.5, Math.PI / 2, 1.3, yardY(-10.6, -54.5));
-  const nextSign = makeSign('PINE ST. SOON', '#5a6b80'); nextSign.position.set(-12.5, 2.4, -54.5); nextSign.rotation.y = Math.PI / 2; nextSign.scale.setScalar(1.6); scene.add(nextSign);
+  for (let z = -61; z <= -50.5; z += 1.5) decor('cone', -11.4, z, 0, 1.1, 0);
+  decor('slowsign', -12.1, -56, Math.PI / 2, 1.3, yardY(-12.1, -56));
+  const nextSign = makeSign('PINE ST. SOON', '#5a6b80'); nextSign.position.set(-14, 2.4, -56); nextSign.rotation.y = Math.PI / 2; nextSign.scale.setScalar(1.6); scene.add(nextSign);
   // yard props (some lots already have a snowman/sled)
   decor('snowman_a', 18.5, 31.0, -1.2, 1.0, yardY(18.5, 31));
   decor('sled', -18.0, 20.2, 0.6, 1.0, yardY(-18, 20.2));
@@ -1351,14 +1366,14 @@ function poseShovel(S, w, toss) {
 
 // ---------- truck shapes (per tier) ----------
 const TGEO = {
-  pickup: { model: 'pickup', off: 0, rear: 2.6, nose: 2.6, halfW: 1.08, bladeZ: 3.25, bladeS: [1.9, 1.7], carve: 3.62, pileZ: 3.75, beacon: [0, 1.95, -0.3], cam: 1 },
-  tipper: { model: 'tipper', off: 1.97, rear: 3.65, nose: 3.6, halfW: 1.46, bladeZ: 4.62, bladeS: [2.8, 2.0], carve: 5.06, pileZ: 5.2, beacon: [0, 3.25, 3.0], cam: 1.16, tint: 0xf07a12 },
-  groomer: { model: 'groomer', off: 0.34, rear: 4.45, nose: 4.1, halfW: 2.25, bladeZ: null, carve: 4.5, pileZ: 4.65, beacon: [0, 3.5, 1.9], cam: 1.32, pivot: true },
+  pickup: { model: 'pickup', turn: 2.0, off: 0, rear: 2.6, nose: 2.6, halfW: 1.08, bladeZ: 3.25, bladeS: [1.9, 1.7], carve: 3.62, pileZ: 3.75, beacon: [0, 1.95, -0.3], cam: 1 },
+  tipper: { model: 'tipper', turn: 1.75, off: 1.97, rear: 3.65, nose: 3.6, halfW: 1.46, bladeZ: 4.62, bladeS: [2.8, 2.0], carve: 5.06, pileZ: 5.2, beacon: [0, 3.25, 3.0], cam: 1.16, tint: 0xf07a12 },
+  groomer: { model: 'groomer', turn: 1.5, off: 0.34, rear: 4.45, nose: 4.1, halfW: 2.25, bladeZ: null, carve: 4.5, pileZ: 4.65, beacon: [0, 3.5, 1.9], cam: 1.32, pivot: true },
 };
 // ---------- player ----------
 const PL = {
-  x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', loads: { sled: 0, truck: 0 },
-  scoop: 0, toss: 0, tossCD: 0, dumping: null, full: false, fullT: 0, carveRate: 0, moveAmt: 0, blowing: 0,
+  x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', load: 0,
+  scoop: 0, toss: 0, tossCD: 0, full: false, payFlash: 0, fullT: 0, carveRate: 0, moveAmt: 0, blowing: 0,
   sledX: -4.7, sledZ: 46.6, sledH: -Math.PI / 2, sledBump: 0, sledVis: 0, pileVis: 0, celebrate: 0, breathT: 2,
   init(scene) {
     this.scene = scene;
@@ -1401,8 +1416,6 @@ const PL = {
   },
   get kind() { return TIER[this.tool].kind; },
   get geo() { return TGEO[TIER[this.tool].geo || 'pickup']; },
-  get load() { return this.kind === 'truck' ? this.loads.truck : this.loads.sled; },
-  set load(v) { if (this.kind === 'truck') this.loads.truck = v; else this.loads.sled = v; },
   stats() { return GAME.stats(this.tool); },
   applyTool() {
     const t = this.tool, k = this.kind, st = this.stats();
@@ -1430,6 +1443,7 @@ const PL = {
   },
   setTool(t, silent) {
     if (t === this.tool) return;
+    if (this.load > 0.3) this.payout(true);
     const was = this.tool, wasK = TIER[was].kind, newK = TIER[t].kind;
     if (newK === 'truck') {
       this.tool = t;
@@ -1453,7 +1467,7 @@ const PL = {
     let best = null, bd = 1e9;
     const cand = [];
     for (let zz = -46; zz <= 46; zz += 2) for (const xx of [-1.75, 0, 1.75]) cand.push([xx, zz]);
-    for (const xx of [-5, -2.5, 0, 2.5, 5]) { cand.push([xx, 54.5]); cand.push([xx, -54.5]); }
+    for (const xx of [-5, -2.5, 0, 2.5, 5]) { cand.push([xx, 55.5]); cand.push([xx, -55.8]); }
     for (const [xx, zz] of cand) {
       const d = (xx - x) ** 2 + (zz - z) ** 2; if (d >= bd) continue;
       for (const hh of [h0, h0 + Math.PI, Math.PI / 2, -Math.PI / 2]) if (this.truckFree(xx, zz, hh)) { bd = d; best = { x: xx, z: zz, h: hh }; break; }
@@ -1469,18 +1483,37 @@ const PL = {
     const px = x + fx * 2.0, pz = z + fz * 2.0;
     return SNOW.walk(px + rx * w, pz + rz * w) && SNOW.walk(px - rx * w, pz - rz * w) && SNOW.walk(x + fx * 1.0, z + fz * 1.0);
   },
-  truckFree(x, z, h) {
-    const G = this.geo, fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx, hw = G.halfW;
-    const bw = Math.max(hw, this.stats().w * 0.5 - 0.22), bz = G.carve - 0.12;
-    const pts = [[hw - 0.03, -G.rear], [-hw + 0.03, -G.rear], [hw, 0], [-hw, 0], [hw, -G.rear * 0.5], [-hw, -G.rear * 0.5], [hw, G.nose], [-hw, G.nose], [bw, bz], [-bw, bz], [bw * 0.5, bz], [-bw * 0.5, bz], [0, G.carve]];
-    for (const [a, b] of pts) if (!SNOW.walk(x + rx * a + fx * b, z + rz * a + fz * b)) return false;
-    return true;
+  // how a pose sits: Infinity = hits something hard (house, fence, post, car, tree) or leaves the map;
+  // otherwise the number of wheel/body points that are off the paved ground (hanging over a snowy lawn)
+  poseBad(x, z, h) {
+    const G = this.geo, fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx, hw = G.halfW, T = SNOW.T;
+    const bw = Math.max(hw, this.stats().w * 0.5 - 0.4), bz = G.carve - 0.12, P = this._pts || (this._pts = []);
+    P.length = 0;
+    P.push(hw - 0.03, -G.rear, -hw + 0.03, -G.rear, hw, 0, -hw, 0, hw, -G.rear * 0.5, -hw, -G.rear * 0.5, hw, G.nose, -hw, G.nose, 0, G.carve);
+    let off = 0;
+    for (let i = 0; i < P.length; i += 2) {
+      const k = SNOW.idx(x + rx * P[i] + fx * P[i + 1], z + rz * P[i] + fz * P[i + 1]);
+      if (k < 0) return Infinity; const t = T[k]; if (t === 2) return Infinity; if (t === 0) off++;
+    }
+    const B = [bw, -bw, bw * 0.5, -bw * 0.5, hw, -hw];
+    for (const a of B) if (SNOW.solid(x + rx * a + fx * bz, z + rz * a + fz * bz)) return Infinity;
+    return off;
+  },
+  truckFree(x, z, h) { return this.poseBad(x, z, h) === 0; },
+  // after an upgrade (wider blade) or a tool change the machine may overlap something: move it to the nearest free spot
+  ensureFree() {
+    if (this.kind !== 'truck' || this.truckFree(this.x, this.z, this.h)) return;
+    for (let r = 0.15; r <= 3.2; r += 0.15) for (const dh of [0, 0.25, -0.25, 0.5, -0.5]) for (let k = 0; k < 16; k++) {
+      const ang = k / 16 * TAU, x = this.x + Math.sin(ang) * r, z = this.z + Math.cos(ang) * r;
+      if (this.truckFree(x, z, this.h + dh)) { this.x = x; this.z = z; this.h += dh; return; }
+    }
+    const s = this.findTruckSpot(this.x, this.z); this.x = s.x; this.z = s.z; this.h = s.h;
   },
   // ---- main update ----
   update(dt, inp) {
     const st = this.stats(); const t = this.kind;
     if (this.h > Math.PI * 4 || this.h < -Math.PI * 4) this.h = Math.atan2(Math.sin(this.h), Math.cos(this.h));
-    this.full = this.load >= st.cap - 0.01;
+    this.full = false;
     let mvx = inp.x, mvz = -inp.y, mag = Math.min(1, Math.hypot(mvx, mvz));
     if (mag > 0.001) { mvx /= mag; mvz /= mag; }
     if (mag < 0.12) mag = 0;
@@ -1488,14 +1521,13 @@ const PL = {
     if (t !== 'truck') removed = this._walk(dt, st, mvx, mvz, mag);
     else removed = this._drive(dt, st, mvx, mvz, mag);
     this.carveRate = damp(this.carveRate, removed / Math.max(dt, 1e-3), 10, dt);
-    // full warning
-    if (this.full) { if (this.fullT <= 0) { AUD.full(); UI.onFull(); } this.fullT = 1; } else this.fullT = Math.max(0, this.fullT - dt);
-    this._dumpCheck(dt);
+    // a full sled / blade turns into coins right away (no trips to a melter)
+    if (this.load >= st.cap - 0.01) this.payout();
     this._visuals(dt, st);
   },
   _walk(dt, st, mx, mz, mag) {
     const isB = this.kind === 'blower';
-    let sp = st.spd * (this.full ? 0.9 : 1);
+    let sp = st.spd;
     const tvx = mx * sp * mag, tvz = mz * sp * mag;
     const acc = mag > 0 ? 20 : 26;
     this.vx = damp(this.vx, tvx, acc * 0.5, dt); this.vz = damp(this.vz, tvz, acc * 0.5, dt);
@@ -1559,67 +1591,64 @@ const PL = {
     FX.clump(b.x, b.y + 0.3, b.z, sx, 0.45 + this.sledVis * 0.35, sz, size, 0.34, (x, y, z) => { this.sledBump = 1; FX.puff(x, y, z, 4, 0.5); AUD.plop(); });
     AUD.toss();
   },
+  // arcade driving: the machine turns toward your finger right away (tight turns, it slows down while turning hard).
+  // A turn is tried around several points along the machine (middle, back, front...) so it squeezes through tight
+  // spots; if nothing fits it backs up by itself. Nothing ever needs a manual reverse.
   _drive(dt, st, mx, mz, mag) {
     const G = this.geo;
+    this.ensureFree();
     const want = mag > 0 ? Math.atan2(mx, mz) : this.h;
-    const a = angDiff(this.h, want);
-    if (G.pivot) return this._drivePivot(dt, st, mag, a, G);
-    if (mag > 0 && Math.abs(a) > 2.3 && this.spd < 1.2) this.rev = true;
-    if (this.rev && !this.autoRev && (mag === 0 || Math.abs(a) < 1.2)) this.rev = false;
-    // assist: stuck nose-first against something while pushing forward -> back up a little
-    if (this.autoRev > 0) { this.autoRev -= dt; if (this.autoRev <= 0) { this.autoRev = 0; this.rev = false; } }
-    if (!this.rev && mag > 0 && Math.abs(this.spd) < 0.3) { this.blockT = (this.blockT || 0) + dt; if (this.blockT > 0.35) { this.blockT = 0; this.rev = true; this.autoRev = 0.9; } } else this.blockT = 0;
-    let target;
-    if (this.rev) target = -3.2 * mag;
-    else target = st.spd * mag * (Math.abs(a) < 1.9 ? 1 - 0.42 * Math.abs(a) / 1.9 : 0.4);
-    if (this.full && SNOW.depth(this.x + Math.sin(this.h) * (G.carve + 0.2), this.z + Math.cos(this.h) * (G.carve + 0.2)) > 0.1) target *= 0.55;
-    const ac = Math.sign(target - this.spd) === Math.sign(this.spd) || this.spd === 0 ? 7 : 12;
-    this.spd += clamp(target - this.spd, -ac * dt, ac * dt);
-    const om = clamp((Math.abs(this.spd) + 1.0) / 3.0, 0.4, 2.3);
-    let yaw = clamp(a * 3.0, -om, om);
-    if (this.rev) yaw = -Math.sign(a || 1) * om * 0.9;
-    if (mag === 0) yaw = 0;
+    const a = angDiff(this.h, want), al = Math.abs(a);
+    const esc = this.escape > 0;
+    let target = mag === 0 ? 0 : st.spd * mag * (al < 0.35 ? 1 : al < 1.1 ? 1 - (al - 0.35) * 1.05 : 0.15);
+    if (esc) { this.escape -= dt; target = -2.6; }
+    const acc = target > this.spd ? (this.spd < 0 ? 14 : 7) : 12;
+    this.spd += clamp(target - this.spd, -acc * dt, acc * dt);
+    const turn = G.turn || 1.8;
+    const yaw = mag === 0 ? 0 : clamp(a * 3.4, -turn, turn) * (esc ? 0.7 : 1);
     const nh = this.h + yaw * dt;
-    const fx = Math.sin(nh), fz = Math.cos(nh);
-    const nx = this.x + fx * this.spd * dt, nz = this.z + fz * this.spd * dt;
-    const ox = this.x + Math.sin(this.h) * this.spd * dt, oz = this.z + Math.cos(this.h) * this.spd * dt;
-    if (this.truckFree(nx, nz, nh)) { this.x = nx; this.z = nz; this.h = nh; }
-    else if (this.truckFree(ox, oz, this.h)) { this.x = ox; this.z = oz; }
-    else if (this.truckFree(this.x, this.z, nh)) { this.h = nh; this.spd *= 0.5; }
-    else if (this.truckFree(nx, this.z, this.h)) { this.x = nx; this.spd *= 0.7; }
-    else if (this.truckFree(this.x, nz, this.h)) { this.z = nz; this.spd *= 0.7; }
-    else { if (Math.abs(this.spd) > 2) { CAM.shake = 0.25; AUD.thump(); } this.spd = 0; }
-    // never-stuck assist: if pushing but not moving, pivot in place / slide free
-    const moved = Math.hypot(this.x - (this._px || this.x), this.z - (this._pz || this.z)); this._px = this.x; this._pz = this.z;
-    if (mag > 0 && moved < 0.004) {
-      this.stuckT = (this.stuckT || 0) + dt;
-      if (this.stuckT > 0.6) {
-        const piv = this.h + clamp(a, -1, 1) * 1.6 * dt;
-        if (this.truckFree(this.x, this.z, piv)) this.h = piv;
-        else {
-          for (let k = 0; k < 8; k++) { const ang = k / 8 * TAU, ox = this.x + Math.sin(ang) * 0.12, oz = this.z + Math.cos(ang) * 0.12; if (this.truckFree(ox, oz, piv)) { this.x = ox; this.z = oz; this.h = piv; break; } }
-        }
+    const fx0 = Math.sin(this.h), fz0 = Math.cos(this.h), fx = Math.sin(nh), fz = Math.cos(nh);
+    const step = this.spd * dt;
+    let moved = false, turned = false;
+    const L0 = -G.rear, L1 = G.carve, P = this._piv || (this._piv = [0.5, 0.2, 0.8, 0.35, 0.65, 0.05, 0.95]);
+    const pivotPose = (sh, f) => { const m = L0 + (L1 - L0) * f; return [this.x + (fx0 - fx) * m + fz * sh, this.z + (fz0 - fz) * m - fx * sh]; };
+    // 1) turn while driving (around whichever point fits)
+    if (Math.abs(yaw) > 0.02) {
+      outer: for (const sh of [0, 0.12, -0.12]) for (const f of P) {
+        const [rx, rz] = pivotPose(sh, f);
+        if (this.truckFree(rx + fx * step, rz + fz * step, nh)) { this.x = rx + fx * step; this.z = rz + fz * step; this.h = nh; moved = turned = true; break outer; }
       }
-    } else this.stuckT = 0;
-    this.moveAmt = clamp(Math.abs(this.spd) / st.spd, 0, 1);
-    return this._bladeCarve(dt, st, G);
-  },
-  // tracked machines (groomer) turn on the spot
-  _drivePivot(dt, st, mag, a, G) {
-    let target = mag === 0 ? 0 : st.spd * mag * (Math.abs(a) < 0.5 ? 1 : Math.abs(a) < 1.2 ? 0.55 : 0.12);
-    if (this.full && SNOW.depth(this.x + Math.sin(this.h) * (G.carve + 0.2), this.z + Math.cos(this.h) * (G.carve + 0.2)) > 0.1) target *= 0.55;
-    this.spd += clamp(target - this.spd, -9 * dt, 6 * dt);
-    const yaw = mag === 0 ? 0 : clamp(a * 2.6, -1.35, 1.35);
-    const nh = this.h + yaw * dt, fx = Math.sin(nh), fz = Math.cos(nh);
-    const nx = this.x + fx * this.spd * dt, nz = this.z + fz * this.spd * dt;
-    if (this.truckFree(nx, nz, nh)) { this.x = nx; this.z = nz; this.h = nh; }
-    else if (this.truckFree(this.x, this.z, nh)) { this.h = nh; this.spd *= 0.4; }
-    else if (this.truckFree(nx, this.z, this.h)) { this.x = nx; this.spd *= 0.7; }
-    else if (this.truckFree(this.x, nz, this.h)) { this.z = nz; this.spd *= 0.7; }
-    else {
-      this.spd = 0;
-      for (let k = 0; k < 8; k++) { const ang = k / 8 * TAU, ox = this.x + Math.sin(ang) * 0.15, oz = this.z + Math.cos(ang) * 0.15; if (this.truckFree(ox, oz, nh)) { this.x = ox; this.z = oz; this.h = nh; break; } }
+    } else if (this.truckFree(this.x + fx0 * step, this.z + fz0 * step, this.h)) { this.x += fx0 * step; this.z += fz0 * step; moved = true; }
+    // 2) roughly the right way but the turn does not fit: keep driving straight / slide along the edge (keeps speed)
+    if (!moved && (al < 0.9 || esc || mag === 0)) {
+      if (this.truckFree(this.x + fx0 * step, this.z + fz0 * step, this.h)) { this.x += fx0 * step; this.z += fz0 * step; moved = true; }
+      else if (this.truckFree(this.x + fx0 * step, this.z, this.h)) { this.x += fx0 * step; this.spd *= 0.9; moved = true; }
+      else if (this.truckFree(this.x, this.z + fz0 * step, this.h)) { this.z += fz0 * step; this.spd *= 0.9; moved = true; }
     }
+    // 3) facing the wrong way (or blocked): turn on the spot, sliding a little sideways toward open space if needed
+    if (!moved && Math.abs(yaw) > 0.02) {
+      outer2: for (const sh of [0, 0.12, -0.12, 0.25, -0.25, 0.4, -0.4]) for (const f of P) {
+        const [rx, rz] = pivotPose(sh, f);
+        if (this.truckFree(rx, rz, nh)) { this.x = rx; this.z = rz; this.h = nh; this.spd *= 0.6; turned = true; break outer2; }
+      }
+    }
+    if (!moved && !turned) { if (Math.abs(this.spd) > 2.5) { CAM.shake = 0.2; AUD.thump(); } this.spd = 0; }
+    const blocked = mag > 0 && !turned && (al >= 0.9 || !moved);
+    // never stuck: when pushing but blocked, wiggle free; if that fails, back up a little so the turn fits
+    if (mag > 0 && !esc && (blocked || (Math.abs(this.spd) < 0.25 && al < 0.6))) {
+      this.stuckT = (this.stuckT || 0) + dt;
+      if (this.stuckT > 0.3) {
+        let okw = false;
+        const piv = this.h + clamp(a, -1, 1) * turn * dt * 2;
+        for (let k = 0; k < 16 && !okw; k++) {
+          const ang = k / 16 * TAU, d = 0.12 + (k % 4) * 0.08, ox = this.x + Math.sin(ang) * d, oz = this.z + Math.cos(ang) * d;
+          if (this.truckFree(ox, oz, piv)) { this.x = ox; this.z = oz; this.h = piv; okw = true; }
+        }
+        if (okw) this.stuckT = 0.2;
+        else if (this.stuckT > 0.5) { this.escape = 0.7; this.stuckT = 0; }
+      }
+    } else if (!esc) this.stuckT = 0;
+    this.rev = this.spd < -0.2;
     this.moveAmt = clamp(Math.abs(this.spd) / st.spd, 0, 1);
     return this._bladeCarve(dt, st, G);
   },
@@ -1643,48 +1672,25 @@ const PL = {
     }
     return removed;
   },
-  _dumpCheck(dt) {
-    if (this.dumping) {
-      const D = this.dumping; D.t += dt;
-      const M = D.M;
-      while (D.sent < D.n && D.t >= D.sent * D.iv) {
-        const part = D.amount / D.n; D.sent++;
-        const src = this.kind === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
-        const sz = this.kind === 'truck' ? 0.5 + this.geo.halfW * 0.15 : 0.28;
-        const first = D.sent === 1;
-        FX.clump(src.x, src.y + 0.5, src.z, M.x + rnd(-0.3, 0.3), 1.05, M.z + rnd(-0.3, 0.3), sz * rnd(0.8, 1.2), 0.38, () => {
-          if (first) UI.floatText(this._v2.set(M.x, 2.6, M.z), '+' + fmt(D.amount * GAME.price()), '#ffd34d', 34);
-          M.heat = Math.min(1.8, M.heat + 0.5); M.shake = 0.2;
-          FX.steam(M.x, 1.1, M.z, 5, true); FX.glow(M.x, 1.2, M.z, 2.5); AUD.sizzle();
-          const val = part * GAME.price();
-          GAME.earn(val);
-          FX.coinBurst(M.spoutPos.x, M.spoutPos.y, M.spoutPos.z, Math.max(1, Math.min(9, Math.round(part * 0.8))), val);
-        });
-      }
-      D.vis = Math.max(0, D.amount * (1 - D.t / (D.n * D.iv + 0.2)));
-      if (D.sent >= D.n && D.t > D.n * D.iv + 0.5) { this.dumping = null; GAME.onDump(D.amount); }
-      return;
-    }
-    if (this.load < 0.3) return;
-    const isT = this.kind === 'truck', fx = Math.sin(this.h), fz = Math.cos(this.h), G = this.geo;
-    for (const M of WORLD.melters) {
-      let d;
-      if (isT) { // distance from zone center to the truck's long axis (rear .. blade)
-        const rx = M.zone.x - this.x, rz = M.zone.z - this.z, t = clamp(rx * fx + rz * fz, -G.rear, G.carve + 0.3);
-        d = Math.hypot(rx - fx * t, rz - fz * t) - G.halfW * 0.8;
-      } else d = Math.hypot(this.x - M.zone.x, this.z - M.zone.z);
-      if (d < M.r) {
-        const amt = this.load; this.load = 0; this.full = false;
-        const n = clamp(Math.round(3 + amt / 6), 3, 14);
-        this.dumping = { M, t: 0, amount: amt, n, iv: clamp(0.7 / n, 0.04, 0.12), sent: 0, vis: amt };
-        AUD.dump(); UI.onDump();
-        break;
-      }
-    }
+  payout(quiet) {
+    const amt = this.load; this.load = 0;
+    if (amt < 0.3) return;
+    const val = amt * GAME.price();
+    const src = this.kind === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
+    GAME.earn(val);
+    const n = clamp(Math.round(4 + Math.log2(val + 1) * 1.4), 5, 18);
+    FX.coinBurst(src.x, src.y + 0.5, src.z, n, val, { up: 0.95, spread: 0.8 });
+    if (quiet) return;
+    const big = this.kind === 'truck';
+    FX.puff(src.x, src.y + 0.3, src.z, big ? 14 : 9, big ? 2.0 : 1.1); FX.sparkle(src.x, src.y + 0.5, src.z, big ? 18 : 10, big ? 1.0 : 0.5);
+    UI.floatText(this._v1.set(src.x, src.y + (big ? 2.4 : 1.5), src.z), '+' + fmt(val), '#ffd34d', big ? 36 : 30);
+    AUD.cash();
+    this.sledBump = 1; this.payFlash = 1;
+    GAME.payouts++; UI.onPayout();
   },
   _visuals(dt, st) {
     const t = this.kind, walking = t !== 'truck';
-    const loadVis = this.load + (this.dumping ? this.dumping.vis : 0);
+    const loadVis = this.load;
     this.bump = Math.max(0, (this.bump || 0) - dt * 3.2);
     const bsc = this.bump > 0 ? 1 + Math.sin((1 - this.bump) * Math.PI) * 0.2 : 1;
     this.kid.root.scale.setScalar(bsc); this.truck.scale.setScalar(bsc);
@@ -1933,40 +1939,39 @@ const FX = {
 // ---------- economy, jobs, save ----------
 // tool ladder: every new tool is a big visible jump; upgrades are cheap and frequent
 const TIERS = [
-  { key: 'shovel', name: 'Shovel', kind: 'shovel', cost: 0, pay: 1, base: [0.72, 20, 3.8] },
-  { key: 'bigshovel', name: 'Big Shovel', kind: 'shovel', cost: 45, pay: 2, base: [1.1, 34, 4.0] },
-  { key: 'blower', name: 'Snow Blower', kind: 'blower', cost: 220, pay: 3, base: [1.3, 60, 4.3] },
-  { key: 'megablower', name: 'Mega Blower', kind: 'blower', cost: 700, pay: 5, base: [1.9, 110, 4.6] },
-  { key: 'truck', name: 'Plow Truck', kind: 'truck', cost: 1400, pay: 8, base: [2.7, 260, 7.0], geo: 'pickup' },
-  { key: 'dumpplow', name: 'Dump Plow', kind: 'truck', cost: 7000, pay: 12, base: [3.7, 560, 7.4], geo: 'tipper' },
-  { key: 'groomer', name: 'Snow Groomer', kind: 'truck', cost: 14000, pay: 20, base: [4.6, 1400, 7.0], geo: 'groomer' },
+  { key: 'shovel', name: 'Shovel', kind: 'shovel', cost: 0, up: 45, pay: 1, base: [0.8, 14, 3.9] },
+  { key: 'bigshovel', name: 'Big Shovel', kind: 'shovel', cost: 45, up: 220, pay: 2, base: [1.15, 22, 4.1] },
+  { key: 'blower', name: 'Snow Blower', kind: 'blower', cost: 220, up: 700, pay: 3, base: [1.45, 36, 4.4] },
+  { key: 'megablower', name: 'Mega Blower', kind: 'blower', cost: 700, up: 1400, pay: 5, base: [2.0, 60, 4.7] },
+  { key: 'truck', name: 'Plow Truck', kind: 'truck', cost: 0, gift: true, up: 12000, pay: 8, base: [2.7, 150, 7.0], geo: 'pickup' },
+  { key: 'dumpplow', name: 'Dump Plow', kind: 'truck', cost: 12000, up: 20000, pay: 12, base: [3.7, 300, 7.4], geo: 'tipper' },
+  { key: 'groomer', name: 'Snow Groomer', kind: 'truck', cost: 20000, up: 40000, pay: 20, base: [4.6, 400, 7.2], geo: 'groomer' },
 ];
 const TIER = {}; TIERS.forEach((t, i) => { t.i = i; TIER[t.key] = t; });
+// upgrades: 0 wider, 1 faster, 2 more coins
 const UPMAX = 3, UPK = [0.06, 0.1, 0.16], UPM = [1.0, 0.8, 1.2];
-const UPLABELS = { shovel: ['Wider shovel', 'Bigger sled', 'Faster'], blower: ['Wider intake', 'Bigger sled', 'Faster'], truck: ['Wider blade', 'Bigger load', 'More power'] };
-const UPSAY = ['WIDER!', 'BIGGER!', 'FASTER!'];
+const UPLABELS = { shovel: ['Wider shovel', 'Faster', 'More coins'], blower: ['Wider intake', 'Faster', 'More coins'], truck: ['Wider blade', 'More power', 'More coins'] };
+const UPSAY = ['WIDER!', 'FASTER!', 'MORE COINS!'];
+const DONE_AT = 0.85;   // an area finishes itself at 85% (80% for the big truck jobs) -> nobody hunts for the last bits
+const doneAt = a => a.lot ? DONE_AT : 0.8;
 // tips per area
 const TIPMIN = { rose: 25, miller: 40, apron: 10 };
+// hand tools do the driveways, trucks do the street, sidewalks, lot and square -> you never go back to a smaller tool
 const GOALS = [
   { a: 'rose', t: "Clear Grandma Rose's driveway", ico: 'house' },
   { a: 'miller', t: "Dig out the Millers' car", ico: 'car' },
-  { tool: 'blower', t: 'Get the Snow Blower', ico: 'blower' },
-  { a: 'walkW1', t: 'Clear the west sidewalk', ico: 'walk' },
-  { a: 'hale', t: "Clear Mr. Hale's driveway", ico: 'house' },
-  { a: 'walkE1', t: 'Clear the east sidewalk', ico: 'walk' },
   { a: 'park', t: "Free the Parks' camper", ico: 'car' },
+  { a: 'hale', t: "Clear Mr. Hale's driveway", ico: 'house' },
   { a: 'lina', t: "Free Lina's ice cream van", ico: 'car' },
-  { tool: 'truck', t: 'Get the Plow Truck', ico: 'truck' },
-  { a: 'street1', t: 'Plow Maple Lane (south)', ico: 'road' },
-  { a: 'walkW2', t: 'Clear the north-west sidewalk', ico: 'walk' },
-  { a: 'walkE2', t: 'Clear the north-east sidewalk', ico: 'walk' },
-  { a: 'street2', t: 'Plow Maple Lane (north)', ico: 'road' },
   { a: 'ortega', t: "Help the Ortegas", ico: 'house' },
   { a: 'tom', t: "Clear Old Tom's path", ico: 'house' },
+  { a: 'street1', t: 'Plow Maple Lane (south)', ico: 'road' },
+  { a: 'street2', t: 'Plow Maple Lane (north)', ico: 'road' },
   { a: 'north', t: 'Open the bakery', ico: 'shop' },
   { a: 'plaza', t: 'Light up the town square', ico: 'tree' },
   { end: true, t: 'Maple Lane is saved!', ico: 'star' },
 ];
+const HAND_AREAS = ['rose', 'miller', 'park', 'hale', 'lina', 'ortega', 'tom'];
 const DONE_LINES = {
   rose: ['Bless you, dear!', 'My hip thanks you!'], miller: ['Our car is free!', 'You rock!'], hale: ['Splendid work!'], park: ['Road trip time!'],
   lina: ['Free ice cream later!'], ortega: ['¡Gracias!'], tom: ['Back in my day...', 'Good job, kid.'],
@@ -1974,45 +1979,44 @@ const DONE_LINES = {
 
 const GAME = {
   coins: 0, earned: 0, time: 0, owned: { shovel: 1 }, lv: {},
-  done: {}, dumps: 0, firstFull: false, firstUp: false, started: false, ended: false, saveT: 0, checkT: 0, ver: 2,
+  done: {}, payouts: 0, crew: 0, firstUp: false, started: false, ended: false, saveT: 0, checkT: 0, ver: 3, giftT: 0,
   L(key) { return this.lv[key] || (this.lv[key] = [0, 0, 0]); },
   stats(key) {
     const T = TIER[key], L = this.L(key);
-    return { w: T.base[0] * (1 + 0.14 * L[0]), cap: T.base[1] * Math.pow(1.45, L[1]), spd: T.base[2] * (1 + 0.08 * L[2]), pay: T.pay, kind: T.kind };
+    return { w: T.base[0] * (1 + 0.14 * L[0]), cap: T.base[1], spd: T.base[2] * (1 + 0.08 * L[1]), pay: T.pay * (1 + 0.35 * L[2]), kind: T.kind };
   },
   upCost(key, i) {
     const T = TIER[key], L = this.L(key)[i]; if (L >= UPMAX) return Infinity;
-    const nx = TIERS[T.i + 1], ref = nx ? nx.cost : T.cost * 2.5;
-    return Math.max(3, niceNum(ref * UPK[L] * UPM[i]));
+    return Math.max(3, niceNum(T.up * UPK[L] * UPM[i]));
   },
-  price() { return TIER[PL.tool].pay * STORM.mult; },
+  price() { return this.stats(PL.tool).pay * STORM.mult; },
   earn(v) { this.coins += v; this.earned += v; },
   spend(v) { if (this.coins + 1e-6 < v) return false; this.coins -= v; return true; },
   nextTool() { for (const t of TIERS) if (!this.owned[t.key]) return t.key; return null; },
+  handDone() { let n = 0; for (const k of HAND_AREAS) if (this.done[k]) n++; return n; },
   best(kind) { let b = null; for (const t of TIERS) if (this.owned[t.key] && (kind === 'hand' ? t.kind !== 'truck' : t.kind === 'truck')) b = t.key; return b; },
   buyUp(i) {
     const t = PL.tool, c = this.upCost(t, i);
     if (!isFinite(c) || UI.shownCoins() + 1e-6 < c || !this.spend(c)) { AUD.deny(); return false; }
-    this.L(t)[i]++; PL.applyTool(); PL.bump = 1;
+    this.L(t)[i]++; PL.applyTool(); PL.ensureFree(); PL.bump = 1;
     AUD.buy(); this.firstUp = true;
     UI.onUpgrade(i);
     const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.sparkle(p.x, 0.6, p.z, 18, 0.8); FX.puff(p.x, 0.3, p.z, 6, 1);
-    UI.floatText(this._v.set(p.x, PL.kind === 'truck' ? 3.8 : 2.2, p.z), UPSAY[i], '#7dffb0', 30);
+    UI.floatText(this._v.set(p.x, PL.kind === 'truck' ? 3.8 : 2.2, p.z), UPSAY[i], i === 2 ? '#ffd34d' : '#7dffb0', 30);
     this.save();
     return true;
   },
   _v: new V3(),
-  buyTool(t) {
-    const T = TIER[t], c = T.cost;
-    if (UI.shownCoins() + 1e-6 < c || !this.spend(c)) { AUD.deny(); return false; }
+  buyTool(t, free) {
+    const T = TIER[t], c = free ? 0 : T.cost;
+    if (!free && (T.gift || UI.shownCoins() + 1e-6 < c || !this.spend(c))) { AUD.deny(); return false; }
     this.owned[t] = 1; AUD.newTool();
     PL.setTool(t, true); PL.celebrate = 1.0; PL.bump = 1;
     const p = T.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.confetti(p.x, 1.5, p.z, 70); FX.sparkle(p.x, 0.8, p.z, 34, 1.5); FX.puff(p.x, 0.4, p.z, 16, 1.6);
-    const prev = TIERS[T.i - 1];
-    const sub = T.kind === 'truck' && (!prev || prev.kind !== 'truck') ? 'Plow the whole street!' : 'x' + T.pay + ' coins per load!';
-    UI.banner(T.name.toUpperCase() + '!', sub, t);
+    const sub = T.gift ? 'A gift from the town!' : 'x' + T.pay + ' coins!';
+    UI.banner(T.name.toUpperCase() + '!', sub, t, T.gift ? 3.2 : 2.2);
     if (T.kind === 'truck') AUD.horn();
     UI.refreshTools(); this.save();
     return true;
@@ -2033,20 +2037,15 @@ const GAME = {
       this.checkT = 0.2;
       for (const a of SNOW.areas) {
         if (!a || a.done) continue;
-        if (SNOW.prog(a) >= 0.95) this.completeArea(a, false);
+        if (SNOW.prog(a) >= doneAt(a)) this.completeArea(a, false);
       }
-      const gi = this.goalIdx(); const g = GOALS[gi];
-      let area = g.a ? WORLD.areaByKey[g.a] : null;
-      if (g.tool) for (let j = gi + 1; j < GOALS.length && !area; j++) if (GOALS[j].a && !this.done[GOALS[j].a]) area = WORLD.areaByKey[GOALS[j].a];
+      const g = GOALS[this.goalIdx()];
+      const area = g.a ? WORLD.areaByKey[g.a] : null;
       SNOW.setHighlight(area && !area.done ? area.id : 0);
-      // tool advice (once per goal)
-      if (area && !area.done && this._advised !== gi) {
-        let adv = null, want = null;
-        if (area.lot && PL.kind === 'truck') { want = this.best('hand'); adv = 'Driveways need the ' + TIER[want].name + '! Tap it on the left'; }
-        else if (!area.lot && this.best('truck') && PL.kind !== 'truck' && area.total > 1500) { want = this.best('truck'); adv = 'The ' + TIER[want].name + ' is much faster here!'; }
-        if (adv) { this._advised = gi; UI.hint(adv, 5); UI.pulseTool(want); }
-      }
+      // all driveways done -> the town hands over its plow truck
+      if (!this.owned.truck && this.handDone() >= HAND_AREAS.length && this.giftT <= 0) this.giftT = 2.4;
     }
+    if (this.giftT > 0) { this.giftT -= dt; if (this.giftT <= 0 && !this.owned.truck) { this.giftT = 0; this.buyTool('truck', true); } }
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
   },
@@ -2080,16 +2079,15 @@ const GAME = {
       this.save();
     }
   },
-  onDump(amt) { this.dumps++; },
   // ---- save ----
   save() {
     if (QS.has('nosave') || QS.has('bot')) return;
-    const o = { v: this.ver, coins: this.coins, earned: this.earned, time: this.time, owned: this.owned, lv: this.lv, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, loads: PL.loads, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), firstUp: this.firstUp, ended: this.ended, t: Date.now() };
-    STORE.set('plowtown_v2', JSON.stringify(o));
+    const o = { v: this.ver, coins: this.coins, earned: this.earned, time: this.time, owned: this.owned, lv: this.lv, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), firstUp: this.firstUp, ended: this.ended, crew: this.crew || 0, t: Date.now() };
+    STORE.set('plowtown_v3', JSON.stringify(o));
   },
   load() {
     if (QS.has('fresh') || QS.has('bot')) return false;
-    const s = STORE.get('plowtown_v2'); if (!s) return false;
+    const s = STORE.get('plowtown_v3'); if (!s) return false;
     try {
       const o = JSON.parse(s); if (o.v !== this.ver) return false;
       this.coins = o.coins || 0; this.earned = o.earned || 0; this.time = o.time || 0; this.owned = o.owned || { shovel: 1 };
@@ -2098,7 +2096,8 @@ const GAME = {
       if (o.snow) { SNOW.deserialize(o.snow); SNOW.finalizeAreas(); SNOW.markAll(); }
       if (o.tr) TREASURE.list.forEach((t, i) => { if (o.tr[i] === '1') { t.found = t.gone = true; t.mesh.visible = false; } });
       for (const a of SNOW.areas) if (a && this.done[a.key]) this.completeArea(a, true);
-      PL.loads = o.loads || { sled: 0, truck: 0 };
+      PL.load = o.load || 0;
+      this.crew = o.crew || 0;
       PL.x = o.x; PL.z = o.z; PL.h = o.h || Math.PI;
       if (o.tool && this.owned[o.tool] && TIER[o.tool]) { PL.tool = o.tool; }
       if (PL.kind === 'truck') { if (!PL.truckFree(PL.x, PL.z, PL.h)) { const s2 = PL.findTruckSpot(PL.x, PL.z); PL.x = s2.x; PL.z = s2.z; PL.h = s2.h; } }
@@ -2163,7 +2162,7 @@ const TREASURE = {
     // candidate cells: paved, inside a job area, away from blocked/yard edges
     const N = SNOW.NX, T = SNOW.T, A = SNOW.A;
     const okAt = (x, z) => { const k = SNOW.idx(x, z); if (k < 0 || T[k] !== 1 || !A[k]) return false; for (const [dx, dz] of [[0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]]) { const k2 = SNOW.idx(x + dx, z + dz); if (k2 < 0 || T[k2] !== 1) return false; } return true; };
-    const want = { rose: [3, 0], miller: [2, 1], walkW1: [4, 1], hale: [2, 1], walkE1: [4, 1], park: [2, 1], lina: [2, 1], street1: [6, 2], walkW2: [3, 1], walkE2: [3, 1], street2: [6, 2], ortega: [2, 1], tom: [2, 1], north: [4, 2], plaza: [5, 2], apron: [2, 0] };
+    const want = { rose: [3, 0], miller: [2, 1], park: [2, 1], hale: [2, 1], lina: [2, 1], ortega: [2, 1], tom: [2, 1], street1: [10, 3], street2: [10, 3], north: [4, 2], plaza: [5, 2], apron: [2, 0] };
     for (const key in want) {
       const a = WORLD.areaByKey[key]; if (!a) continue;
       const [nc, ng] = want[key];
@@ -2214,6 +2213,142 @@ const TREASURE = {
   }
 };
 
+// ==== h3_crew.js ====
+// ---------- your snow crew: friends join and clear the next driveways for you (you earn their coins) ----------
+const CREW_DEFS = [
+  { name: 'Max', tool: 'shovel', w: 0.78, spd: 2.8, need: 1, sub: 'Free help with driveways!', look: { jacket: 0x2f7fd6, band: 0x2466ad, hat: 0x3ccf7a, brim: 0x2aa862, scarf: 0xffd34d, mitt: 0xff8a1e } },
+  { name: 'Lily', tool: 'blower', w: 1.25, spd: 3.0, need: 3, sub: 'Your crew is growing!', look: { jacket: 0x9a5bd6, band: 0x7d45b5, hat: 0xff6fa8, brim: 0xe0558c, scarf: 0x5bc8f5, mitt: 0xffffff } },
+];
+const CREW = {
+  list: [], joinT: 0, _v: new V3(),
+  init(scene) { this.scene = scene; },
+  join(i, silent) {
+    if (this.list.some(h => h.i === i)) return;
+    const D = CREW_DEFS[i], P = makePerson(D.look);
+    P.root.scale.setScalar(0.92); this.scene.add(P.root);
+    let tool;
+    if (D.tool === 'shovel') { tool = makeShovel(); P.root.add(tool.g); }
+    else {
+      const g = new THREE.Group(), m = ownMats(artScene('blower').clone(true));
+      m.traverse(c => { if (c.isMesh) { c.castShadow = true; if (c.material.name === 'red') c.material.color.setHex(0xff6fa8); } });
+      m.scale.set(D.w / 0.8, 0.7, 0.7); g.add(m); g.position.set(0, 0, 1.0); P.root.add(g); tool = { g, m };
+    }
+    // walk in from next to you
+    const sx = PL.kind === 'truck' ? 0 : PL.x, sz = PL.kind === 'truck' ? 50.6 : PL.z;
+    let x = sx + 1.3, z = sz + 0.6; if (!SNOW.walk(x, z)) { x = sx; z = sz; }
+    const h = { i, D, P, tool, x, z, h: Math.PI, job: null, wps: [], wi: 0, load: 0, scoop: 0, toss: 0, moving: 0, lcx: undefined, lcz: undefined, cheer: silent ? 0 : 1.6, co: {} };
+    this.list.push(h); GAME.crew = Math.max(GAME.crew || 0, this.list.length);
+    P.root.position.set(x, 0, z);
+    if (!silent) {
+      FX.confetti(x, 1.4, z, 40); FX.sparkle(x, 0.8, z, 20, 1.0); AUD.newTool();
+      UI.banner(D.name.toUpperCase() + ' JOINED!', D.sub, 'house', 2.6);
+      UI.floatText(this._v.set(x, 2.0, z), 'NEW HELPER!', '#7dffb0', 30);
+      GAME.save();
+    }
+  },
+  // which job: the next unfinished driveway that nobody else is on (not the one you are doing); later the crew yard
+  pickJob(h) {
+    const taken = new Set(this.list.filter(o => o !== h && o.job).map(o => o.job.key));
+    const cur = GOALS[GAME.goalIdx()].a;
+    let cands = HAND_AREAS.map(k => WORLD.areaByKey[k]).filter(a => !a.done && !taken.has(a.key));
+    if (GAME.ended) cands = HAND_AREAS.map(k => WORLD.areaByKey[k]).filter(a => !taken.has(a.key) && SNOW.nearestSnow(a.lot.drive.x0 * 0.5 + a.lot.drive.x1 * 0.5, (a.lot.drive.z0 + a.lot.drive.z1) / 2, a.id, 0.08, 12));
+    let a = cands.find(o => o.key !== cur) || cands[0] || null;
+    if (!a) { const ap = WORLD.areaByKey.apron; if (!ap.done && !taken.has('apron')) a = ap; }
+    return a;
+  },
+  // route: out to the sidewalk, along it, into the driveway, then back-and-forth lanes over the driveway and the path
+  plan(h, a) {
+    const W = [], lane = Math.max(0.45, h.D.w * 0.85), sideOf = x => (x < 0 ? -1 : 1);
+    const go = (x, z, work) => W.push([x, z, !!work]);
+    if (Math.abs(h.x) > 5.3) go(sideOf(h.x) * 4.6, clamp(h.z, -49, 49));
+    if (a.lot) {
+      const L = a.lot, s = L.side, dz = (L.drive.z0 + L.drive.z1) / 2;
+      go(s * 4.6, dz);
+      // driveway lanes (the car blocks the far end: stop where the ground is blocked)
+      let flip = false;
+      for (let zz = L.drive.z0 + 0.35; zz <= L.drive.z1 - 0.3; zz += lane) {
+        let far = s * 5.6; for (let xx = 5.6; xx <= 14.3; xx += 0.3) { if (!SNOW.walk(s * xx, zz)) break; far = s * xx; }
+        const near = s * 5.5;
+        if (flip) { go(far, zz, 1); go(near, zz, 1); } else { go(near, zz, 1); go(far, zz, 1); }
+        flip = !flip;
+      }
+      // the front path
+      const pz = (L.path.z0 + L.path.z1) / 2;
+      go(s * 4.6, pz); go(s * 5.5, pz, 1); go(s * 11.6, pz, 1); go(s * 5.5, pz); go(s * 4.6, pz);
+    } else {
+      const r = a.rects[0];
+      go(clamp(h.x, r.x0 + 0.5, r.x1 - 0.5), r.z0 + 0.4);
+      let flip = false;
+      for (let zz = r.z0 + 0.4; zz <= r.z1 - 0.3; zz += lane) { if (flip) { go(r.x1 - 0.4, zz, 1); go(r.x0 + 0.4, zz, 1); } else { go(r.x0 + 0.4, zz, 1); go(r.x1 - 0.4, zz, 1); } flip = !flip; }
+    }
+    h.wps = W; h.wi = 0; h.job = a;
+  },
+  update(dt) {
+    // friends join as your business grows (after 1 and 3 cleared driveways)
+    const n = GAME.handDone();
+    if (this.joinT > 0) { this.joinT -= dt; if (this.joinT <= 0) this.join(this.list.length); }
+    else if (this.list.length < CREW_DEFS.length && n >= CREW_DEFS[this.list.length].need) this.joinT = 2.6;
+    for (const h of this.list) this._step(h, dt);
+  },
+  _step(h, dt) {
+    const D = h.D;
+    if (h.job && (h.wi >= h.wps.length || (h.job.done && !GAME.ended))) h.job = null;
+    if (!h.job) { const a = this.pickJob(h); if (a) this.plan(h, a); }
+    let mvx = 0, mvz = 0, work = false;
+    if (!h.job) { // nothing to do: wait at the crew yard by the kiosk
+      const ix = 9.4 - h.i * 1.4, iz = 57.2, dx = ix - h.x, dz = iz - h.z, d = Math.hypot(dx, dz);
+      if (d > 0.3) { const sp = h.D.spd * 1.2; mvx = dx / d * sp; mvz = dz / d * sp; }
+      else h.h = dampAng(h.h, 0, 4, dt);
+    }
+    if (h.job && h.wi < h.wps.length) {
+      const wp = h.wps[h.wi], dx = wp[0] - h.x, dz = wp[1] - h.z, d = Math.hypot(dx, dz);
+      if (d < 0.22) h.wi++;
+      else { const sp = D.spd * (wp[2] ? 0.85 : 1.25); mvx = dx / d * sp; mvz = dz / d * sp; work = wp[2] || (h.wi > 0 && h.wps[h.wi - 1][2]); }
+    }
+    // stay out of the way of your truck
+    if (PL.kind === 'truck') {
+      const dx = h.x - PL.x, dz = h.z - PL.z, d = Math.hypot(dx, dz), R = PL.geo.halfW + 2.6;
+      if (d < R) { const k = (R - d) / R * 4; mvx += dx / (d || 1) * k; mvz += dz / (d || 1) * k; }
+    }
+    const nx = h.x + mvx * dt, nz = h.z + mvz * dt;
+    if (SNOW.walk(nx, nz) || !SNOW.walk(h.x, h.z)) { h.x = nx; h.z = nz; }
+    const v = Math.hypot(mvx, mvz); h.moving = damp(h.moving, clamp(v / D.spd, 0, 1), 10, dt);
+    if (v > 0.2) h.h = dampAng(h.h, Math.atan2(mvx, mvz), 9, dt);
+    // clear snow in front of the tool
+    const fx = Math.sin(h.h), fz = Math.cos(h.h), off = D.tool === 'shovel' ? 0.62 : 1.5;
+    const cx = h.x + fx * off, cz = h.z + fz * off;
+    if (work && v > 0.2) {
+      const steps = h.lcx === undefined ? 1 : Math.min(5, Math.ceil(Math.hypot(cx - h.lcx, cz - h.lcz) / 0.15));
+      for (let s = 1; s <= steps; s++) {
+        const px = h.lcx === undefined ? cx : lerp(h.lcx, cx, s / steps), pz = h.lcz === undefined ? cz : lerp(h.lcz, cz, s / steps);
+        const r = SNOW.carve(px, pz, fx, fz, D.w * 0.5 + 0.05, D.tool === 'shovel' ? 0.16 : 0.2, 1e6, h.co);
+        if (r > 0) { h.load += r; h.scoop += r; }
+      }
+    }
+    h.lcx = cx; h.lcz = cz;
+    if (h.scoop > 0.7 && D.tool === 'shovel' && h.toss <= 0) {
+      h.scoop = 0; h.toss = 1;
+      const rx = fz, rz = -fx, b = h.tool.blade.getWorldPosition(this._v);
+      FX.clump(b.x, b.y + 0.3, b.z, h.x + rx * 1.4 + rnd(-0.2, 0.2), 0.35, h.z + rz * 1.4 + rnd(-0.2, 0.2), 0.16, 0.32, (x, y, z) => FX.puff(x, y, z, 3, 0.4));
+    }
+    if (D.tool === 'blower' && work && v > 0.2 && Math.random() < 0.6) { const rx = fz, rz = -fx; FX.spray(cx, 0.6, cz, rx * 1.2 + fx * 0.2, rz * 1.2 + fz * 0.2, 2, 3.2, 0.16); }
+    h.toss = Math.max(0, h.toss - dt / 0.3);
+    // their coins are yours
+    if (h.load >= 7) this._pay(h);
+    // visuals
+    h.P.root.position.set(h.x, 0, h.z); h.P.root.rotation.y = h.h;
+    if (D.tool === 'shovel') poseShovel(h.tool, D.w, h.toss > 0 ? 1 - h.toss : 0);
+    if (h.cheer > 0) h.cheer -= dt;
+    animPerson(h.P, dt, { walk: h.moving, pose: h.cheer > 0 ? 'cheer' : !h.job ? 'wave' : D.tool === 'shovel' ? 'shovel' : 'push', t: performance.now() / 1000, toss: h.toss > 0 ? 1 - h.toss : 0, lean: 0.1 * h.moving, hop: h.cheer > 0 ? Math.abs(Math.sin(h.cheer * 9)) * 0.15 : 0 });
+  },
+  _pay(h) {
+    const pay = GAME.stats(GAME.best('hand')).pay * STORM.mult, val = h.load * pay; h.load = 0;
+    GAME.earn(val);
+    FX.coinBurst(h.x, 1.1, h.z, clamp(Math.round(2 + Math.log2(val + 1)), 3, 8), val, { up: 0.7, spread: 0.5 });
+    UI.floatText(this._v.set(h.x, 1.9, h.z), '+' + fmt(val), '#ffe9a8', 22);
+  }
+};
+
 // ==== h_life.js ====
 // ---------- town life: residents, cars, finale ----------
 const LOOKS = {
@@ -2240,7 +2375,7 @@ const LIFE = {
     const P = makePerson(LOOKS.baker); WORLD.scene.add(P.root);
     const d = WORLD.bakery.door; P.root.position.set(d.x + 1.2, 0, d.z + 0.5); P.root.rotation.y = 0; P.root.scale.setScalar(0.001);
     this.people.push({ P, t: 0, life: 7, sc: 1.38, line: 'Fresh bread for everyone!', bub: UI.bubble('Fresh bread for everyone!'), mode: 'wave' });
-    WORLD.bakery.smoke = new V3(1.0, 6.2, -62.6);
+    WORLD.bakery.smoke = new V3(1.0, 6.2, -65.2);
   },
   freeCar(car, silent) {
     car.state = 'free';
@@ -2364,14 +2499,14 @@ const UI = {
   flyers: [], pending: 0, joy: null,
   init() {
     this.cv = $('fx2d'); this.g = this.cv.getContext('2d');
-    $('coinIco').innerHTML = ICONS.coin;
+    $('coinIco').innerHTML = ICONS.coin; $('loadTag').querySelector('.ci').innerHTML = ICONS.coin;
     $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd;
     $('btnMute').onclick = (e) => { e.stopPropagation(); AUD.init(); AUD.setMuted(!AUD.muted); $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd; STORE.set('plowtown_mute', AUD.muted ? '1' : '0'); };
     const ups = $('ups');
     ups.innerHTML = '';
     this.upBtns = [];
     for (let i = 0; i < 3; i++) {
-      const b = document.createElement('button'); b.className = 'up'; b.innerHTML = `<div class="ui-ico">${[ICONS.w, ICONS.cap, ICONS.spd][i]}</div><div class="ui-lbl"></div><div class="ui-dots"></div><div class="ui-cost"><span class="ci">${ICONS.coin}</span><b></b></div>`;
+      const b = document.createElement('button'); b.className = 'up'; b.innerHTML = `<div class="ui-ico">${[ICONS.w, ICONS.spd, ICONS.coin][i]}</div><div class="ui-lbl"></div><div class="ui-dots"></div><div class="ui-cost"><span class="ci">${ICONS.coin}</span><b></b></div>`;
       b.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); GAME.buyUp(i); });
       ups.appendChild(b); this.upBtns.push(b);
     }
@@ -2388,14 +2523,8 @@ const UI = {
     if (b) { b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 6000); }
   },
   refreshTools() {
-    const box = $('tools'); box.innerHTML = '';
-    const owned = [GAME.best('hand'), GAME.best('truck')].filter(Boolean);
-    box.style.display = owned.length > 1 ? 'flex' : 'none';
-    for (const t of owned) {
-      const b = document.createElement('button'); b.className = 'tool' + (PL.tool === t ? ' on' : ''); b.innerHTML = ICONS[t]; b.dataset.t = t;
-      b.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); if (PL.tool !== t) { PL.setTool(t); this.refreshTools(); GAME.save(); } });
-      box.appendChild(b);
-    }
+    // you always use your newest tool: no switching back to smaller ones
+    const box = $('tools'); box.innerHTML = ''; box.style.display = 'none';
   },
   _lastGoal: -1, _lastCoinTxt: '', _hintT: 0, _uiT: 0,
   update(dt) {
@@ -2422,7 +2551,17 @@ const UI = {
     }
     const nt = GAME.nextTool(), tb = this.toolBtn;
     if (!nt) { tb.style.display = 'none'; }
+    else if (TIER[nt].gift) {
+      // the plow truck is a gift from the town once every driveway is clear
+      const n = GAME.handDone(), N = HAND_AREAS.length, f = n / N;
+      tb.style.display = n >= 3 ? '' : 'none';
+      if (tb._t !== nt) { tb.querySelector('.ui-ico').innerHTML = ICONS[nt]; tb.querySelector('.ui-lbl').textContent = TIER[nt].name; tb._t = nt; }
+      tb.querySelector('.ui-cost b').textContent = 'FREE ' + n + '/' + N;
+      tb.querySelector('.tc-bar i').style.width = (f * 100).toFixed(1) + '%';
+      tb.classList.remove('can'); tb.classList.add('gift');
+    }
     else {
+      tb.classList.remove('gift');
       const c = TIER[nt].cost, f = clamp(shown / c, 0, 1);
       const vis = f >= 0.35 || GOALS[GAME.goalIdx()].tool === nt;
       tb.style.display = vis ? '' : 'none';
@@ -2444,7 +2583,7 @@ const UI = {
       const el = $('goal'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
     }
     let f = 1, lab = '';
-    if (g.a) { const a = WORLD.areaByKey[g.a]; f = SNOW.prog(a); lab = Math.floor(f * 100) + '%'; }
+    if (g.a) { const a = WORLD.areaByKey[g.a]; f = a.done ? 1 : Math.min(1, SNOW.prog(a) / doneAt(a)); lab = Math.floor(f * 100) + '%'; }
     else if (g.tool) { const c = TIER[g.tool].cost; f = clamp(shown / c, 0, 1); lab = fmt(Math.min(shown, c)) + '/' + fmt(c); }
     else if (STORM.phase === 'bonus') { f = STORM.multT / 90; lab = 'x2 ' + Math.ceil(STORM.multT) + 's'; }
     else if (STORM.phase === 'storm') { f = STORM.t / 12; lab = 'storm'; }
@@ -2456,20 +2595,18 @@ const UI = {
   _updLoadTag() {
     const el = $('loadTag');
     const st = PL.stats(), f = PL.load / st.cap;
-    if (f <= 0.02 && !PL.dumping) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
+    if (f <= 0.02) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
     if (!el._on) { el.classList.add('on'); el._on = 1; }
     const p = PL.kind === 'truck' ? this._v.set(PL.x, 2.6 + PL.geo.halfW * 0.9, PL.z) : this._v.set(PL.x, 1.75, PL.z);
     p.project(CAM.cam);
     el.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
-    const full = f >= 0.999;
-    el.classList.toggle('full', full);
     el.querySelector('i').style.width = (clamp(f, 0, 1) * 100).toFixed(1) + '%';
-    el.querySelector('b').textContent = full ? 'FULL!' : Math.floor(PL.load) + '/' + Math.floor(st.cap);
+    const v = '+' + fmt(Math.floor(PL.load * GAME.price())); if (el._v !== v) { el.querySelector('b').textContent = v; el._v = v; }
   },
-  onFull() {
-    if (!GAME.firstFull) { GAME.firstFull = true; this.hint(PL.kind === 'truck' ? 'Blade is full! Push it into a MELTER' : 'Sled is full! Empty it at the MELTER', 5); }
+  onPayout() {
+    if (GAME.payouts === 1) this.hint(PL.kind === 'truck' ? 'A full blade turns into coins!' : 'A full sled turns into coins!', 3);
+    const el = $('loadTag'); if (el) { el.classList.remove('paid'); void el.offsetWidth; el.classList.add('paid'); }
   },
-  onDump() { if (GAME.dumps === 0) this.hint('Snow melts into coins!', 3); },
   onUpgrade(i) { const b = this.upBtns[i]; b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); },
   hint(t, dur) { const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; },
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },
@@ -2634,11 +2771,7 @@ const GUIDE = {
   update(dt) {
     this.t += dt;
     let tx = null, tz = null, beam = null;
-    if (PL.full || (PL.load > PL.stats().cap * 0.85 && !PL.dumping)) {
-      let best = null, bd = 1e9;
-      for (const M of WORLD.melters) { const d = Math.hypot(M.zone.x - PL.x, M.zone.z - PL.z); if (d < bd) { bd = d; best = M; } }
-      if (best) { tx = best.zone.x; tz = best.zone.z; beam = best; }
-    } else if (!GAME.ended) {
+    if (!GAME.ended) {
       const a = SNOW.areas[SNOW.hlArea];
       if (a) {
         this._rt = (this._rt || 0) - dt;
@@ -2715,54 +2848,73 @@ const BOT = {
   },
   buy() {
     const nt = GAME.nextTool();
-    if (nt && UI.shownCoins() >= TIER[nt].cost) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
-    if (nt && GOALS[GAME.goalIdx()].tool) return; // save up for the tool
+    if (nt && !TIER[nt].gift && UI.shownCoins() >= TIER[nt].cost) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
+    for (const k of TIERS) if (GAME.owned[k.key]) this.mark('tool_' + k.key);
     const t = PL.tool, order = [1, 0, 2];
     let best = -1, bc = 1e18;
     for (const i of order) { const c = GAME.upCost(t, i); if (c < bc) { bc = c; best = i; } }
     if (best >= 0 && UI.shownCoins() >= bc) GAME.buyUp(best);
   },
   lanes(a, w, truck) {
+    // each lane: [startWaypoint, endWaypoint, swathStart, swathEnd, heading]
     const pts = [];
     for (const r of a.rects) {
-      const wx = r.x1 - r.x0, wz = r.z1 - r.z0, sp = Math.max(0.5, w * 0.8), m = Math.min(w * 0.45, 0.6);
-      if (truck && Math.min(wx, wz) < 2.4) {
-        // narrow strip (sidewalk): one pass with the truck hugging it from the street side
-        if (wz > wx) { const cx = (r.x0 + r.x1) / 2, edge = cx > 0 ? r.x1 : r.x0, o = PL.geo.halfW + 0.04, lx = edge + (cx > 0 ? -o : o); pts.push([[lx, r.z0 + 0.4], [lx, r.z1 - 0.4]]); }
+      const wx = r.x1 - r.x0, wz = r.z1 - r.z0;
+      if (truck) {
+        // long passes; the truck starts behind the strip so its blade (far in front) covers the ends too
+        const G = PL.geo, o = Math.max(G.halfW + 0.08, w * 0.5 - 0.15), alongZ = wz >= wx;
+        const lo = (alongZ ? r.x0 : r.z0) + o, hi = (alongZ ? r.x1 : r.z1) - o;
+        const n = hi <= lo ? 1 : Math.ceil((hi - lo) / (w * 0.85)) + 1;
+        let flip = false;
+        for (let q = 0; q < n; q++) {
+          const c = n > 1 ? lo + (hi - lo) * q / (n - 1) : (lo + hi) / 2;
+          let A = alongZ ? [c, r.z0 + 0.3] : [r.x0 + 0.3, c], B = alongZ ? [c, r.z1 - 0.3] : [r.x1 - 0.3, c];
+          if (flip) [A, B] = [B, A]; flip = !flip;
+          const dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L, h = Math.atan2(ux, uz);
+          let wa = [A[0] - ux * (G.carve + 0.3), A[1] - uz * (G.carve + 0.3)], moved = 0;
+          for (let t = 0; t < 16 && !PL.truckFree(wa[0], wa[1], h); t++) { wa = [wa[0] + ux * 0.5, wa[1] + uz * 0.5]; moved += 0.5; }
+          let wb = [B[0] - ux * (G.carve - 0.6), B[1] - uz * (G.carve - 0.6)];
+          for (let t = 0; t < 16 && !PL.truckFree(wb[0], wb[1], h); t++) wb = [wb[0] - ux * 0.5, wb[1] - uz * 0.5];
+          pts.push([wa, wb, A, B, h]);
+          // closed end (a wall behind the start): the blade could not reach the start, so drive this lane back the other way too
+          if (moved > 1) { const h2 = h + Math.PI; let wc = [B[0] + ux * (G.carve + 0.3), B[1] + uz * (G.carve + 0.3)]; for (let t = 0; t < 16 && !PL.truckFree(wc[0], wc[1], h2); t++) wc = [wc[0] - ux * 0.5, wc[1] - uz * 0.5];
+            let wd = [A[0] + ux * (G.carve - 0.6), A[1] + uz * (G.carve - 0.6)]; for (let t = 0; t < 16 && !PL.truckFree(wd[0], wd[1], h2); t++) wd = [wd[0] + ux * 0.5, wd[1] + uz * 0.5];
+            pts.push([wc, wd, B, A, h2]); }
+        }
         continue;
       }
+      const sp = Math.max(0.5, w * 0.8), m = Math.min(w * 0.45, 0.6);
       const across = wx >= wz ? wz : wx, n = Math.max(1, Math.ceil((across - 2 * m) / sp) + 1), stp = n > 1 ? (across - 2 * m) / (n - 1) : 0;
       let flip = false;
       for (let q = 0; q < n; q++) {
         const o = (n > 1 ? m + q * stp : across / 2);
         const a0 = wx >= wz ? [r.x0 + 0.4, r.z0 + o] : [r.x0 + o, r.z0 + 0.4], a1 = wx >= wz ? [r.x1 - 0.4, r.z0 + o] : [r.x0 + o, r.z1 - 0.4];
-        pts.push(flip ? [a1, a0] : [a0, a1]); flip = !flip;
+        pts.push(flip ? [a1, a0, a1, a0] : [a0, a1, a0, a1]); flip = !flip;
       }
     }
     return pts;
   },
-  laneHasSnow(L) { for (let k = 0; k <= 8; k++) { const x = lerp(L[0][0], L[1][0], k / 8), z = lerp(L[0][1], L[1][1], k / 8); if (SNOW.depth(x, z) > 0.06 && SNOW.type(x, z) === 1) return true; } return false; },
+  laneHasSnow(L) { const A = L[2] || L[0], B = L[3] || L[1]; for (let k = 0; k <= 10; k++) { const x = lerp(A[0], B[0], k / 10), z = lerp(A[1], B[1], k / 10); if (SNOW.depth(x, z) > 0.06 && SNOW.type(x, z) === 1) return true; } return false; },
   mark(k) { if (!this.last[k]) { this.last[k] = GAME.time; this.log.push(k + '@' + GAME.time.toFixed(1)); console.log('[BOT]', k, GAME.time.toFixed(1)); } },
   get(dt) {
     this.buy();
-    // pick the right tool for the job (like a player would)
-    { const a = SNOW.areas[SNOW.hlArea] || null;
-      if (a) { const want = a.lot ? GAME.best('hand') : (GAME.best('truck') || GAME.best('hand'));
-        if (want !== PL.tool && !PL.dumping) { PL.setTool(want); UI.refreshTools(); this.laneArea = null; } } }
     const truck = PL.kind === 'truck';
     let tx, tz, key;
     const st = PL.stats();
-    if (PL.load >= st.cap * 0.97 || (this.goingDump && PL.load > 1)) {
-      this.goingDump = true;
-      let best = null, bd = 1e9; for (const M of WORLD.melters) { const d = Math.hypot(M.zone.x - PL.x, M.zone.z - PL.z); if (d < bd) { bd = d; best = M; } }
-      tx = best.zone.x; tz = best.zone.z; key = 'm' + best.x;
-    } else {
-      this.goingDump = false;
+    {
       this.rt -= dt;
       this.stuckT = (this.stuckT || 0) + dt;
       if (PL.carveRate > 0.05 || Math.hypot(PL.x - (this.px || 0), PL.z - (this.pz || 0)) > 0.8) { this.stuckT = 0; this.px = PL.x; this.pz = PL.z; }
-      if (this.stuckT > 2.5) { this.stuckT = 0; this.jit = 1.2; this.tgt = null; this.rt = 0; }
-      if (this.jit > 0) { this.jit -= dt; const a = GAME.time * 1.7; return { x: Math.cos(a), y: Math.sin(a) }; }
+      if (this.stuckT > 2.5) { this.stuckT = 0; this.jit = truck ? 2.0 : 1.2; this.tgt = null; this.rt = 0; if (truck) this.li++; }
+      if (this.jit > 0) {
+        this.jit -= dt;
+        if (truck) { // back into open space (middle of the street / lot / square), then try again
+          const inPlaza = PL.x > 5.3 && PL.z < 2.4 && PL.z > -22.4, ox = inPlaza ? 8.2 : 0, oz = inPlaza ? clamp(PL.z, -20, 0) : clamp(PL.z, -55.5, 55.5);
+          const dx = ox - PL.x, dz = oz - PL.z, l = Math.hypot(dx, dz);
+          if (l > 0.8) return { x: dx / l, y: -dz / l };
+        }
+        const a = GAME.time * 1.7; return { x: Math.cos(a), y: Math.sin(a) };
+      }
       // lane sweeping on the goal area (efficient, human-like)
       const a0 = SNOW.areas[SNOW.hlArea] || null;
       if (a0 && !a0.done) {
@@ -2770,8 +2922,10 @@ const BOT = {
         while (this.li < this.laneList.length && this.lp === 0 && !this.laneHasSnow(this.laneList[this.li])) this.li++;
         if (this.li < this.laneList.length) {
           const L = this.laneList[this.li], wp = L[this.lp];
-          const unreachable = truck ? !PL.truckFree(wp[0], wp[1], PL.h) && !PL.truckFree(wp[0], wp[1], PL.h + Math.PI / 2) : !PL.kidFree(wp[0], wp[1]);
-          if (unreachable || this.noPath > 1.5 || Math.hypot(wp[0] - PL.x, wp[1] - PL.z) < (truck ? 2.2 : 0.6)) { this.noPath = 0; this.lp++; if (this.lp > 1) { this.lp = 0; this.li++; } }
+          const lh = L[4] !== undefined ? L[4] : PL.h, unreachable = truck ? !PL.truckFree(wp[0], wp[1], lh) && !PL.truckFree(wp[0], wp[1], lh + Math.PI) && !PL.truckFree(wp[0], wp[1], PL.h) : !PL.kidFree(wp[0], wp[1]);
+          const dwp = Math.hypot(wp[0] - PL.x, wp[1] - PL.z);
+          this.nearT = dwp < (truck ? 3.5 : 1.2) ? (this.nearT || 0) + dt : 0;   // circling around a waypoint counts as reached
+          if (unreachable || this.noPath > 1.5 || this.nearT > 1.2 || dwp < (truck ? (this.lp ? 1.0 : 2.2) : 0.6)) { this.nearT = 0; this.noPath = 0; this.lp++; if (this.lp > 1) { this.lp = 0; this.li++; } }
           if (this.li < this.laneList.length) { const w2 = this.laneList[this.li][this.lp]; this.tgt = { x: w2[0], z: w2[1] }; this.rt = 0.35; }
         }
       }
@@ -2794,7 +2948,33 @@ const BOT = {
     const here = dist[ci + cj * W];
     if (here < 0) this.noPath = (this.noPath || 0) + dt; else this.noPath = 0;
     const open = (x, z) => (Math.abs(x) < 3.6 && Math.abs(z) < 50) || Math.abs(z) > 50.5;
-    if (truck && open(PL.x, PL.z) && open(tx, tz)) { const l = Math.hypot(dx, dz) || 1; return { x: dx / l, y: -dz / l }; }
+    if (truck) {
+      // route between the open zones (street, end lots, square) through their mouths
+      const zone = (x, z) => z < -50 ? 'N' : z > 50 ? 'S' : (x > 5.3 && z < 2.4 && z > -22.4) ? 'P' : 'R';
+      const zp = zone(PL.x, PL.z), zt = zone(tx, tz);
+      if (zp !== zt) {
+        let wx = null, wz = null;
+        if (zp === 'N') { wx = 0; wz = -45; } else if (zp === 'S') { wx = 0; wz = 45; }
+        else if (zp === 'P') { wx = 1.0; wz = clamp(PL.z, -16, -4); }
+        else if (zt === 'P') { if (PL.x < 0.5 || Math.abs(PL.z - clamp(tz, -16, -4)) > 4) { wx = 1.0; wz = clamp(tz, -16, -4); } }
+        else if (zt === 'N' && PL.z > -44) { wx = 0; wz = -46; } else if (zt === 'S' && PL.z < 44) { wx = 0; wz = 46; }
+        if (wx !== null && Math.hypot(wx - PL.x, wz - PL.z) > 2) { dx = wx - PL.x; dz = wz - PL.z; const l = Math.hypot(dx, dz) || 1; return { x: dx / l, y: -dz / l }; }
+      }
+      // trucks: straight at the waypoint when the way is clear, otherwise follow the path field a few cells ahead
+      const r = PL.geo.halfW + 0.15, L = Math.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L;
+      let clear = true;
+      for (let d = 1; d < L && clear; d += 0.6) { const x = PL.x + ux * d, z = PL.z + uz * d; if (!SNOW.walk(x, z) || !SNOW.walk(x + uz * r, z - ux * r) || !SNOW.walk(x - uz * r, z + ux * r)) clear = false; }
+      if (!clear && here > 2) {
+        let ci2 = ci, cj2 = cj, v = here;
+        for (let s = 0; s < 6; s++) {
+          let bi = ci2, bj = cj2, bv = v;
+          for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) { const ni = ci2 + a, nj = cj2 + b; if (ni < 0 || nj < 0 || ni >= W || nj >= this.D) continue; const w = dist[ni + nj * W]; if (w >= 0 && w < bv) { bv = w; bi = ni; bj = nj; } }
+          if (bv >= v) break; ci2 = bi; cj2 = bj; v = bv;
+        }
+        dx = WORLD.bounds.x0 + (ci2 + 0.5) * this.CS - PL.x; dz = WORLD.bounds.z0 + (cj2 + 0.5) * this.CS - PL.z;
+      }
+      const l = Math.hypot(dx, dz) || 1; return { x: dx / l, y: -dz / l };
+    }
     if (here > 1) {
       let bi = ci, bj = cj, bv = here;
       for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
@@ -2814,13 +2994,13 @@ async function loadArt() {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/town.glb.gz?v=v2'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/town.glb.gz?v=v3'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/town.glb?v=v2'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/town.glb?v=v3'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -2842,8 +3022,18 @@ async function boot() {
   PL.init(scene);
   GUIDE.init(scene);
   TREASURE.init(scene);
+  CREW.init(scene);
   if (STORE.get('plowtown_mute') === '1') AUD.muted = true;
   const resumed = GAME.load();
+  for (let i = 0; i < Math.min(GAME.crew || 0, CREW_DEFS.length); i++) CREW.join(i, true);
+  // test shortcut: ?skip=truck|dumpplow|groomer jumps to that stage (driveways done, tools owned)
+  if (QS.has('skip')) {
+    const to = QS.get('skip') || 'truck';
+    for (const k of HAND_AREAS) { const a = WORLD.areaByKey[k]; if (!a.done) GAME.completeArea(a, true); }
+    for (const t of TIERS) { GAME.owned[t.key] = 1; if (t.key === to) break; }
+    if (to === 'groomer') { for (const k of ['street1', 'street2']) GAME.completeArea(WORLD.areaByKey[k], true); }
+    PL.x = 0; PL.z = 30; PL.h = Math.PI; PL.setTool(to, true); PL.ensureFree();
+  }
   UI.init();
   INPUT.init($('c'));
   if (QS.has('bot')) { BOT.init(); window.__hold = true; }
@@ -2877,6 +3067,7 @@ function step(dt) {
   GAME.update(dt);
   LIFE.update(dt);
   TREASURE.update(dt);
+  CREW.update(dt);
   updateWorld(dt);
   FX.update(dt);
   UI.tick(dt);

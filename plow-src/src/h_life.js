@@ -23,7 +23,7 @@ const LIFE = {
     const P = makePerson(LOOKS.baker); WORLD.scene.add(P.root);
     const d = WORLD.bakery.door; P.root.position.set(d.x + 1.2, 0, d.z + 0.5); P.root.rotation.y = 0; P.root.scale.setScalar(0.001);
     this.people.push({ P, t: 0, life: 7, sc: 1.38, line: 'Fresh bread for everyone!', bub: UI.bubble('Fresh bread for everyone!'), mode: 'wave' });
-    WORLD.bakery.smoke = new V3(1.0, 6.2, -62.6);
+    WORLD.bakery.smoke = new V3(1.0, 6.2, -65.2);
   },
   freeCar(car, silent) {
     car.state = 'free';

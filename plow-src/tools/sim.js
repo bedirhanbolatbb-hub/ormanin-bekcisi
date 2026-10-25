@@ -17,10 +17,10 @@ const { chromium } = require('playwright');
     const r = await page.evaluate((n) => {
       __step(n * 30, 1 / 30);
       const a = WORLD.areaByKey;
-      return { t: GAME.time, c: Math.round(GAME.coins), e: Math.round(GAME.earned), tool: PL.tool, lv: JSON.stringify(GAME.lv[PL.tool]), g: GAME.goalIdx(), load: Math.round(PL.load), cap: Math.round(PL.stats().cap), done: Object.keys(GAME.done).join(',') };
+      return { t: GAME.time, c: Math.round(GAME.coins), e: Math.round(GAME.earned), tool: PL.tool, lv: JSON.stringify(GAME.lv[PL.tool]), g: GAME.goalIdx(), load: Math.round(PL.load), cap: Math.round(PL.stats().cap), done: Object.keys(GAME.done).join(','), pay: GAME.payouts };
     }, chunk);
     t += chunk;
-    snap.push(`${r.t.toFixed(0).padStart(4)}s coins=${r.c} earned=${r.e} tool=${r.tool} lv=${r.lv} goal=${r.g} load=${r.load}/${r.cap} done=[${r.done}]`);
+    snap.push(`${r.t.toFixed(0).padStart(4)}s coins=${r.c} earned=${r.e} tool=${r.tool} lv=${r.lv} goal=${r.g} pays=${r.pay} done=[${r.done}]`);
     if (t >= nextShot) { nextShot += shotEvery; await page.evaluate(() => window.__render()); await page.screenshot({ path: prefix + (shotN++) + '.png' }); }
   }
   const bl = await page.evaluate(() => BOT.log);

@@ -43,6 +43,7 @@ const SNOW = {
   },
   type(x, z) { const k = this.idx(x, z); return k < 0 ? 0 : this.T[k]; },
   walk(x, z) { const k = this.idx(x, z); if (k < 0) return false; const t = this.T[k]; return t === 1 || t === 3; },
+  solid(x, z) { const k = this.idx(x, z); return k < 0 || this.T[k] === 2; },
   depth(x, z) { // bilinear snow depth
     const fx = (x - this.X0) / this.C, fz = (z - this.Z0) / this.C;
     const i = Math.floor(fx), j = Math.floor(fz);

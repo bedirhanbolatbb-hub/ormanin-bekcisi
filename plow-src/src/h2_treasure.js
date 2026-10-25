@@ -12,7 +12,7 @@ const TREASURE = {
     // candidate cells: paved, inside a job area, away from blocked/yard edges
     const N = SNOW.NX, T = SNOW.T, A = SNOW.A;
     const okAt = (x, z) => { const k = SNOW.idx(x, z); if (k < 0 || T[k] !== 1 || !A[k]) return false; for (const [dx, dz] of [[0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]]) { const k2 = SNOW.idx(x + dx, z + dz); if (k2 < 0 || T[k2] !== 1) return false; } return true; };
-    const want = { rose: [3, 0], miller: [2, 1], walkW1: [4, 1], hale: [2, 1], walkE1: [4, 1], park: [2, 1], lina: [2, 1], street1: [6, 2], walkW2: [3, 1], walkE2: [3, 1], street2: [6, 2], ortega: [2, 1], tom: [2, 1], north: [4, 2], plaza: [5, 2], apron: [2, 0] };
+    const want = { rose: [3, 0], miller: [2, 1], park: [2, 1], hale: [2, 1], lina: [2, 1], ortega: [2, 1], tom: [2, 1], street1: [10, 3], street2: [10, 3], north: [4, 2], plaza: [5, 2], apron: [2, 0] };
     for (const key in want) {
       const a = WORLD.areaByKey[key]; if (!a) continue;
       const [nc, ng] = want[key];

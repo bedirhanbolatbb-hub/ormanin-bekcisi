@@ -115,14 +115,14 @@ function poseShovel(S, w, toss) {
 
 // ---------- truck shapes (per tier) ----------
 const TGEO = {
-  pickup: { model: 'pickup', off: 0, rear: 2.6, nose: 2.6, halfW: 1.08, bladeZ: 3.25, bladeS: [1.9, 1.7], carve: 3.62, pileZ: 3.75, beacon: [0, 1.95, -0.3], cam: 1 },
-  tipper: { model: 'tipper', off: 1.97, rear: 3.65, nose: 3.6, halfW: 1.46, bladeZ: 4.62, bladeS: [2.8, 2.0], carve: 5.06, pileZ: 5.2, beacon: [0, 3.25, 3.0], cam: 1.16, tint: 0xf07a12 },
-  groomer: { model: 'groomer', off: 0.34, rear: 4.45, nose: 4.1, halfW: 2.25, bladeZ: null, carve: 4.5, pileZ: 4.65, beacon: [0, 3.5, 1.9], cam: 1.32, pivot: true },
+  pickup: { model: 'pickup', turn: 2.0, off: 0, rear: 2.6, nose: 2.6, halfW: 1.08, bladeZ: 3.25, bladeS: [1.9, 1.7], carve: 3.62, pileZ: 3.75, beacon: [0, 1.95, -0.3], cam: 1 },
+  tipper: { model: 'tipper', turn: 1.75, off: 1.97, rear: 3.65, nose: 3.6, halfW: 1.46, bladeZ: 4.62, bladeS: [2.8, 2.0], carve: 5.06, pileZ: 5.2, beacon: [0, 3.25, 3.0], cam: 1.16, tint: 0xf07a12 },
+  groomer: { model: 'groomer', turn: 1.5, off: 0.34, rear: 4.45, nose: 4.1, halfW: 2.25, bladeZ: null, carve: 4.5, pileZ: 4.65, beacon: [0, 3.5, 1.9], cam: 1.32, pivot: true },
 };
 // ---------- player ----------
 const PL = {
-  x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', loads: { sled: 0, truck: 0 },
-  scoop: 0, toss: 0, tossCD: 0, dumping: null, full: false, fullT: 0, carveRate: 0, moveAmt: 0, blowing: 0,
+  x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', load: 0,
+  scoop: 0, toss: 0, tossCD: 0, full: false, payFlash: 0, fullT: 0, carveRate: 0, moveAmt: 0, blowing: 0,
   sledX: -4.7, sledZ: 46.6, sledH: -Math.PI / 2, sledBump: 0, sledVis: 0, pileVis: 0, celebrate: 0, breathT: 2,
   init(scene) {
     this.scene = scene;
@@ -165,8 +165,6 @@ const PL = {
   },
   get kind() { return TIER[this.tool].kind; },
   get geo() { return TGEO[TIER[this.tool].geo || 'pickup']; },
-  get load() { return this.kind === 'truck' ? this.loads.truck : this.loads.sled; },
-  set load(v) { if (this.kind === 'truck') this.loads.truck = v; else this.loads.sled = v; },
   stats() { return GAME.stats(this.tool); },
   applyTool() {
     const t = this.tool, k = this.kind, st = this.stats();
@@ -194,6 +192,7 @@ const PL = {
   },
   setTool(t, silent) {
     if (t === this.tool) return;
+    if (this.load > 0.3) this.payout(true);
     const was = this.tool, wasK = TIER[was].kind, newK = TIER[t].kind;
     if (newK === 'truck') {
       this.tool = t;
@@ -217,7 +216,7 @@ const PL = {
     let best = null, bd = 1e9;
     const cand = [];
     for (let zz = -46; zz <= 46; zz += 2) for (const xx of [-1.75, 0, 1.75]) cand.push([xx, zz]);
-    for (const xx of [-5, -2.5, 0, 2.5, 5]) { cand.push([xx, 54.5]); cand.push([xx, -54.5]); }
+    for (const xx of [-5, -2.5, 0, 2.5, 5]) { cand.push([xx, 55.5]); cand.push([xx, -55.8]); }
     for (const [xx, zz] of cand) {
       const d = (xx - x) ** 2 + (zz - z) ** 2; if (d >= bd) continue;
       for (const hh of [h0, h0 + Math.PI, Math.PI / 2, -Math.PI / 2]) if (this.truckFree(xx, zz, hh)) { bd = d; best = { x: xx, z: zz, h: hh }; break; }
@@ -233,18 +232,37 @@ const PL = {
     const px = x + fx * 2.0, pz = z + fz * 2.0;
     return SNOW.walk(px + rx * w, pz + rz * w) && SNOW.walk(px - rx * w, pz - rz * w) && SNOW.walk(x + fx * 1.0, z + fz * 1.0);
   },
-  truckFree(x, z, h) {
-    const G = this.geo, fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx, hw = G.halfW;
-    const bw = Math.max(hw, this.stats().w * 0.5 - 0.22), bz = G.carve - 0.12;
-    const pts = [[hw - 0.03, -G.rear], [-hw + 0.03, -G.rear], [hw, 0], [-hw, 0], [hw, -G.rear * 0.5], [-hw, -G.rear * 0.5], [hw, G.nose], [-hw, G.nose], [bw, bz], [-bw, bz], [bw * 0.5, bz], [-bw * 0.5, bz], [0, G.carve]];
-    for (const [a, b] of pts) if (!SNOW.walk(x + rx * a + fx * b, z + rz * a + fz * b)) return false;
-    return true;
+  // how a pose sits: Infinity = hits something hard (house, fence, post, car, tree) or leaves the map;
+  // otherwise the number of wheel/body points that are off the paved ground (hanging over a snowy lawn)
+  poseBad(x, z, h) {
+    const G = this.geo, fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx, hw = G.halfW, T = SNOW.T;
+    const bw = Math.max(hw, this.stats().w * 0.5 - 0.4), bz = G.carve - 0.12, P = this._pts || (this._pts = []);
+    P.length = 0;
+    P.push(hw - 0.03, -G.rear, -hw + 0.03, -G.rear, hw, 0, -hw, 0, hw, -G.rear * 0.5, -hw, -G.rear * 0.5, hw, G.nose, -hw, G.nose, 0, G.carve);
+    let off = 0;
+    for (let i = 0; i < P.length; i += 2) {
+      const k = SNOW.idx(x + rx * P[i] + fx * P[i + 1], z + rz * P[i] + fz * P[i + 1]);
+      if (k < 0) return Infinity; const t = T[k]; if (t === 2) return Infinity; if (t === 0) off++;
+    }
+    const B = [bw, -bw, bw * 0.5, -bw * 0.5, hw, -hw];
+    for (const a of B) if (SNOW.solid(x + rx * a + fx * bz, z + rz * a + fz * bz)) return Infinity;
+    return off;
+  },
+  truckFree(x, z, h) { return this.poseBad(x, z, h) === 0; },
+  // after an upgrade (wider blade) or a tool change the machine may overlap something: move it to the nearest free spot
+  ensureFree() {
+    if (this.kind !== 'truck' || this.truckFree(this.x, this.z, this.h)) return;
+    for (let r = 0.15; r <= 3.2; r += 0.15) for (const dh of [0, 0.25, -0.25, 0.5, -0.5]) for (let k = 0; k < 16; k++) {
+      const ang = k / 16 * TAU, x = this.x + Math.sin(ang) * r, z = this.z + Math.cos(ang) * r;
+      if (this.truckFree(x, z, this.h + dh)) { this.x = x; this.z = z; this.h += dh; return; }
+    }
+    const s = this.findTruckSpot(this.x, this.z); this.x = s.x; this.z = s.z; this.h = s.h;
   },
   // ---- main update ----
   update(dt, inp) {
     const st = this.stats(); const t = this.kind;
     if (this.h > Math.PI * 4 || this.h < -Math.PI * 4) this.h = Math.atan2(Math.sin(this.h), Math.cos(this.h));
-    this.full = this.load >= st.cap - 0.01;
+    this.full = false;
     let mvx = inp.x, mvz = -inp.y, mag = Math.min(1, Math.hypot(mvx, mvz));
     if (mag > 0.001) { mvx /= mag; mvz /= mag; }
     if (mag < 0.12) mag = 0;
@@ -252,14 +270,13 @@ const PL = {
     if (t !== 'truck') removed = this._walk(dt, st, mvx, mvz, mag);
     else removed = this._drive(dt, st, mvx, mvz, mag);
     this.carveRate = damp(this.carveRate, removed / Math.max(dt, 1e-3), 10, dt);
-    // full warning
-    if (this.full) { if (this.fullT <= 0) { AUD.full(); UI.onFull(); } this.fullT = 1; } else this.fullT = Math.max(0, this.fullT - dt);
-    this._dumpCheck(dt);
+    // a full sled / blade turns into coins right away (no trips to a melter)
+    if (this.load >= st.cap - 0.01) this.payout();
     this._visuals(dt, st);
   },
   _walk(dt, st, mx, mz, mag) {
     const isB = this.kind === 'blower';
-    let sp = st.spd * (this.full ? 0.9 : 1);
+    let sp = st.spd;
     const tvx = mx * sp * mag, tvz = mz * sp * mag;
     const acc = mag > 0 ? 20 : 26;
     this.vx = damp(this.vx, tvx, acc * 0.5, dt); this.vz = damp(this.vz, tvz, acc * 0.5, dt);
@@ -323,67 +340,64 @@ const PL = {
     FX.clump(b.x, b.y + 0.3, b.z, sx, 0.45 + this.sledVis * 0.35, sz, size, 0.34, (x, y, z) => { this.sledBump = 1; FX.puff(x, y, z, 4, 0.5); AUD.plop(); });
     AUD.toss();
   },
+  // arcade driving: the machine turns toward your finger right away (tight turns, it slows down while turning hard).
+  // A turn is tried around several points along the machine (middle, back, front...) so it squeezes through tight
+  // spots; if nothing fits it backs up by itself. Nothing ever needs a manual reverse.
   _drive(dt, st, mx, mz, mag) {
     const G = this.geo;
+    this.ensureFree();
     const want = mag > 0 ? Math.atan2(mx, mz) : this.h;
-    const a = angDiff(this.h, want);
-    if (G.pivot) return this._drivePivot(dt, st, mag, a, G);
-    if (mag > 0 && Math.abs(a) > 2.3 && this.spd < 1.2) this.rev = true;
-    if (this.rev && !this.autoRev && (mag === 0 || Math.abs(a) < 1.2)) this.rev = false;
-    // assist: stuck nose-first against something while pushing forward -> back up a little
-    if (this.autoRev > 0) { this.autoRev -= dt; if (this.autoRev <= 0) { this.autoRev = 0; this.rev = false; } }
-    if (!this.rev && mag > 0 && Math.abs(this.spd) < 0.3) { this.blockT = (this.blockT || 0) + dt; if (this.blockT > 0.35) { this.blockT = 0; this.rev = true; this.autoRev = 0.9; } } else this.blockT = 0;
-    let target;
-    if (this.rev) target = -3.2 * mag;
-    else target = st.spd * mag * (Math.abs(a) < 1.9 ? 1 - 0.42 * Math.abs(a) / 1.9 : 0.4);
-    if (this.full && SNOW.depth(this.x + Math.sin(this.h) * (G.carve + 0.2), this.z + Math.cos(this.h) * (G.carve + 0.2)) > 0.1) target *= 0.55;
-    const ac = Math.sign(target - this.spd) === Math.sign(this.spd) || this.spd === 0 ? 7 : 12;
-    this.spd += clamp(target - this.spd, -ac * dt, ac * dt);
-    const om = clamp((Math.abs(this.spd) + 1.0) / 3.0, 0.4, 2.3);
-    let yaw = clamp(a * 3.0, -om, om);
-    if (this.rev) yaw = -Math.sign(a || 1) * om * 0.9;
-    if (mag === 0) yaw = 0;
+    const a = angDiff(this.h, want), al = Math.abs(a);
+    const esc = this.escape > 0;
+    let target = mag === 0 ? 0 : st.spd * mag * (al < 0.35 ? 1 : al < 1.1 ? 1 - (al - 0.35) * 1.05 : 0.15);
+    if (esc) { this.escape -= dt; target = -2.6; }
+    const acc = target > this.spd ? (this.spd < 0 ? 14 : 7) : 12;
+    this.spd += clamp(target - this.spd, -acc * dt, acc * dt);
+    const turn = G.turn || 1.8;
+    const yaw = mag === 0 ? 0 : clamp(a * 3.4, -turn, turn) * (esc ? 0.7 : 1);
     const nh = this.h + yaw * dt;
-    const fx = Math.sin(nh), fz = Math.cos(nh);
-    const nx = this.x + fx * this.spd * dt, nz = this.z + fz * this.spd * dt;
-    const ox = this.x + Math.sin(this.h) * this.spd * dt, oz = this.z + Math.cos(this.h) * this.spd * dt;
-    if (this.truckFree(nx, nz, nh)) { this.x = nx; this.z = nz; this.h = nh; }
-    else if (this.truckFree(ox, oz, this.h)) { this.x = ox; this.z = oz; }
-    else if (this.truckFree(this.x, this.z, nh)) { this.h = nh; this.spd *= 0.5; }
-    else if (this.truckFree(nx, this.z, this.h)) { this.x = nx; this.spd *= 0.7; }
-    else if (this.truckFree(this.x, nz, this.h)) { this.z = nz; this.spd *= 0.7; }
-    else { if (Math.abs(this.spd) > 2) { CAM.shake = 0.25; AUD.thump(); } this.spd = 0; }
-    // never-stuck assist: if pushing but not moving, pivot in place / slide free
-    const moved = Math.hypot(this.x - (this._px || this.x), this.z - (this._pz || this.z)); this._px = this.x; this._pz = this.z;
-    if (mag > 0 && moved < 0.004) {
-      this.stuckT = (this.stuckT || 0) + dt;
-      if (this.stuckT > 0.6) {
-        const piv = this.h + clamp(a, -1, 1) * 1.6 * dt;
-        if (this.truckFree(this.x, this.z, piv)) this.h = piv;
-        else {
-          for (let k = 0; k < 8; k++) { const ang = k / 8 * TAU, ox = this.x + Math.sin(ang) * 0.12, oz = this.z + Math.cos(ang) * 0.12; if (this.truckFree(ox, oz, piv)) { this.x = ox; this.z = oz; this.h = piv; break; } }
-        }
+    const fx0 = Math.sin(this.h), fz0 = Math.cos(this.h), fx = Math.sin(nh), fz = Math.cos(nh);
+    const step = this.spd * dt;
+    let moved = false, turned = false;
+    const L0 = -G.rear, L1 = G.carve, P = this._piv || (this._piv = [0.5, 0.2, 0.8, 0.35, 0.65, 0.05, 0.95]);
+    const pivotPose = (sh, f) => { const m = L0 + (L1 - L0) * f; return [this.x + (fx0 - fx) * m + fz * sh, this.z + (fz0 - fz) * m - fx * sh]; };
+    // 1) turn while driving (around whichever point fits)
+    if (Math.abs(yaw) > 0.02) {
+      outer: for (const sh of [0, 0.12, -0.12]) for (const f of P) {
+        const [rx, rz] = pivotPose(sh, f);
+        if (this.truckFree(rx + fx * step, rz + fz * step, nh)) { this.x = rx + fx * step; this.z = rz + fz * step; this.h = nh; moved = turned = true; break outer; }
       }
-    } else this.stuckT = 0;
-    this.moveAmt = clamp(Math.abs(this.spd) / st.spd, 0, 1);
-    return this._bladeCarve(dt, st, G);
-  },
-  // tracked machines (groomer) turn on the spot
-  _drivePivot(dt, st, mag, a, G) {
-    let target = mag === 0 ? 0 : st.spd * mag * (Math.abs(a) < 0.5 ? 1 : Math.abs(a) < 1.2 ? 0.55 : 0.12);
-    if (this.full && SNOW.depth(this.x + Math.sin(this.h) * (G.carve + 0.2), this.z + Math.cos(this.h) * (G.carve + 0.2)) > 0.1) target *= 0.55;
-    this.spd += clamp(target - this.spd, -9 * dt, 6 * dt);
-    const yaw = mag === 0 ? 0 : clamp(a * 2.6, -1.35, 1.35);
-    const nh = this.h + yaw * dt, fx = Math.sin(nh), fz = Math.cos(nh);
-    const nx = this.x + fx * this.spd * dt, nz = this.z + fz * this.spd * dt;
-    if (this.truckFree(nx, nz, nh)) { this.x = nx; this.z = nz; this.h = nh; }
-    else if (this.truckFree(this.x, this.z, nh)) { this.h = nh; this.spd *= 0.4; }
-    else if (this.truckFree(nx, this.z, this.h)) { this.x = nx; this.spd *= 0.7; }
-    else if (this.truckFree(this.x, nz, this.h)) { this.z = nz; this.spd *= 0.7; }
-    else {
-      this.spd = 0;
-      for (let k = 0; k < 8; k++) { const ang = k / 8 * TAU, ox = this.x + Math.sin(ang) * 0.15, oz = this.z + Math.cos(ang) * 0.15; if (this.truckFree(ox, oz, nh)) { this.x = ox; this.z = oz; this.h = nh; break; } }
+    } else if (this.truckFree(this.x + fx0 * step, this.z + fz0 * step, this.h)) { this.x += fx0 * step; this.z += fz0 * step; moved = true; }
+    // 2) roughly the right way but the turn does not fit: keep driving straight / slide along the edge (keeps speed)
+    if (!moved && (al < 0.9 || esc || mag === 0)) {
+      if (this.truckFree(this.x + fx0 * step, this.z + fz0 * step, this.h)) { this.x += fx0 * step; this.z += fz0 * step; moved = true; }
+      else if (this.truckFree(this.x + fx0 * step, this.z, this.h)) { this.x += fx0 * step; this.spd *= 0.9; moved = true; }
+      else if (this.truckFree(this.x, this.z + fz0 * step, this.h)) { this.z += fz0 * step; this.spd *= 0.9; moved = true; }
     }
+    // 3) facing the wrong way (or blocked): turn on the spot, sliding a little sideways toward open space if needed
+    if (!moved && Math.abs(yaw) > 0.02) {
+      outer2: for (const sh of [0, 0.12, -0.12, 0.25, -0.25, 0.4, -0.4]) for (const f of P) {
+        const [rx, rz] = pivotPose(sh, f);
+        if (this.truckFree(rx, rz, nh)) { this.x = rx; this.z = rz; this.h = nh; this.spd *= 0.6; turned = true; break outer2; }
+      }
+    }
+    if (!moved && !turned) { if (Math.abs(this.spd) > 2.5) { CAM.shake = 0.2; AUD.thump(); } this.spd = 0; }
+    const blocked = mag > 0 && !turned && (al >= 0.9 || !moved);
+    // never stuck: when pushing but blocked, wiggle free; if that fails, back up a little so the turn fits
+    if (mag > 0 && !esc && (blocked || (Math.abs(this.spd) < 0.25 && al < 0.6))) {
+      this.stuckT = (this.stuckT || 0) + dt;
+      if (this.stuckT > 0.3) {
+        let okw = false;
+        const piv = this.h + clamp(a, -1, 1) * turn * dt * 2;
+        for (let k = 0; k < 16 && !okw; k++) {
+          const ang = k / 16 * TAU, d = 0.12 + (k % 4) * 0.08, ox = this.x + Math.sin(ang) * d, oz = this.z + Math.cos(ang) * d;
+          if (this.truckFree(ox, oz, piv)) { this.x = ox; this.z = oz; this.h = piv; okw = true; }
+        }
+        if (okw) this.stuckT = 0.2;
+        else if (this.stuckT > 0.5) { this.escape = 0.7; this.stuckT = 0; }
+      }
+    } else if (!esc) this.stuckT = 0;
+    this.rev = this.spd < -0.2;
     this.moveAmt = clamp(Math.abs(this.spd) / st.spd, 0, 1);
     return this._bladeCarve(dt, st, G);
   },
@@ -407,48 +421,25 @@ const PL = {
     }
     return removed;
   },
-  _dumpCheck(dt) {
-    if (this.dumping) {
-      const D = this.dumping; D.t += dt;
-      const M = D.M;
-      while (D.sent < D.n && D.t >= D.sent * D.iv) {
-        const part = D.amount / D.n; D.sent++;
-        const src = this.kind === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
-        const sz = this.kind === 'truck' ? 0.5 + this.geo.halfW * 0.15 : 0.28;
-        const first = D.sent === 1;
-        FX.clump(src.x, src.y + 0.5, src.z, M.x + rnd(-0.3, 0.3), 1.05, M.z + rnd(-0.3, 0.3), sz * rnd(0.8, 1.2), 0.38, () => {
-          if (first) UI.floatText(this._v2.set(M.x, 2.6, M.z), '+' + fmt(D.amount * GAME.price()), '#ffd34d', 34);
-          M.heat = Math.min(1.8, M.heat + 0.5); M.shake = 0.2;
-          FX.steam(M.x, 1.1, M.z, 5, true); FX.glow(M.x, 1.2, M.z, 2.5); AUD.sizzle();
-          const val = part * GAME.price();
-          GAME.earn(val);
-          FX.coinBurst(M.spoutPos.x, M.spoutPos.y, M.spoutPos.z, Math.max(1, Math.min(9, Math.round(part * 0.8))), val);
-        });
-      }
-      D.vis = Math.max(0, D.amount * (1 - D.t / (D.n * D.iv + 0.2)));
-      if (D.sent >= D.n && D.t > D.n * D.iv + 0.5) { this.dumping = null; GAME.onDump(D.amount); }
-      return;
-    }
-    if (this.load < 0.3) return;
-    const isT = this.kind === 'truck', fx = Math.sin(this.h), fz = Math.cos(this.h), G = this.geo;
-    for (const M of WORLD.melters) {
-      let d;
-      if (isT) { // distance from zone center to the truck's long axis (rear .. blade)
-        const rx = M.zone.x - this.x, rz = M.zone.z - this.z, t = clamp(rx * fx + rz * fz, -G.rear, G.carve + 0.3);
-        d = Math.hypot(rx - fx * t, rz - fz * t) - G.halfW * 0.8;
-      } else d = Math.hypot(this.x - M.zone.x, this.z - M.zone.z);
-      if (d < M.r) {
-        const amt = this.load; this.load = 0; this.full = false;
-        const n = clamp(Math.round(3 + amt / 6), 3, 14);
-        this.dumping = { M, t: 0, amount: amt, n, iv: clamp(0.7 / n, 0.04, 0.12), sent: 0, vis: amt };
-        AUD.dump(); UI.onDump();
-        break;
-      }
-    }
+  payout(quiet) {
+    const amt = this.load; this.load = 0;
+    if (amt < 0.3) return;
+    const val = amt * GAME.price();
+    const src = this.kind === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
+    GAME.earn(val);
+    const n = clamp(Math.round(4 + Math.log2(val + 1) * 1.4), 5, 18);
+    FX.coinBurst(src.x, src.y + 0.5, src.z, n, val, { up: 0.95, spread: 0.8 });
+    if (quiet) return;
+    const big = this.kind === 'truck';
+    FX.puff(src.x, src.y + 0.3, src.z, big ? 14 : 9, big ? 2.0 : 1.1); FX.sparkle(src.x, src.y + 0.5, src.z, big ? 18 : 10, big ? 1.0 : 0.5);
+    UI.floatText(this._v1.set(src.x, src.y + (big ? 2.4 : 1.5), src.z), '+' + fmt(val), '#ffd34d', big ? 36 : 30);
+    AUD.cash();
+    this.sledBump = 1; this.payFlash = 1;
+    GAME.payouts++; UI.onPayout();
   },
   _visuals(dt, st) {
     const t = this.kind, walking = t !== 'truck';
-    const loadVis = this.load + (this.dumping ? this.dumping.vis : 0);
+    const loadVis = this.load;
     this.bump = Math.max(0, (this.bump || 0) - dt * 3.2);
     const bsc = this.bump > 0 ? 1 + Math.sin((1 - this.bump) * Math.PI) * 0.2 : 1;
     this.kid.root.scale.setScalar(bsc); this.truck.scale.setScalar(bsc);
