@@ -7,54 +7,40 @@ const TIERS = [
   { key: 'megablower', name: 'Mega Blower', kind: 'blower', cost: 700, up: 1400, pay: 5, base: [2.0, 60, 4.7] },
   { key: 'truck', name: 'Plow Truck', kind: 'truck', cost: 0, gift: true, up: 12000, pay: 8, base: [2.7, 150, 7.0], geo: 'pickup' },
   { key: 'dumpplow', name: 'Dump Plow', kind: 'truck', cost: 12000, up: 20000, pay: 12, base: [3.7, 300, 7.4], geo: 'tipper' },
-  { key: 'groomer', name: 'Snow Groomer', kind: 'truck', cost: 20000, up: 40000, pay: 20, base: [4.6, 400, 7.2], geo: 'groomer' },
+  { key: 'thrower', name: 'Snow Thrower', kind: 'truck', cost: 30000, up: 50000, pay: 18, base: [4.1, 420, 7.8], geo: 'thrower', max: [3, 5, 5], labels: ['Wider blower', 'More power', 'More coins'] },
+  { key: 'sleigh', name: 'Magic Sleigh', kind: 'truck', cost: 150000, up: 150000, pay: 24, base: [4.5, 520, 8.8], geo: 'sleigh', max: [3, 5, 5], labels: ['Wider blade', 'More magic', 'More coins'] },
+  { key: 'zamboni', name: 'Ice Machine', kind: 'truck', cost: 450000, up: 250000, pay: 30, base: [4.3, 600, 8.0], geo: 'zamboni', max: [3, 5, 5], labels: ['Wider brush', 'More power', 'More coins'] },
+  { key: 'groomer', name: 'Snow Groomer', kind: 'truck', cost: 700000, up: 400000, pay: 38, base: [5.0, 800, 7.8], geo: 'groomer', max: [3, 5, 5], labels: ['Wider tiller', 'More power', 'More coins'] },
 ];
 const TIER = {}; TIERS.forEach((t, i) => { t.i = i; TIER[t.key] = t; });
 // upgrades: 0 wider, 1 faster, 2 more coins
-const UPMAX = 3, UPK = [0.06, 0.1, 0.16], UPM = [1.0, 0.8, 1.2];
+// later machines go further: 3 width levels, up to 5 power / coin levels
+const UPMAX = 3, UPK = [0.06, 0.1, 0.16, 0.25, 0.36], UPM = [1.0, 0.8, 1.2];
+const upMax = (key, i) => (TIER[key].max || [3, 3, 3])[i];
 const UPLABELS = { shovel: ['Wider shovel', 'Faster', 'More coins'], blower: ['Wider intake', 'Faster', 'More coins'], truck: ['Wider blade', 'More power', 'More coins'] };
 const UPSAY = ['WIDER!', 'FASTER!', 'MORE COINS!'];
 const DONE_AT = 0.85;   // an area finishes itself at 85% (80% for the big truck jobs) -> nobody hunts for the last bits
 const doneAt = a => a.lot ? DONE_AT : 0.8;
 // tips per area
 const TIPMIN = { rose: 25, miller: 40, apron: 10 };
-// hand tools do the driveways, trucks do the street, sidewalks, lot and square -> you never go back to a smaller tool
-const GOALS = [
-  { a: 'rose', t: "Clear Grandma Rose's driveway", ico: 'house' },
-  { a: 'miller', t: "Dig out the Millers' car", ico: 'car' },
-  { a: 'park', t: "Free the Parks' camper", ico: 'car' },
-  { a: 'hale', t: "Clear Mr. Hale's driveway", ico: 'house' },
-  { a: 'lina', t: "Free Lina's ice cream van", ico: 'car' },
-  { a: 'ortega', t: "Help the Ortegas", ico: 'house' },
-  { a: 'tom', t: "Clear Old Tom's path", ico: 'house' },
-  { a: 'street1', t: 'Plow Maple Lane (south)', ico: 'road' },
-  { a: 'street2', t: 'Plow Maple Lane (north)', ico: 'road' },
-  { a: 'north', t: 'Open the bakery', ico: 'shop' },
-  { a: 'plaza', t: 'Light up the town square', ico: 'tree' },
-  { end: true, t: 'Maple Lane is saved!', ico: 'star' },
-];
-const HAND_AREAS = ['rose', 'miller', 'park', 'hale', 'lina', 'ortega', 'tom'];
-const DONE_LINES = {
-  rose: ['Bless you, dear!', 'My hip thanks you!'], miller: ['Our car is free!', 'You rock!'], hale: ['Splendid work!'], park: ['Road trip time!'],
-  lina: ['Free ice cream later!'], ortega: ['¡Gracias!'], tom: ['Back in my day...', 'Good job, kid.'],
-};
-
 const GAME = {
   coins: 0, earned: 0, time: 0, owned: { shovel: 1 }, lv: {},
-  done: {}, payouts: 0, crew: 0, firstUp: false, started: false, ended: false, saveT: 0, checkT: 0, ver: 3, giftT: 0,
+  done: {}, payouts: 0, crew: 0, firstUp: false, started: false, ended: false, saveT: 0, checkT: 0, ver: 4, giftT: 0,
+  chapter: 1, chapters: {}, totalTime: 0, finishT: 0, _cs: null,
   L(key) { return this.lv[key] || (this.lv[key] = [0, 0, 0]); },
   stats(key) {
     const T = TIER[key], L = this.L(key);
     return { w: T.base[0] * (1 + 0.14 * L[0]), cap: T.base[1], spd: T.base[2] * (1 + 0.08 * L[1]), pay: T.pay * (1 + 0.35 * L[2]), kind: T.kind };
   },
   upCost(key, i) {
-    const T = TIER[key], L = this.L(key)[i]; if (L >= UPMAX) return Infinity;
+    const T = TIER[key], L = this.L(key)[i]; if (L >= upMax(key, i)) return Infinity;
     return Math.max(3, niceNum(T.up * UPK[L] * UPM[i]));
   },
-  price() { return this.stats(PL.tool).pay * STORM.mult; },
+  price() { return this.stats(PL.tool).pay * STORM.mult * (CH.payMul || 1) * (this.boost || 1); },
   earn(v) { this.coins += v; this.earned += v; },
   spend(v) { if (this.coins + 1e-6 < v) return false; this.coins -= v; return true; },
-  nextTool() { for (const t of TIERS) if (!this.owned[t.key]) return t.key; return null; },
+  // the next machine after the one you use (machines you already own come back for free, e.g. when you replay a chapter)
+  nextTool() { const s = CH.shop, i = s.indexOf(PL.tool); return i >= 0 && i + 1 < s.length ? s[i + 1] : (i < 0 ? s.find(k => !this.owned[k]) || null : null); },
   handDone() { let n = 0; for (const k of HAND_AREAS) if (this.done[k]) n++; return n; },
   best(kind) { let b = null; for (const t of TIERS) if (this.owned[t.key] && (kind === 'hand' ? t.kind !== 'truck' : t.kind === 'truck')) b = t.key; return b; },
   buyUp(i) {
@@ -71,13 +57,13 @@ const GAME = {
   },
   _v: new V3(),
   buyTool(t, free) {
-    const T = TIER[t], c = free ? 0 : T.cost;
-    if (!free && (T.gift || UI.shownCoins() + 1e-6 < c || !this.spend(c))) { AUD.deny(); return false; }
+    const T = TIER[t], had = !!this.owned[t], c = free || had ? 0 : T.cost;
+    if (!free && !had && (T.gift || UI.shownCoins() + 1e-6 < c || !this.spend(c))) { AUD.deny(); return false; }
     this.owned[t] = 1; AUD.newTool();
     PL.setTool(t, true); PL.celebrate = 1.0; PL.bump = 1;
     const p = T.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.confetti(p.x, 1.5, p.z, 70); FX.sparkle(p.x, 0.8, p.z, 34, 1.5); FX.puff(p.x, 0.4, p.z, 16, 1.6);
-    const sub = T.gift ? 'A gift from the town!' : 'x' + T.pay + ' coins!';
+    const sub = had ? 'Your machine is back!' : T.gift ? 'A gift from the town!' : 'x' + T.pay + ' coins!';
     UI.banner(T.name.toUpperCase() + '!', sub, t, T.gift ? 3.2 : 2.2);
     if (T.kind === 'truck') AUD.horn();
     UI.refreshTools(); this.save();
@@ -88,12 +74,15 @@ const GAME = {
       const g = GOALS[i];
       if (g.end) return i;
       if (g.tool) { if (!this.owned[g.tool]) return i; continue; }
+      if (g.count) { if (g.count() < g.n) return i; continue; }
+      if (g.wait) { if (!g.wait()) return i; continue; }
       if (!this.done[g.a]) return i;
     }
     return GOALS.length - 1;
   },
   update(dt) {
-    this.time += dt;
+    if (!this.ended && !CHUI.open) this.time += dt;
+    this.totalTime += dt;
     this.checkT -= dt;
     if (this.checkT <= 0) {
       this.checkT = 0.2;
@@ -105,9 +94,14 @@ const GAME = {
       const area = g.a ? WORLD.areaByKey[g.a] : null;
       SNOW.setHighlight(area && !area.done ? area.id : 0);
       // all driveways done -> the town hands over its plow truck
-      if (!this.owned.truck && this.handDone() >= HAND_AREAS.length && this.giftT <= 0) this.giftT = 2.4;
+      { const nt = this.nextTool(); if (CH.giftTruck && nt && TIER[nt].gift && this.handDone() >= HAND_AREAS.length && this.giftT <= 0) this.giftT = 2.4; }
+      // every job done -> the chapter's big finish, then the results
+      if (!this.ended && GOALS[this.goalIdx()].end) this.finishChapter();
     }
-    if (this.giftT > 0) { this.giftT -= dt; if (this.giftT <= 0 && !this.owned.truck) { this.giftT = 0; this.buyTool('truck', true); } }
+    for (let i = LATER.length - 1; i >= 0; i--) { const L = LATER[i]; L.t -= dt; if (L.t <= 0) { LATER.splice(i, 1); try { L.fn(); } catch (e) { console.warn(e); } } }
+    if (CH.update) CH.update(dt);
+    if (this.finishT > 0) { this.finishT -= dt; if (this.finishT <= 0) CHUI.results(); }
+    if (this.giftT > 0) { this.giftT -= dt; const nt = this.nextTool(); if (this.giftT <= 0 && nt && TIER[nt].gift) { this.giftT = 0; this.buyTool(nt, true); } }
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
   },
@@ -119,57 +113,109 @@ const GAME = {
     if (!silent) {
       let n = 0;
       for (let i = 0; i < pts.length && n < 40; i += 3, n++) { FX.puff(pts[i], pts[i + 2] * 0.6, pts[i + 1], 2, 0.8); if (n % 2 === 0) FX.sparkle(pts[i], 0.2, pts[i + 1], 2, 0.3); }
-      if (a.key !== 'apron') { AUD.complete(); PL.celebrate = 1.3; const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position; FX.confetti(p.x, 1.6, p.z, 40); }
+      if (!a.quiet) { AUD.complete(); PL.celebrate = 1.3; const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position; FX.confetti(p.x, 1.6, p.z, 40); }
     }
-    let src = null;
-    if (a.lot) {
-      const H = a.lot.house; H.litT = 1; if (silent) { H.lit = 1; applyLit(H, 1); }
-      src = H.door;
-      if (!silent) LIFE.resident(a.lot, DONE_LINES[a.key] ? DONE_LINES[a.key][(Math.random() * DONE_LINES[a.key].length) | 0] : 'Thank you!');
-      const car = WORLD.cars.find(c => c.lot === a.lot);
-      if (car) LIFE.freeCar(car, silent);
-    }
-    if (a.key === 'north') { WORLD.bakery.litT = 1; if (silent) { WORLD.bakery.lit = 1; applyLit(WORLD.bakery, 1); } src = WORLD.bakery.door; if (!silent) LIFE.baker(); }
-    if (a.key === 'plaza') { WORLD.tree.lit = silent ? 1 : 0.001; if (!silent) LIFE.finale(); }
-    if ((a.key === 'street1' || a.key === 'street2') && this.done.street1 && this.done.street2) LIFE.streetOpen(silent);
+    const src = CH.onDone ? CH.onDone(a, silent) : null;
     if (!silent) {
       const pos = src || (PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position);
       this.earn(tip);
       FX.coinBurst(pos.x, 1.5, pos.z, Math.min(30, 8 + Math.round(Math.log2(tip + 1) * 2)), tip, { up: 1.1 });
       UI.floatText(this._v.set(pos.x, 2.6, pos.z), '+' + fmt(tip), '#ffd34d', 34);
-      if (a.key !== 'apron') UI.banner(doneTitle(a), '+' + fmt(tip) + ' tip', a.lot ? 'house' : 'road');
+      if (!a.quiet) UI.banner(a.title || doneTitle(a), '+' + fmt(tip) + ' tip', a.lot ? 'house' : (a.ico || 'road'));
       this.save();
     }
   },
-  // ---- save ----
-  save() {
-    if (QS.has('nosave') || QS.has('bot')) return;
-    const o = { v: this.ver, coins: this.coins, earned: this.earned, time: this.time, owned: this.owned, lv: this.lv, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), firstUp: this.firstUp, ended: this.ended, crew: this.crew || 0, t: Date.now() };
-    STORE.set('plowtown_v3', JSON.stringify(o));
+  // ---- chapter flow ----
+  finishChapter() {
+    this.ended = true;
+    const st = this.time <= CH.par[0] ? 3 : this.time <= CH.par[1] ? 2 : 1;
+    const rec = this.chapters[CH.id] || (this.chapters[CH.id] = { stars: 0, best: 0 });
+    this.lastStars = st; this.lastNew = st > rec.stars;
+    rec.stars = Math.max(rec.stars, st); rec.best = rec.best ? Math.min(rec.best, this.time) : this.time; rec.done = 1;
+    if (CH.finale) CH.finale();
+    if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
+    this.finishT = CH.finaleDelay || 5.5;
+    this.save();
   },
-  load() {
-    if (QS.has('fresh') || QS.has('bot')) return false;
-    const s = STORE.get('plowtown_v3'); if (!s) return false;
+  goChapter(id) {
+    this.chapter = id; this._cs = null; this.done = {}; this.time = 0; this.ended = false;
+    this.save(true);
+  },
+  // ---- save ----
+  save(fresh) {
+    if (QS.has('nosave') || QS.has('bot')) return;
+    const cs = fresh ? null : { id: CH.id, time: this.time, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), ended: this.ended, extra: CH.save ? CH.save() : null };
+    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now() };
+    STORE.set('plowtown_v4', JSON.stringify(o));
+  },
+  // before the world is built: coins, machines, crew and which chapter to play
+  loadMeta() {
+    let o = null;
+    if (!QS.has('fresh') && !QS.has('bot')) { try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; } }
+    // coming from the old single-street version: keep everything; if Maple Lane was already saved, go straight on to chapter 2
+    if (!o && !QS.has('fresh') && !QS.has('bot')) {
+      try {
+        const v3 = JSON.parse(STORE.get('plowtown_v3') || 'null');
+        if (v3 && v3.v === 3) {
+          const t = v3.time || 0, st = t <= 330 ? 3 : t <= 540 ? 2 : 1;
+          o = { v: this.ver, coins: v3.coins, earned: v3.earned, total: t, owned: v3.owned, lv: v3.lv, firstUp: v3.firstUp, crew: v3.crew, chapter: v3.ended ? 2 : 1,
+            chapters: v3.ended ? { 1: { stars: st, best: t, done: 1 } } : {},
+            cs: v3.ended ? null : { id: 1, time: t, done: v3.done, tool: v3.tool, x: v3.x, z: v3.z, h: v3.h, load: v3.load, snow: v3.snow, tr: v3.tr, ended: false } };
+          this._migrated = !!v3.ended;
+        }
+      } catch (e) { o = null; }
+    }
+    if (o && o.v === this.ver) {
+      this.coins = o.coins || 0; this.earned = o.earned || 0; this.totalTime = o.total || 0; this.owned = o.owned || { shovel: 1 };
+      this.lv = o.lv || {}; this.firstUp = !!o.firstUp; this.crew = o.crew || 0;
+      this.chapter = o.chapter || 1; this.chapters = o.chapters || {}; this._cs = o.cs || null;
+    }
+    if (QS.has('ch')) { this.chapter = +QS.get('ch') || 1; if (!this._cs || this._cs.id !== this.chapter) this._cs = null; }
+    // test: arrive with what you would have after the earlier chapters (machines maxed, some coins, the crew)
+    if (QS.has('carry')) {
+      this.coins = +QS.get('carry') || 20000; this.crew = 2; this.firstUp = true;
+      for (const C of CHAPTERS) { if (C.id >= this.chapter) break; for (const k of C.shop) { this.owned[k] = 1; this.lv[k] = [0, 1, 2].map(i => upMax(k, i)); } this.chapters[C.id] = { stars: 2, best: 300, done: 1 }; }
+    }
+    return this.chapter;
+  },
+  // after the world is built: put the chapter back the way you left it (or start it fresh)
+  loadChapter() {
+    const o = this._cs; this._cs = null;
+    if (!o || o.id !== CH.id) { this.startChapter(); return false; }
     try {
-      const o = JSON.parse(s); if (o.v !== this.ver) return false;
-      this.coins = o.coins || 0; this.earned = o.earned || 0; this.time = o.time || 0; this.owned = o.owned || { shovel: 1 };
-      this.lv = o.lv || {};
-      this.done = o.done || {}; this.firstUp = !!o.firstUp; this.ended = !!o.ended;
+      this.time = o.time || 0; this.done = o.done || {}; this.ended = !!o.ended;
       if (o.snow) { SNOW.deserialize(o.snow); SNOW.finalizeAreas(); SNOW.markAll(); }
       if (o.tr) TREASURE.list.forEach((t, i) => { if (o.tr[i] === '1') { t.found = t.gone = true; t.mesh.visible = false; } });
       for (const a of SNOW.areas) if (a && this.done[a.key]) this.completeArea(a, true);
+      if (CH.load && o.extra) CH.load(o.extra);
       PL.load = o.load || 0;
-      this.crew = o.crew || 0;
       PL.x = o.x; PL.z = o.z; PL.h = o.h || Math.PI;
       if (o.tool && this.owned[o.tool] && TIER[o.tool]) { PL.tool = o.tool; }
       if (PL.kind === 'truck') { if (!PL.truckFree(PL.x, PL.z, PL.h)) { const s2 = PL.findTruckSpot(PL.x, PL.z); PL.x = s2.x; PL.z = s2.z; PL.h = s2.h; } }
-      else if (!PL.kidFree(PL.x, PL.z)) { PL.x = -6.0; PL.z = 46.4; }
+      else if (!PL.kidFree(PL.x, PL.z)) { PL.x = CH.start.x; PL.z = CH.start.z; }
       PL.sledX = PL.x - Math.sin(PL.h) * 1.4; PL.sledZ = PL.z - Math.cos(PL.h) * 1.4;
       PL.applyTool();
       return true;
-    } catch (e) { console.warn('load', e); return false; }
+    } catch (e) { console.warn('load', e); this.startChapter(); return false; }
+  },
+  startChapter() {
+    this.time = 0; this.done = {}; this.ended = false;
+    const S = CH.start;
+    // a chapter starts with its own first tool, or the best machine you own from this chapter's shop
+    let tool = S.tool || null;
+    if (!tool) { for (const k of CH.shop) if (this.owned[k]) tool = k; if (!tool) tool = CH.shop[0]; }
+    if (!this.owned[tool]) this.owned[tool] = 1;
+    PL.tool = tool; PL.load = 0;
+    PL.x = S.x; PL.z = S.z; PL.h = S.h;
+    PL.sledX = PL.x - Math.sin(PL.h) * 1.4; PL.sledZ = PL.z - Math.cos(PL.h) * 1.4;
+    PL.applyTool();
+    if (PL.kind === 'truck') PL.ensureFree();
+    if (CH.begin) CH.begin();
   }
 };
+// game-time timers (pause with the game, run at the sim's speed in tests)
+const LATER = [];
+function later(sec, fn) { LATER.push({ t: sec, fn }); }
 function niceNum(v) { if (v < 100) return Math.round(v); if (v < 1000) return Math.round(v / 5) * 5; if (v < 10000) return Math.round(v / 50) * 50; return Math.round(v / 500) * 500; }
 function doneTitle(a) {
   if (a.lot) return a.lot.car ? 'CAR DUG OUT!' : 'DRIVEWAY CLEAR!';

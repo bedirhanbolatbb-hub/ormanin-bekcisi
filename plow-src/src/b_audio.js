@@ -121,6 +121,15 @@ const AUD = {
     this._nz('highpass', 3500, 1800, 1.1, 0.12, 0.05, 0.4); this._nz('bandpass', 600, 200, 0.5, 0.18, 0, 0.7);
     this._tone('sine', 120, 60, 0.25, 0.22);
   },
+  star(i) {
+    if (!this.ok || this.muted) return;
+    const f = [784, 988, 1319][i] || 1319;
+    this._bell(f, 0.09, 0, 0.7); this._bell(f * 1.5, 0.05, 0.06, 0.6); this._nz('highpass', 6000, 3000, 0.25, 0.05, 0, 0.5);
+  },
+  chapterIn() {
+    if (!this.ok || this.muted) return;
+    [0, 4, 7, 12].forEach((s, i) => this._bell(523.25 * Math.pow(2, s / 12), 0.07, i * 0.09, 0.6));
+  },
   cash() {
     if (!this.ok || this.muted) return;
     this._nz('bandpass', 2600, 1300, 0.16, 0.12, 0, 1.4);
@@ -160,6 +169,12 @@ const AUD = {
     if (gift) this._nz('bandpass', 3000, 6000, 0.4, 0.05, 0.05, 2);
   },
   horn() { if (!this.ok || this.muted) return; this._tone('sawtooth', 330, 330, 0.28, 0.05); this._tone('sawtooth', 415, 415, 0.28, 0.04); },
+  busHorn() { if (!this.ok || this.muted) return; for (const w of [0, 0.34]) { this._tone('sawtooth', 247, 247, 0.26, 0.06, w); this._tone('sawtooth', 311, 311, 0.26, 0.05, w); this._tone('square', 196, 196, 0.26, 0.02, w); } },
+  tick(hi) { if (!this.ok || this.muted) return; this._tone('square', hi ? 1320 : 990, hi ? 1320 : 990, 0.045, 0.05); this._nz('highpass', 6000, 4000, 0.04, 0.04, 0, 0.8); },
+  bell() { if (!this.ok || this.muted) return; for (let i = 0; i < 8; i++) { this._bell(1046.5, 0.08, i * 0.12, 0.5); this._bell(1318.5, 0.04, i * 0.12 + 0.01, 0.35); } },
+  jingle(v) { if (!this.ok || this.muted) return; const t = this.ctx.currentTime; if (t - (this._jT || 0) < 0.11) return; this._jT = t; this._bell(2093 * (1 + Math.random() * 0.06), 0.03 * (v || 1), 0, 0.18); this._bell(2637 * (1 + Math.random() * 0.06), 0.022 * (v || 1), 0.03, 0.15); },
+  cheer() { if (!this.ok || this.muted) return; for (let i = 0; i < 6; i++) this._nz('bandpass', 900 + Math.random() * 900, 1500 + Math.random() * 800, 0.5 + Math.random() * 0.4, 0.05, i * 0.05, 3); [0, 4, 7].forEach((s, i) => this._bell(784 * Math.pow(2, s / 12), 0.05, 0.1 + i * 0.07, 0.4)); },
+  whoosh() { if (!this.ok || this.muted) return; this._nz('bandpass', 400, 2400, 0.45, 0.12, 0, 1.5); },
   firework() { if (!this.ok || this.muted) return; this._nz('lowpass', 2500, 200, 0.6, 0.2, 0, 0.6); this._tone('sine', 90, 40, 0.4, 0.2); },
   thump() { if (!this.ok || this.muted) return; this._tone('sine', 140, 50, 0.18, 0.2); this._nz('lowpass', 500, 100, 0.15, 0.12); },
   // ------- music: gentle music-box loop (original) -------

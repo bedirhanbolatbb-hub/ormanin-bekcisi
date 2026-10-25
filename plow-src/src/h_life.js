@@ -46,12 +46,8 @@ const LIFE = {
     }
     if (!silent) UI.toast('The street is open! Cars are back on the road.');
   },
-  finale() {
-    this.fw = 7; this.fwT = 0; this.treeT = 0.001;
-    AUD.bigWin(); GAME.ended = true;
-    setTimeout(() => UI.banner('MAPLE LANE IS SAVED!', 'You brought the town back to life', 'star', 4.5), 600);
-    setTimeout(() => UI.endCard(), 5200);
-  },
+  fwX: 12, fwZ: -10,
+  fireworks(x, z, dur) { this.fw = dur || 7; this.fwT = 0; this.fwX = x; this.fwZ = z; },
   update(dt) {
     for (let i = this.people.length - 1; i >= 0; i--) {
       const o = this.people[i]; o.t += dt;
@@ -78,14 +74,14 @@ const LIFE = {
       for (let i = this.movers.length - 1; i >= 0; i--) { const m = this.movers[i]; this._drive(m, dt); if (m.state === 'gone') { WORLD.scene.remove(m.obj); this.movers.splice(i, 1); } }
     }
     // tree lights + fireworks
-    if (WORLD.tree.lit > 0 && WORLD.tree.lit < 1) { WORLD.tree.lit = Math.min(1, WORLD.tree.lit + dt * 0.5); }
-    if (WORLD.tree.mats.length) for (const m of WORLD.tree.mats) { m.emissive.copy(m.userData.lit.e); m.emissiveIntensity = (m.userData.lit.i || 1) * 2.2 * WORLD.tree.lit * (0.85 + 0.15 * Math.sin(performance.now() / 300 + m.id)); }
+    if (WORLD.tree && WORLD.tree.lit > 0 && WORLD.tree.lit < 1) { WORLD.tree.lit = Math.min(1, WORLD.tree.lit + dt * 0.5); }
+    if (WORLD.tree && WORLD.tree.mats.length) for (const m of WORLD.tree.mats) { m.emissive.copy(m.userData.lit.e); m.emissiveIntensity = (m.userData.lit.i || 1) * 2.2 * WORLD.tree.lit * (0.85 + 0.15 * Math.sin(performance.now() / 300 + m.id)); }
     if (this.fw > 0) {
       this.fw -= dt; this.fwT -= dt;
       if (this.fwT <= 0) {
         this.fwT = rnd(0.35, 0.8);
         const cols = [[1, 0.4, 0.4], [1, 0.85, 0.3], [0.4, 1, 0.6], [0.5, 0.7, 1], [1, 0.5, 1]];
-        FX.firework(12 + rnd(-6, 6), rnd(11, 16), -10 + rnd(-8, 8), cols[(Math.random() * 5) | 0]); AUD.firework();
+        FX.firework(this.fwX + rnd(-6, 6), rnd(11, 16), this.fwZ + rnd(-8, 8), cols[(Math.random() * 5) | 0]); AUD.firework();
       }
     }
   },

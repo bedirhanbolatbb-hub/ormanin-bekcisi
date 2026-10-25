@@ -10,34 +10,6 @@ const PAVED = [];
 const LOTS = [];
 function rect(x0, z0, x1, z1) { return { x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1) }; }
 
-function defineLayout() {
-  PAVED.length = 0; LOTS.length = 0;
-  PAVED.push({ r: rect(-3.5, -50, 3.5, 50), kind: 'asphalt', d: 0.5, key: 'street' });
-  PAVED.push({ r: rect(-5.3, -50, -3.5, 50), kind: 'walk', d: 0.38, key: 'walkW' });
-  PAVED.push({ r: rect(3.5, -50, 5.3, 50), kind: 'walk', d: 0.38, key: 'walkE' });
-  PAVED.push({ r: rect(-11, 50, 11, 61), kind: 'apron', d: 0.12, key: 'apron' });
-  PAVED.push({ r: rect(-11, -61.5, 11, -50), kind: 'asphalt', d: 0.46, key: 'north' });
-  PAVED.push({ r: rect(5.3, -22.4, 19.6, 2.4), kind: 'cobble', d: 0.42, key: 'plaza' });
-  // lots: side -1 west, +1 east
-  const defs = [
-    { side: -1, c: 38, model: 'cabin', s: 1.22, who: 'Grandma Rose', key: 'rose', car: null, smoke: [1.40, 4.6, -0.47] },
-    { side: 1, c: 38, model: 'cottage_ginger', s: 2.25, who: 'the Millers', key: 'miller', car: 'car_blue', smoke: [0.84, 2.72, -0.1] },
-    { side: -1, c: 14, model: 'chalet', s: 1.08, who: 'Mr. Hale', key: 'hale', car: 'car_white', smoke: [0.91, 5.3, -1.01] },
-    { side: 1, c: 14, model: 'cottage_red', s: 2.05, who: 'the Parks', key: 'park', car: 'camper', smoke: [0.82, 2.77, -0.1] },
-    { side: -1, c: -10, model: 'chalet_blue', s: 1.65, who: 'Lina', key: 'lina', car: 'icecream', smoke: null },
-    { side: -1, c: -34, model: 'guesthouse', s: 0.98, who: 'the Ortegas', key: 'ortega', car: 'car_blue', smoke: null },
-    { side: 1, c: -34, model: 'chalet_xmas', s: 1.78, who: 'Old Tom', key: 'tom', car: null, smoke: [0.57, 3.12, -0.62] },
-  ];
-  for (const d of defs) {
-    const sx = d.side;
-    const drive = rect(sx * 5.3, d.c + 5.0, sx * 14.6, d.c + 9.0);
-    const path = rect(sx * 5.3, d.c - 0.65, sx * 11.9, d.c + 0.65);
-    PAVED.push({ r: drive, kind: 'pavers', d: 0.36, key: d.key + '_drive' });
-    PAVED.push({ r: path, kind: 'flags', d: 0.34, key: d.key + '_path' });
-    LOTS.push(Object.assign({ drive, path }, d));
-  }
-}
-
 // ---------- procedural textures ----------
 function canvasTex(w, h, draw, rep) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -112,18 +84,36 @@ function makeTextures() {
     for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.beginPath(); g.moveTo(128, 128); g.lineTo(128 + Math.cos(a) * 46, 128 + Math.sin(a) * 46); g.stroke(); }
   });
   TEX.ring.encoding = THREE.LinearEncoding;
+  const sk = (CH && CH.env && CH.env.sky) || ['#6f9fd6', '#b9d3ee', '#e8f0f8'];
   TEX.sky = canvasTex(4, 256, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#6f9fd6'); gr.addColorStop(0.55, '#b9d3ee'); gr.addColorStop(1, '#e8f0f8');
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, sk[0]); gr.addColorStop(0.55, sk[1]); gr.addColorStop(1, sk[2]);
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  // chapter ground textures
+  TEX.ice = canvasTex(256, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#5fb0e8'); gr.addColorStop(0.5, '#7cc4f0'); gr.addColorStop(1, '#93d2f6'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const r = mulberry(21); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 1.2;
+    for (let i = 0; i < 9; i++) { let x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 90; y += (r() - 0.5) * 90; g.lineTo(x, y); } g.stroke(); }
+    speckle(g, w, h, 600, ['#ffffff', '#d8f1ff'], 0.15, 0.45, 1, 3);
+  });
+  TEX.piste = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#c9d8ec'; g.fillRect(0, 0, w, h);
+    // groomed corduroy (clearly different from fresh powder)
+    for (let x = 0; x < w; x += 8) { g.fillStyle = 'rgba(96,126,176,0.5)'; g.fillRect(x, 0, 3, h); g.fillStyle = 'rgba(244,248,255,0.85)'; g.fillRect(x + 4, 0, 3, h); }
+    speckle(g, w, h, 900, ['#ffffff', '#b8cae2'], 0.2, 0.5, 1, 2);
+  });
+  TEX.school = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#3a3f47'; g.fillRect(0, 0, w, h);
+    speckle(g, w, h, 4000, ['#30353c', '#454b54', '#2a2e35'], 0.4, 0.9, 1, 2.5);
   });
 }
 
-function groundPlane(r, tex, tile, y, rough) {
+function groundPlane(r, tex, tile, y, rough, glossy) {
   const w = r.x1 - r.x0 + 0.2, d = r.z1 - r.z0 + 0.2;
   const geo = new THREE.PlaneGeometry(w, d); geo.rotateX(-Math.PI / 2);
   const uv = geo.attributes.uv;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / tile, uv.getY(i) * d / tile);
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: rough || 0.85, metalness: 0 }));
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: rough || 0.85, metalness: glossy ? 0.15 : 0, envMapIntensity: glossy ? 1.4 : 1 }));
   m.position.set((r.x0 + r.x1) / 2, y || 0, (r.z0 + r.z1) / 2); m.receiveShadow = true;
   m.matrixAutoUpdate = false; m.updateMatrix();
   return m;
@@ -165,49 +155,6 @@ function flushDecor(scene) {
   DECOR.items.length = 0;
 }
 
-// ---------- the melter (procedural) ----------
-function makeMelter(x, z, rot) {
-  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot || 0;
-  const iron = new THREE.MeshStandardMaterial({ color: 0xc23b2e, roughness: 0.42, metalness: 0.25 });
-  const iron2 = new THREE.MeshStandardMaterial({ color: 0x2f3540, roughness: 0.5, metalness: 0.5 });
-  const red = new THREE.MeshStandardMaterial({ color: 0x2f3540, roughness: 0.45, metalness: 0.4 });
-  const glowM = new THREE.MeshStandardMaterial({ color: 0xff5a10, emissive: 0xff3a00, emissiveIntensity: 1.0, roughness: 0.6 });
-  const gold = new THREE.MeshStandardMaterial({ color: 0xffc23d, roughness: 0.3, metalness: 0.7, emissive: 0x7a4a00, emissiveIntensity: 0.4 });
-  // base tub
-  const tub = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.2, 1.05, 20, 1, true), iron); tub.position.y = 0.55;
-  const bottom = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.3, 0.12, 20), iron2); bottom.position.y = 0.06;
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(1.06, 0.1, 8, 24), red); rim.rotation.x = Math.PI / 2; rim.position.y = 1.08;
-  const band = new THREE.Mesh(new THREE.TorusGeometry(1.14, 0.05, 6, 24), iron2); band.rotation.x = Math.PI / 2; band.position.y = 0.5;
-  // glowing core inside
-  const core = new THREE.Mesh(new THREE.CircleGeometry(0.98, 20), glowM); core.rotation.x = -Math.PI / 2; core.position.y = 0.9;
-  // grate bars
-  const bars = new THREE.Group();
-  for (let i = -3; i <= 3; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 1.9 * Math.sqrt(1 - (i / 3.6) * (i / 3.6))), iron2); b.position.set(i * 0.27, 0.98, 0); bars.add(b); }
-  // chimney
-  const chim = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.5, 10), iron2); chim.position.set(-0.75, 1.65, -0.55);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.14, 10), red); cap.position.set(-0.75, 2.45, -0.55);
-  // coin spout + coin pile
-  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.17, 0.5, 10), gold); spout.rotation.z = Math.PI / 2.6; spout.position.set(1.15, 0.85, 0.2);
-  const pile = new THREE.Group();
-  for (let i = 0; i < 14; i++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.03, 12), gold); c.position.set(1.4 + rnd(-0.2, 0.2), 0.02 + (i % 5) * 0.03, 0.2 + rnd(-0.25, 0.25)); c.rotation.set(rnd(-0.3, 0.3), 0, rnd(-0.3, 0.3)); pile.add(c); }
-  // sign post
-  const sign = makeSign('MELTER', '#c8322a'); sign.position.set(x, 2.95, z + 0.2); sign.scale.setScalar(0.95); WORLD.scene.add(sign);
-  [tub, bottom, rim, band, core, chim, cap, spout].forEach(m => { m.castShadow = true; m.receiveShadow = true; xray(m.material); g.add(m); });
-  g.add(bars, pile);
-  // dump zone ring on the ground
-  const ringMat = new THREE.MeshBasicMaterial({ map: TEX.ring, transparent: true, depthWrite: false, color: 0xffb01f, opacity: 0.85, fog: false, toneMapped: false });
-  const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), ringMat); ring.rotation.x = -Math.PI / 2;
-  ring.renderOrder = 2;
-  WORLD.scene.add(g); WORLD.scene.add(ring);
-  // warm light pool
-  const pool = new THREE.Mesh(new THREE.CircleGeometry(2.4, 24), new THREE.MeshBasicMaterial({ map: TEX.dot, color: 0xff7a20, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }));
-  pool.rotation.x = -Math.PI / 2; pool.position.set(x, 0.03, z); pool.renderOrder = 1; WORLD.scene.add(pool);
-  const M = { g, x, z, core: glowM, ring, pool, chimTop: new V3(), spoutPos: new V3(), heat: 0, r: 1.9, zone: new V3(), shake: 0 };
-  g.updateMatrixWorld(true);
-  cap.getWorldPosition(M.chimTop); M.chimTop.y += 0.2;
-  spout.getWorldPosition(M.spoutPos); M.spoutPos.y += 0.2;
-  return M;
-}
 function makeSign(text, color) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
   g.fillStyle = color; g.beginPath(); g.roundRect ? g.roundRect(4, 4, 248, 56, 14) : g.rect(4, 4, 248, 56); g.fill();
@@ -222,19 +169,24 @@ function makeSign(text, color) {
 function buildWorld(scene) {
   WORLD.scene = scene;
   makeTextures();
-  defineLayout();
+  PAVED.length = 0; LOTS.length = 0;
+  Object.assign(SNOW, CH.grid);
+  WORLD.bounds = { x0: SNOW.X0 + 0.5, x1: SNOW.X0 + (SNOW.NX - 1) * SNOW.C - 0.5, z0: SNOW.Z0 + 1, z1: SNOW.Z0 + (SNOW.NZ - 1) * SNOW.C - 1 };
+  CH.layout();
   SNOW.init();
   const H = SNOW.H, T = SNOW.T;
   // 1) yards everywhere
+  const yd = CH.yardDepth || 0.44;
   for (let j = 0; j < SNOW.NZ; j++) for (let i = 0; i < SNOW.NX; i++) {
     const x = SNOW.X0 + i * SNOW.C, z = SNOW.Z0 + j * SNOW.C, k = j * SNOW.NX + i;
-    H[k] = 0.44 + (fbm(x * 0.18, z * 0.18) - 0.5) * 0.22 + (fbm(x * 0.9 + 50, z * 0.9) - 0.5) * 0.05;
+    H[k] = yd + (fbm(x * 0.18, z * 0.18) - 0.5) * 0.22 + (fbm(x * 0.9 + 50, z * 0.9) - 0.5) * 0.05;
     T[k] = 0;
   }
   // 2) paved areas
-  const kindDepth = {};
   for (const p of PAVED) {
+    if (p.noSnow) continue;
     SNOW.paint(p.r.x0, p.r.z0, p.r.x1, p.r.z1, (k, x, z) => {
+      if (p.mask && !p.mask(x, z)) return;
       T[k] = 1;
       let d = p.d + (fbm(x * 0.35 + 9, z * 0.35) - 0.5) * 0.07;
       H[k] = Math.max(0.05, d);
@@ -253,180 +205,48 @@ function buildWorld(scene) {
   WORLD.areaByKey = {};
   const mk = (key, name, rects, extra) => {
     const a = SNOW.newArea(Object.assign({ key, name, rects }, extra || {}));
-    for (const r of rects) SNOW.paint(r.x0, r.z0, r.x1, r.z1, (k) => { if (T[k] === 1) SNOW.A[k] = a.id; });
+    for (const r of rects) SNOW.paint(r.x0, r.z0, r.x1, r.z1, (k, x, z) => { if (T[k] === 1 && (!a.mask || a.mask(x, z))) SNOW.A[k] = a.id; });
     WORLD.areaByKey[key] = a; return a;
   };
   const pav = key => PAVED.find(p => p.key === key).r;
-  for (const L of LOTS) mk(L.key, L.who, [L.drive, L.path], { lot: L });
-  // a street job = the road plus both sidewalks (fence to fence): wide blades clear it in a few long passes
-  mk('street1', 'Maple Lane (south)', [rect(-5.3, 0, 5.3, 50)]);
-  mk('street2', 'Maple Lane (north)', [rect(-5.3, -50, 5.3, 0)]);
-  mk('north', 'Bakery parking', [pav('north')]);
-  mk('plaza', 'Town square', [pav('plaza')]);
-  mk('apron', 'Crew yard', [pav('apron')]);
-
+  CH.areas(mk, pav);
   // 4) ground meshes
-  const tile = { asphalt: 4, walk: 1.8, pavers: 2.2, flags: 1.4, cobble: 1.6, apron: 3 };
-  const rough = { asphalt: 0.62, walk: 0.85, pavers: 0.8, flags: 0.8, cobble: 0.75, apron: 0.85 };
-  const gy = { asphalt: 0, walk: 0.003, apron: 0.003, pavers: 0.006, flags: 0.007, cobble: 0.005 };
-  for (const p of PAVED) scene.add(groundPlane(p.r, TEX[p.kind], tile[p.kind], gy[p.kind], rough[p.kind]));
+  const tile = { asphalt: 4, walk: 1.8, pavers: 2.2, flags: 1.4, cobble: 1.6, apron: 3, ice: 6, piste: 2.6, school: 4 };
+  const rough = { asphalt: 0.62, walk: 0.85, pavers: 0.8, flags: 0.8, cobble: 0.75, apron: 0.85, ice: 0.12, piste: 0.95, school: 0.62 };
+  const gy = { asphalt: 0, walk: 0.003, apron: 0.003, pavers: 0.006, flags: 0.007, cobble: 0.005, ice: 0.002, piste: 0.004, school: 0.001 };
+  for (const p of PAVED) if (!p.noMesh) scene.add(groundPlane(p.r, TEX[p.kind], tile[p.kind], gy[p.kind], rough[p.kind], p.kind === 'ice'));
   // safety base under everything
-  const base = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0xe9eef5, roughness: 1 }));
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: 0xe9eef5, roughness: 1 }));
   base.rotation.x = -Math.PI / 2; base.position.y = -0.12; scene.add(base);
   // outer snow fields beyond the grid (static)
-  const outer = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, roughness: 0.9 });
-  for (const [x, w] of [[-24 - 60, 120], [24 + 60, 120]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 300), outer); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.43, 0); m.receiveShadow = true; scene.add(m); }
-  for (const z of [-68 - 60, 68 + 60]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(48, 120), outer); m.rotation.x = -Math.PI / 2; m.position.set(0, 0.43, z); m.receiveShadow = true; scene.add(m); }
-  // road markings
-  const yel = new THREE.MeshStandardMaterial({ color: 0xf2c230, roughness: 0.6 }), wht = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.6 });
-  const marks = [];
-  for (let z = -48; z < 48; z += 6) { const g = new THREE.PlaneGeometry(0.16, 3); g.rotateX(-Math.PI / 2); g.translate(0, 0.006, z + 1.5); marks.push(g); }
-  const ym = new THREE.Mesh(mergeGeoms(marks), yel); ym.receiveShadow = true; scene.add(ym);
-  const wl = [];
-  for (const x of [-3.25, 3.25]) { const g = new THREE.PlaneGeometry(0.12, 100); g.rotateX(-Math.PI / 2); g.translate(x, 0.006, 0); wl.push(g); }
-  const wm = new THREE.Mesh(mergeGeoms(wl), wht); wm.receiveShadow = true; scene.add(wm);
-  // curbs
-  const curbM = new THREE.MeshStandardMaterial({ color: 0xc4c7cb, roughness: 0.8 });
-  const cg = [];
-  for (const x of [-3.5, 3.5]) { const g = new THREE.BoxGeometry(0.16, 0.08, 100); g.translate(x, 0.04, 0); cg.push(g); }
-  const curb = new THREE.Mesh(mergeGeoms(cg.map(g => g.toNonIndexed())), curbM); curb.receiveShadow = true; scene.add(curb);
-
-  // 5) houses
-  for (const L of LOTS) {
-    const s = artScene(L.model); const bb = new THREE.Box3().setFromObject(s);
-    const depth = (bb.max.z - bb.min.z) * L.s;
-    const front = 12.0;
-    // model +Z front: after rotation facing the street, front face sits at x = side*front
-    const cx = L.side * (front + bb.max.z * L.s);
-    const rot = L.side < 0 ? Math.PI / 2 : -Math.PI / 2;
-    const o = place(L.model, cx, L.c, rot, L.s, 0);
-    // per-instance window materials
-    const wins = [];
-    o.traverse(c => {
-      if (!c.isMesh) return;
-      const m = c.material;
-      if (m && m.emissive && (m.emissive.r + m.emissive.g + m.emissive.b) > 0.1) {
-        const nm = m.clone(); nm.userData = {}; xray(nm); nm.userData.lit = { color: m.color.clone(), emissive: m.emissive.clone() };
-        nm.color.setRGB(0.16, 0.2, 0.27); nm.emissive.setRGB(0, 0, 0); nm.emissiveIntensity = 0; c.material = nm; wins.push(nm);
-      }
-    });
-    scene.add(o); solidUnder(o, 0.15, false);
-    const house = { lot: L, obj: o, wins, lit: 0, litT: 0, door: new V3(L.side * (front - 0.3), 0, L.c), smoke: null, x: cx, z: L.c };
-    if (L.smoke) { const v = new V3(L.smoke[0], L.smoke[1], L.smoke[2]).multiplyScalar(L.s); v.applyEuler(new THREE.Euler(0, rot, 0)); house.smoke = v.add(new V3(cx, 0, L.c)); }
-    L.house = house; WORLD.houses.push(house);
-    // warm window light pool (fades in when lit)
-    const pool = new THREE.Mesh(new THREE.CircleGeometry(2.6, 24), new THREE.MeshBasicMaterial({ map: TEX.dot, color: 0xff8a2a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }));
-    pool.rotation.x = -Math.PI / 2; pool.position.set(L.side * (front - 1.0), 0.52, L.c); pool.scale.set(1.0, 1.5, 1); pool.renderOrder = 1; scene.add(pool); house.pool = pool;
-    // parked car (blocked cells + snow cap)
-    if (L.car) {
-      const carX = L.side * 12.0, carZ = L.c + 7;
-      const car = place(L.car, carX, carZ, L.side < 0 ? Math.PI / 2 : -Math.PI / 2, 1, 0);
-      scene.add(car); car.updateMatrixWorld(true);
-      const cb = new THREE.Box3().setFromObject(car), ab = new THREE.Box3().setFromObject(artScene(L.car));
-      const cw = ab.max.x - ab.min.x, cl = ab.max.z - ab.min.z, chh = Math.min(2.2, ab.max.y);
-      const cap = makeSnowCap(cw, cl, chh);
-      cap.position.set((cb.min.x + cb.max.x) / 2, 0, (cb.min.z + cb.max.z) / 2); cap.rotation.y = car.rotation.y; scene.add(cap);
-      const fx0 = cb.min.x + 0.12, fx1 = cb.max.x - 0.12, fz0 = cb.min.z + 0.12, fz1 = cb.max.z - 0.12;
-      SNOW.paint(fx0, fz0, fx1, fz1, (k) => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-      WORLD.cars.push({ obj: car, cap, lot: L, x: carX, z: carZ, rot: car.rotation.y, state: 'parked', fx0, fx1, fz0, fz1 });
-    }
-  }
-  // 6) bakery + crew kiosk + plaza
-  const bak = place('bakery', 0, -64.8, 0, 2.0, 0); scene.add(bak); solidUnder(bak, 0.15, false);
-  const bakWins = []; bak.traverse(c => { if (c.isMesh && c.material.emissive && c.material.emissive.r > 0.1) { const nm = c.material.clone(); nm.userData = {}; xray(nm); nm.userData.lit = { color: nm.color.clone(), emissive: nm.emissive.clone() }; nm.color.setRGB(0.16, 0.2, 0.27); nm.emissive.setRGB(0, 0, 0); c.material = nm; bakWins.push(nm); } });
-  WORLD.bakery = { obj: bak, wins: bakWins, lit: 0, litT: 0, door: new V3(0, 0, -61.4), smoke: null, x: 0, z: -64.8 };
-  const kiosk = place('kiosk', 13.4, 54.6, -Math.PI / 2, 1.2, 0); scene.add(kiosk); solidUnder(kiosk, 0.1, false);
-  WORLD.kiosk = kiosk;
-  const crewSign = makeSign('SNOW CREW', '#2a6fd6'); crewSign.position.set(12.4, 5.6, 56.6); crewSign.rotation.x = -0.25; crewSign.scale.setScalar(1.5); scene.add(crewSign);
-  // plaza
-  // the square is an open ring around the big tree: room for the biggest machines; benches and the cocoa stand sit on its edge
-  const tree = place('xmastree', 12.4, -10, 0, 2.6, 0); scene.add(tree);
-  const tm = []; tree.traverse(c => { if (c.isMesh && c.material.emissive && (c.material.emissive.r + c.material.emissive.g) > 0.05) { const nm = c.material.clone(); nm.userData = {}; xray(nm); nm.userData.lit = { e: nm.emissive.clone(), i: nm.emissiveIntensity }; nm.emissiveIntensity = 0; c.material = nm; tm.push(nm); } });
-  WORLD.tree = { obj: tree, mats: tm, lit: 0 };
-  SNOW.paint(11.5, -10.9, 13.3, -9.1, (k) => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } });
-  decor('bench_a', 20.4, -5.5, -Math.PI / 2, 1, 0, { solid: 0.05 }); decor('bench_a', 20.4, -14.5, -Math.PI / 2, 1, 0, { solid: 0.05 });
-  const cocoa = place('cocoa', 21.2, -19.8, -Math.PI / 2.6, 1.2, 0); scene.add(cocoa); solidUnder(cocoa, 0.1, false);
-  // 7) melters
-  for (const M of WORLD.melters) {
-    SNOW.paint(M.x - 1.35, M.z - 1.35, M.x + 1.35, M.z + 1.35, (k, x, z) => { if ((x - M.x) ** 2 + (z - M.z) ** 2 < 1.9 && T[k] === 1) { T[k] = 2; H[k] = 0; } });
-    // zone center: offset toward the road
-    if (M.z > 50) M.zone.set(M.x + 2.6, 0, M.z - 0.4); else M.zone.set(M.x + (M.x < 0 ? 2.4 : -2.4), 0, M.z);
-    M.ring.position.set(M.zone.x, 0.025, M.zone.z); M.ring.scale.setScalar(M.r * 2);
-    M.pool.position.set(M.zone.x, 0.03, M.zone.z);
-    SNOW.paint(M.zone.x - 2.1, M.zone.z - 2.1, M.zone.x + 2.1, M.zone.z + 2.1, (k, x, z) => { if ((x - M.zone.x) ** 2 + (z - M.zone.z) ** 2 < 4.2 && T[k] === 1) { T[k] = 3; H[k] = 0; SNOW.A[k] = 0; } });
-  }
-  // 8) decor: fences, lamps, mailboxes, trees, snowmen
-  const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
-  for (const L of LOTS) {
-    const sx = L.side, fx = sx * 5.95;
-    const z0 = L.c - 10.8, z1 = L.c + 10.8;
-    const gaps = [[L.drive.z0 - 0.2, L.drive.z1 + 0.2], [L.path.z0 - 0.3, L.path.z1 + 0.3]];
-    for (let z = z0; z < z1 - 0.5; z += 2.0) {
-      const zc = z + 1.0; if (gaps.some(g => zc + 1.0 > g[0] && zc - 1.0 < g[1])) continue;
-      decor('picket', fx, zc, Math.PI / 2, 1, yardY(fx + sx * 0.2, zc), { solid: 0.02 });
-    }
-    // mailbox by the driveway
-    decor('mailbox', sx * 6.45, L.drive.z0 - 0.55, sx < 0 ? Math.PI / 2 : -Math.PI / 2, 0.78, yardY(sx * 6.5, L.drive.z0 - 0.55), { solid: 0.05 });
-    // trees between lots and behind
-    const r = mulberry(L.c * 7 + sx * 13 + 100);
-    const kinds = ['fir_a', 'fir_b', 'fir_c', 'spruce_s', 'fir_a', 'birch'];
-    for (let t = 0; t < 6; t++) {
-      const tx = sx * (7.5 + r() * 15.5), tz = L.c - (9.4 + r() * 1.3);
-      if (Math.abs(tx) < 7) continue;
-      const k = kinds[(r() * kinds.length) | 0];
-      decor(k, tx, tz, r() * TAU, 0.9 + r() * 0.6, yardY(tx, tz), { trunk: 0.45 });
-    }
-    for (let t = 0; t < 3; t++) { const tx = sx * (19.5 + r() * 3.5), tz = L.c - 8 + r() * 16; decor(kinds[(r() * 3) | 0], tx, tz, r() * TAU, 1.1 + r() * 0.7, yardY(tx, tz)); }
-  }
-  // lamps along sidewalks
-  for (let z = -46; z <= 46; z += 15.3) {
-    for (const sx of [-1, 1]) {
-      const zz = z + (sx > 0 ? 7.6 : 0); if (zz > 49) continue;
-      if (LOTS.some(L => L.side === sx && zz > L.drive.z0 - 0.8 && zz < L.drive.z1 + 0.8)) continue;
-      if (sx > 0 && zz < 3 && zz > -23) continue;
-      const lamp = decor('lamp_a', sx * 6.55, zz, 0, 1.05, yardY(sx * 6.6, zz), { trunk: 0.3 });
-      WORLD.lamps.push(new V3(sx * 6.55, 3.0 + yardY(sx * 6.6, zz), zz));
-    }
-  }
-  // plaza lamps & garlands
-  for (const [lx, lz] of [[5.9, -22.0], [19.3, 2.0], [19.3, -22.0]]) { decor('lamp_b', lx, lz, 0, 1.2, 0); SNOW.paint(lx - 0.25, lz - 0.25, lx + 0.25, lz + 0.25, k => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } else if (T[k] === 0) T[k] = 2; }); }
-  decor('garland', 19.9, -10, Math.PI / 2, 1.6, 0.2);
-  // apron decor
-  decor('saltbin', -10.2, 60.4, 0.2, 1.4, 0.0, { solid: 0.05, paved: true }); decor('shovel_b', 4.2, 61.4, -0.3, 1.1, 0);
-  decor('cone', 10.4, 50.6, 0, 1, 0); decor('cone', -10.4, 50.4, 0, 1, 0);
-  decor('trailsign', 4.8, 61.6, Math.PI, 1.2, 0);
-  // north: barrier to "Pine Street"
-  for (let z = -61; z <= -50.5; z += 1.5) decor('cone', -11.4, z, 0, 1.1, 0);
-  decor('slowsign', -12.1, -56, Math.PI / 2, 1.3, yardY(-12.1, -56));
-  const nextSign = makeSign('PINE ST. SOON', '#5a6b80'); nextSign.position.set(-14, 2.4, -56); nextSign.rotation.y = Math.PI / 2; nextSign.scale.setScalar(1.6); scene.add(nextSign);
-  // yard props (some lots already have a snowman/sled)
-  decor('snowman_a', 18.5, 31.0, -1.2, 1.0, yardY(18.5, 31));
-  decor('sled', -18.0, 20.2, 0.6, 1.0, yardY(-18, 20.2));
-  decor('birdfeeder', -9.0, 32.5, 0.3, 1.0, yardY(-9, 32.5));
-  decor('tube', 9.6, 19.0, 0, 1.0, yardY(9.6, 19));
-  decor('boulder', -20, -2, 0.4, 1.2, yardY(-20, -2) - 0.3);
-  decor('boulder', 21, 2, 1.4, 1.0, yardY(21, 2) - 0.3);
-  for (let i = 0; i < 26; i++) { const x = (i % 2 ? 1 : -1) * (13 + (i * 7.3 % 9)), z = -66 + i * 5.1; if (Math.abs(z) < 60 && Math.abs(x) < 17) continue; decor(['fir_a', 'fir_b', 'fir_c'][i % 3], x, z, i, 1.2 + (i % 4) * 0.2, yardY(x, z)); }
+  { const gx0 = SNOW.X0, gx1 = SNOW.X0 + (SNOW.NX - 1) * SNOW.C, gz0 = SNOW.Z0, gz1 = SNOW.Z0 + (SNOW.NZ - 1) * SNOW.C, W = gx1 - gx0, D = gz1 - gz0;
+    const outer = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, roughness: 0.9 });
+    const add = (cx, cz, w, d) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), outer); m.rotation.x = -Math.PI / 2; m.position.set(cx, (CH.yardDepth || 0.44) - 0.01, cz); m.receiveShadow = true; scene.add(m); };
+    add(gx0 - 60, (gz0 + gz1) / 2, 120, D + 240); add(gx1 + 60, (gz0 + gz1) / 2, 120, D + 240);
+    add((gx0 + gx1) / 2, gz0 - 60, W, 120); add((gx0 + gx1) / 2, gz1 + 60, W, 120); }
+  // 5..8) chapter buildings, props, characters
+  CH.build(scene, H, T);
   // samples hugging a parked vehicle don't count toward the job (no pixel hunting)
   {
-    const N = SNOW.NX, T = SNOW.T, A = SNOW.A, R = 3;
+    const T = SNOW.T, A = SNOW.A;
     const near = new Uint8Array(T.length);
-    for (const c of WORLD.cars) SNOW.paint(c.fx0 - 0.6, c.fz0 - 0.6, c.fx1 + 0.6, c.fz1 + 0.6, (k) => { if (T[k] === 1) near[k] = 1; });
-    for (let k = 0; k < T.length; k++) if (near[k] && A[k] && WORLD.areaByKey && SNOW.areas[A[k]].lot) A[k] = 0;
+    for (const c of WORLD.cars) if (!c.isBus) SNOW.paint(c.fx0 - 0.6, c.fz0 - 0.6, c.fx1 + 0.6, c.fz1 + 0.6, (k) => { if (T[k] === 1) near[k] = 1; });
+    for (let k = 0; k < T.length; k++) if (near[k] && A[k]) A[k] = 0;
   }
   flushDecor(scene);
   SNOW.finalizeAreas();
   // 9) snow meshes
   SNOW.buildMeshes(scene);
   // 10) lights
-  const hemi = WORLD.hemi = new THREE.HemisphereLight(0x9cc0f0, 0xe0e6f0, 0.6); scene.add(hemi);
-  const sun = WORLD.sun = new THREE.DirectionalLight(0xffdcb0, 2.1);
+  const E = WORLD.env = Object.assign({ fog: 0xdce8f4, hemi: [0x9cc0f0, 0xe0e6f0, 0.6], sun: [0xffdcb0, 2.1], sunOff: [14, 24, 12], exposure: 0.8, fogNear: 42, fogFar: 120 }, CH.env || {});
+  const hemi = WORLD.hemi = new THREE.HemisphereLight(E.hemi[0], E.hemi[1], E.hemi[2]); scene.add(hemi);
+  const sun = WORLD.sun = new THREE.DirectionalLight(E.sun[0], E.sun[1]);
   sun.castShadow = true; const sm = IS_MOBILE ? 1024 : 2048; sun.shadow.mapSize.set(sm, sm);
   const sc = sun.shadow.camera; sc.left = -26; sc.right = 26; sc.top = 26; sc.bottom = -26; sc.near = 1; sc.far = 90;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
   scene.add(sun); scene.add(sun.target);
   scene.background = TEX.sky;
-  scene.fog = new THREE.Fog(0xdce8f4, 42, 120);
+  scene.fog = new THREE.Fog(E.fog, E.fogNear, E.fogFar);
 }
 
 function makeSnowCap(w, l, h) {

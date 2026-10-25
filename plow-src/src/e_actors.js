@@ -45,6 +45,7 @@ function makePerson(o) {
   }
   if (o.hair) { const h = mk(geo('bun', () => new THREE.SphereGeometry(0.085, 12, 10)), M(o.hair), 0, 0.13, -0.08); head.add(h); const cap = mk(geo('hcap', () => new THREE.SphereGeometry(0.176, 18, 10, 0, TAU, 0, Math.PI / 2.3)), M(o.hair), 0, 0.01, -0.01); head.add(cap); }
   if (o.beard) { const b = mk(geo('beard', () => new THREE.SphereGeometry(0.12, 12, 10)), M(o.beard), 0, -0.09, 0.07); b.scale.set(1, 0.7, 0.7); head.add(b); }
+  if (o._pack) { const bp = mk(geo('backpack', () => new THREE.BoxGeometry(0.26, 0.3, 0.14)), M(o._pack), 0, 0.52, -0.22); body.add(bp); }
   root.scale.setScalar(o.scale);
   return { root, body, legL, legR, armL, armR, head, pom, tail, ph: 0, pomV: new V3(), pomO: new V3(), lastX: 0, lastZ: 0, wave: 0 };
 }
@@ -118,7 +119,49 @@ const TGEO = {
   pickup: { model: 'pickup', turn: 2.0, off: 0, rear: 2.6, nose: 2.6, halfW: 1.08, bladeZ: 3.25, bladeS: [1.9, 1.7], carve: 3.62, pileZ: 3.75, beacon: [0, 1.95, -0.3], cam: 1 },
   tipper: { model: 'tipper', turn: 1.75, off: 1.97, rear: 3.65, nose: 3.6, halfW: 1.46, bladeZ: 4.62, bladeS: [2.8, 2.0], carve: 5.06, pileZ: 5.2, beacon: [0, 3.25, 3.0], cam: 1.16, tint: 0xf07a12 },
   groomer: { model: 'groomer', turn: 1.5, off: 0.34, rear: 4.45, nose: 4.1, halfW: 2.25, bladeZ: null, carve: 4.5, pileZ: 4.65, beacon: [0, 3.5, 1.9], cam: 1.32, pivot: true },
+  // a dump truck with a big rotary blower in front: it throws the snow in a high arc off to the side
+  thrower: { model: 'tipper', turn: 1.75, off: 1.97, rear: 3.65, nose: 3.6, halfW: 1.46, bladeZ: null, head: 'rotary', headZ: 4.25, carve: 4.95, pileZ: null, beacon: [0, 3.25, 3.0], cam: 1.2, tint: 0xc8302a },
+  // Santa's sleigh with a golden blade (no reindeer needed: it's magic)
+  sleigh: { model: 'sleigh', scale: 2.25, turn: 2.35, off: 0, rear: 2.55, nose: 2.5, halfW: 1.3, bladeZ: 2.95, bladeS: [1.7, 1.5], gold: true, carve: 3.4, pileZ: 3.55, beacon: null, cam: 1.15, rider: [0, 1.22, -0.85, 1.2], hover: 1 },
+  // ice resurfacer with a spinning sweeper brush in front
+  zamboni: { model: 'resurfacer', scale: 1.3, grip: 6.0, turn: 2.0, off: 0.15, rear: 3.25, nose: 2.95, halfW: 1.36, bladeZ: null, head: 'brush', headZ: 3.4, carve: 3.8, pileZ: 3.95, beacon: [0, 3.35, -0.1], cam: 1.18, rider: [0.38, 1.18, 0.55, 1.2] },
 };
+// ---------- machine attachments (procedural) ----------
+function makeRotary() {
+  const g = new THREE.Group(), paint = mcol(0xff7a1a, 0.45, 0.25), dark = mcol(0x2c3138, 0.55, 0.3), steel = mcol(0xb4bcc6, 0.3, 0.7), yel = mcol(0xffc23d, 0.5, 0.2);
+  const box = (w, h, d, m, x, y, z) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = true; g.add(me); return me; };
+  // housing (unit width, scaled to the head width): back, roof, sides, cutting lip
+  const housing = new THREE.Group(); g.add(housing);
+  const hb = (w, h, d, m, x, y, z) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = true; housing.add(me); return me; };
+  hb(1, 1.15, 0.12, paint, 0, 0.62, -0.42); hb(1, 0.12, 0.95, paint, 0, 1.2, -0.02); hb(1.02, 0.08, 0.2, steel, 0, 0.05, 0.38);
+  const sideL = box(0.1, 1.2, 0.95, paint, 0.5, 0.62, -0.02), sideR = box(0.1, 1.2, 0.95, paint, -0.5, 0.62, -0.02);
+  hb(1, 0.1, 0.1, yel, 0, 1.28, 0.42);
+  // auger drum with spiral flights
+  const drum = new THREE.Group(); drum.position.set(0, 0.55, 0.02); housing.add(drum);
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1, 12), dark); core.rotation.z = Math.PI / 2; drum.add(core);
+  const fl = new THREE.BoxGeometry(0.05, 0.42, 0.1);
+  for (let i = 0; i < 18; i++) { const t = i / 17, a = t * Math.PI * 4; for (const sd of [-1, 1]) { const m = new THREE.Mesh(fl, steel); m.position.set(sd * (0.06 + t * 0.42), Math.cos(a * sd) * 0.24, Math.sin(a * sd) * 0.24); m.rotation.x = a * sd; m.castShadow = true; drum.add(m); } }
+  // chute: rises from the roof and bends out to the right side
+  const chute = new THREE.Group(); chute.position.set(-0.12, 1.25, -0.25); g.add(chute);
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 1.3, 14, 1, true), paint); tube.position.y = 0.6; tube.castShadow = true; chute.add(tube);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.55, 14, 1, true, 0, Math.PI), paint); cap.rotation.z = Math.PI / 2; cap.rotation.y = Math.PI / 2; cap.position.set(-0.18, 1.3, 0); chute.add(cap);
+  chute.rotation.z = 0.35;
+  const tip = new THREE.Object3D(); tip.position.set(-0.45, 1.35, 0); chute.add(tip);
+  return { g, housing, drum, chute, tip, sideL, sideR };
+}
+function makeBrush() {
+  const g = new THREE.Group(), dark = mcol(0x2c3138, 0.6, 0.2), bris = mcol(0xffd34d, 0.85), hood = mcol(0x3a7bd5, 0.45, 0.25), steel = mcol(0xb4bcc6, 0.3, 0.7);
+  const housing = new THREE.Group(); g.add(housing);
+  const hd = new THREE.Mesh(new THREE.BoxGeometry(1, 0.14, 0.95), hood); hd.position.set(0, 0.98, -0.05); hd.castShadow = true; housing.add(hd);
+  const bk = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 0.1), hood); bk.position.set(0, 0.6, -0.48); housing.add(bk);
+  const drum = new THREE.Group(); drum.position.set(0, 0.44, 0.02); housing.add(drum);
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1, 12), dark); core.rotation.z = Math.PI / 2; drum.add(core);
+  const bg = new THREE.BoxGeometry(1, 0.26, 0.07);
+  for (let i = 0; i < 10; i++) { const a = i / 10 * TAU, m = new THREE.Mesh(bg, i % 2 ? bris : mcol(0xffb020, 0.85)); m.position.set(0, Math.cos(a) * 0.3, Math.sin(a) * 0.3); m.rotation.x = -a; m.castShadow = true; drum.add(m); }
+  const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.95), steel); sideL.position.set(0.5, 0.5, -0.05); g.add(sideL);
+  const sideR = sideL.clone(); sideR.position.x = -0.5; g.add(sideR);
+  return { g, housing, drum, sideL, sideR };
+}
 // ---------- player ----------
 const PL = {
   x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', load: 0,
@@ -151,12 +194,19 @@ const PL = {
     for (const k in TGEO) {
       const G = TGEO[k], m = ownMats(artScene(G.model).clone(true));
       m.traverse(c => { if (c.isMesh) { c.castShadow = true; if (G.tint && c.material.name === 'paint') c.material.color.setHex(G.tint); } });
+      if (G.scale) m.scale.setScalar(G.scale);
+      if (G.rotY) m.rotation.y = G.rotY;
       m.position.z = G.off; m.visible = false; this.truck.add(m); this.truckMs[k] = m;
     }
+    // attachments: rotary blower head, sweeper brush, a driver for open machines
+    this.rotary = makeRotary(); this.truck.add(this.rotary.g); this.rotary.g.visible = false;
+    this.brush = makeBrush(); this.truck.add(this.brush.g); this.brush.g.visible = false;
+    this.rider = makePerson({}); this.truck.add(this.rider.root); this.rider.root.visible = false;
     this.truckM = this.truckMs.pickup;
     this.bladeG = new THREE.Group(); this.truck.add(this.bladeG);
     this.bladeM = ownMats(artScene('blade').clone(true)); this.bladeM.traverse(c => { if (c.isMesh) c.castShadow = true; });
     this.bladeG.add(this.bladeM); this.bladeG.position.set(0, 0.05, 3.25);
+    this.bladeMats = []; this.bladeM.traverse(c => { if (c.isMesh) this.bladeMats.push({ m: c.material, c: c.material.color.clone(), r: c.material.roughness, mt: c.material.metalness }); });
     this.pile = new THREE.Mesh(geo('hemi2', () => { const g = new THREE.SphereGeometry(1, 20, 12, 0, TAU, 0, Math.PI / 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); const n = 1 + 0.08 * Math.sin(x * 9 + z * 7) * Math.cos(z * 5 - x * 3) * (y > 0.05 ? 1 : 0); p.setXYZ(i, x * n, y * n, z * n); } g.computeVertexNormals(); return g; }), pileMat);
     this.pile.castShadow = true; this.pile.receiveShadow = true; this.truck.add(this.pile); this.pile.scale.set(0.001, 0.001, 0.001);
     // beacon light on the truck roof
@@ -184,7 +234,17 @@ const PL = {
       this.truckM = this.truckMs[Object.keys(TGEO).find(key => TGEO[key] === G)];
       this.bladeG.visible = G.bladeZ !== null;
       if (G.bladeZ !== null) { this.bladeG.position.z = G.bladeZ; this.bladeM.scale.set(st.w / 1.06, G.bladeS[0], G.bladeS[1]); }
-      this.beacon.position.set(G.beacon[0], G.beacon[1], G.beacon[2]);
+      for (const b of this.bladeMats) {
+        if (G.gold) { b.m.color.setHex(0xffc83a); b.m.metalness = 0.75; b.m.roughness = 0.28; if (b.m.emissive) { b.m.emissive.setHex(0x7a4a00); b.m.emissiveIntensity = 0.5; } }
+        else { b.m.color.copy(b.c); b.m.metalness = b.mt; b.m.roughness = b.r; if (b.m.emissive) b.m.emissive.setHex(0); }
+      }
+      this.rotary.g.visible = G.head === 'rotary'; this.brush.g.visible = G.head === 'brush';
+      const Hd = G.head === 'rotary' ? this.rotary : G.head === 'brush' ? this.brush : null;
+      if (Hd) { Hd.g.position.set(0, 0, G.headZ); Hd.housing.scale.x = st.w; Hd.sideL.position.x = st.w / 2; Hd.sideR.position.x = -st.w / 2; }
+      this.rider.root.visible = !!G.rider;
+      if (G.rider) { this.rider.root.position.set(G.rider[0], G.rider[1], G.rider[2]); this.rider.root.scale.setScalar(G.rider[3] || 1); }
+      this.beacon.visible = !!G.beacon;
+      if (G.beacon) this.beacon.position.set(G.beacon[0], G.beacon[1], G.beacon[2]);
     }
     const bonus = { shovel: 0, bigshovel: 0.15, blower: 0.3, megablower: 0.5 }[t] || 0;
     const sc = clamp(0.8 + GAME.L(t)[1] * 0.1 + bonus, 0.8, 2.0);
@@ -214,9 +274,8 @@ const PL = {
     // nearest spot on the street (or the two end lots) where the current truck fits
     let h0 = this.h; if (Math.abs(Math.sin(h0)) > 0.7) h0 = z > 0 ? Math.PI : 0;
     let best = null, bd = 1e9;
-    const cand = [];
-    for (let zz = -46; zz <= 46; zz += 2) for (const xx of [-1.75, 0, 1.75]) cand.push([xx, zz]);
-    for (const xx of [-5, -2.5, 0, 2.5, 5]) { cand.push([xx, 55.5]); cand.push([xx, -55.8]); }
+    let cand = CH.truckSpots ? CH.truckSpots() : null;
+    if (!cand) { cand = []; for (let dz = -30; dz <= 30; dz += 1.5) for (let dx = -30; dx <= 30; dx += 1.5) cand.push([x + dx, z + dz]); }
     for (const [xx, zz] of cand) {
       const d = (xx - x) ** 2 + (zz - z) ** 2; if (d >= bd) continue;
       for (const hh of [h0, h0 + Math.PI, Math.PI / 2, -Math.PI / 2]) if (this.truckFree(xx, zz, hh)) { bd = d; best = { x: xx, z: zz, h: hh }; break; }
@@ -343,9 +402,27 @@ const PL = {
   // arcade driving: the machine turns toward your finger right away (tight turns, it slows down while turning hard).
   // A turn is tried around several points along the machine (middle, back, front...) so it squeezes through tight
   // spots; if nothing fits it backs up by itself. Nothing ever needs a manual reverse.
+  // last resort when the machine is pinned (every small move hits something): glide to a nearby pose that can move again
+  unstick() {
+    for (let r = 0.3; r <= 3.9; r += 0.3) for (const dh of [0, 0.3, -0.3, 0.6, -0.6, 1.0, -1.0, 1.6, -1.6]) for (let k = 0; k < 12; k++) {
+      const a = k / 12 * TAU, x = this.x + Math.sin(a) * r, z = this.z + Math.cos(a) * r, h = this.h + dh;
+      if (!this.truckFree(x, z, h)) continue;
+      const fx = Math.sin(h) * 0.35, fz = Math.cos(h) * 0.35;
+      if (this.truckFree(x + fx, z + fz, h) || this.truckFree(x - fx, z - fz, h)) { this.glide = { x, z, h, t: 0.3 }; return true; }
+    }
+    return false;
+  },
   _drive(dt, st, mx, mz, mag) {
     const G = this.geo;
+    if (this.glide) {
+      const g = this.glide, k = Math.min(1, dt / g.t); g.t -= dt;
+      this.x = lerp(this.x, g.x, k); this.z = lerp(this.z, g.z, k); this.h += angDiff(this.h, g.h) * k; this.spd = 0;
+      if (g.t <= 0) { this.x = g.x; this.z = g.z; this.h = g.h; this.glide = null; }
+      this.svx = this.svz = 0; this.moveAmt = 0.3;
+      return this._bladeCarve(dt, st, G);
+    }
     this.ensureFree();
+    const x0 = this.x, z0 = this.z, h0 = this.h;
     const want = mag > 0 ? Math.atan2(mx, mz) : this.h;
     const a = angDiff(this.h, want), al = Math.abs(a);
     const esc = this.escape > 0;
@@ -371,6 +448,20 @@ const PL = {
     // 2) roughly the right way but the turn does not fit: keep driving straight / slide along the edge (keeps speed)
     if (!moved && (al < 0.9 || esc || mag === 0)) {
       if (this.truckFree(this.x + fx0 * step, this.z + fz0 * step, this.h)) { this.x += fx0 * step; this.z += fz0 * step; moved = true; }
+      // blocked straight ahead (e.g. a wide blade brushing a stall or a post): ease sideways toward the side that opens up
+      if (!moved && mag > 0 && !esc && this.spd >= -0.1) {
+        const rx = fz0, rz = -fx0, look = Math.max(Math.abs(step), 0.05) * 4;
+        let side = 0;
+        for (const d of [0.4, 0.8, 1.3, 1.9, 2.6]) {
+          if (this.truckFree(this.x + fx0 * look + rx * d, this.z + fz0 * look + rz * d, this.h)) { side = 1; break; }
+          if (this.truckFree(this.x + fx0 * look - rx * d, this.z + fz0 * look - rz * d, this.h)) { side = -1; break; }
+        }
+        if (side) {
+          const sh = side * clamp(Math.abs(step), 0.05, 0.14), nx = this.x + rx * sh, nz = this.z + rz * sh;
+          if (this.truckFree(nx, nz, this.h)) { this.x = nx; this.z = nz; this.spd = Math.max(this.spd * 0.95, 1.0); moved = true; }
+        }
+      }
+      if (moved) { }
       else if (this.truckFree(this.x + fx0 * step, this.z, this.h)) { this.x += fx0 * step; this.spd *= 0.9; moved = true; }
       else if (this.truckFree(this.x, this.z + fz0 * step, this.h)) { this.z += fz0 * step; this.spd *= 0.9; moved = true; }
     }
@@ -397,15 +488,27 @@ const PL = {
         else if (this.stuckT > 0.5) { this.escape = 0.7; this.stuckT = 0; }
       }
     } else if (!esc) this.stuckT = 0;
+    // ice: the machine keeps sliding the way it was going; grip pulls it back in line (the ice machine grips best)
+    const dt1 = Math.max(dt, 1e-3);
+    if (CH.ice && CH.ice(x0, z0) && !this.escape) {
+      const gk = 1 - Math.exp(-(G.grip || 2.0) * dt), wx = this.x - x0, wz = this.z - z0;
+      const vx = lerp((this.svx || 0) * dt, wx, gk), vz = lerp((this.svz || 0) * dt, wz, gk);
+      if (this.truckFree(x0 + vx, z0 + vz, this.h)) { this.x = x0 + vx; this.z = z0 + vz; }
+    }
+    this.svx = (this.x - x0) / dt1; this.svz = (this.z - z0) / dt1;
+    // pinned? (pushing the stick but nothing moves for a while)
+    if (mag > 0 && Math.abs(this.x - x0) + Math.abs(this.z - z0) < 0.002 && Math.abs(angDiff(h0, this.h)) < 0.002) { this.pinT = (this.pinT || 0) + dt; if (this.pinT > 0.9) { this.pinT = 0; this.unstick(); } }
+    else this.pinT = 0;
+    this.slideLat = this.svx * Math.cos(this.h) - this.svz * Math.sin(this.h);
     this.rev = this.spd < -0.2;
-    this.moveAmt = clamp(Math.abs(this.spd) / st.spd, 0, 1);
+    this.moveAmt = clamp(Math.max(Math.abs(this.spd), Math.hypot(this.svx, this.svz) * 0.8) / st.spd, 0, 1);
     return this._bladeCarve(dt, st, G);
   },
   _bladeCarve(dt, st, G) {
     let removed = 0;
     const hx = Math.sin(this.h), hz = Math.cos(this.h);
     const cx = this.x + hx * G.carve, cz = this.z + hz * G.carve;
-    if (!this.full && this.spd > 0.2) {
+    if (!this.full && (this.spd > 0.2 || (this.svx || 0) * hx + (this.svz || 0) * hz > 0.6)) {
       const steps = this._lastCx === undefined ? 1 : Math.min(8, Math.ceil(Math.hypot(cx - this._lastCx, cz - this._lastCz) / 0.18));
       for (let s = 1; s <= steps; s++) {
         const px = this._lastCx === undefined ? cx : lerp(this._lastCx, cx, s / steps), pz = this._lastCz === undefined ? cz : lerp(this._lastCz, cz, s / steps);
@@ -416,10 +519,27 @@ const PL = {
     this._lastCx = cx; this._lastCz = cz;
     if (removed > 0) {
       const rx = hz, rz = -hx;
-      for (const sd of [-1, 1]) if (Math.random() < 0.7) FX.spray(cx + rx * sd * st.w * 0.5, 0.4, cz + rz * sd * st.w * 0.5, rx * sd * 0.8 + hx * 0.6, rz * sd * 0.8 + hz * 0.6, 3, 3.2, 0.16);
-      if (Math.random() < 0.5) FX.spray(cx + hx * 0.5, 0.6 + this.pileVis, cz + hz * 0.5, hx, hz, 2, 2.0, 0.2);
+      if (G.head === 'rotary') this._throwFX(removed, hx, hz, rx, rz);
+      else if (G.head === 'brush') {
+        // the sweeper flings snow forward and up
+        for (let i = 0; i < 3; i++) FX.spray(cx + rx * rnd(-0.5, 0.5) * st.w, 0.5, cz + rz * rnd(-0.5, 0.5) * st.w, hx * 1.2 + rx * rnd(-0.4, 0.4), hz * 1.2 + rz * rnd(-0.4, 0.4), 2, 4.2, 0.2);
+        if (Math.random() < 0.3) FX.puff(cx + hx * 0.6, 0.7, cz + hz * 0.6, 2, 0.9);
+      } else {
+        for (const sd of [-1, 1]) if (Math.random() < 0.7) FX.spray(cx + rx * sd * st.w * 0.5, 0.4, cz + rz * sd * st.w * 0.5, rx * sd * 0.8 + hx * 0.6, rz * sd * 0.8 + hz * 0.6, 3, 3.2, 0.16);
+        if (Math.random() < 0.5) FX.spray(cx + hx * 0.5, 0.6 + this.pileVis, cz + hz * 0.5, hx, hz, 2, 2.0, 0.2);
+      }
+      if (G.gold && Math.random() < 0.5) { const sd = Math.random() < 0.5 ? 1 : -1; FX.sparkle(cx + rx * sd * st.w * 0.5, 0.5, cz + rz * sd * st.w * 0.5, 2, 0.3); }
     }
     return removed;
+  },
+  // rotary blower: a high, wide arc of snow out of the chute, landing well off to the side
+  _throwFX(removed, hx, hz, rx, rz) {
+    const tip = this.rotary.tip.getWorldPosition(this._v1), n = Math.min(9, 2 + Math.round(removed * 26)), v = Math.max(0, this.spd);
+    for (let i = 0; i < n; i++) {
+      const sp = rnd(6.0, 8.0), up = rnd(4.6, 6.2);
+      FX.emit(FX.norm, { x: tip.x + rnd(-0.1, 0.1), y: tip.y + rnd(-0.1, 0.1), z: tip.z + rnd(-0.1, 0.1), vx: -rx * sp + hx * (v * 0.6 + rnd(-0.6, 0.6)), vy: up, vz: -rz * sp + hz * (v * 0.6 + rnd(-0.6, 0.6)), gr: 9.5, life: rnd(1.0, 1.4), s0: rnd(0.18, 0.3), s1: rnd(0.45, 0.7), a0: 0.95, a1: 0.35, dr: 0.25, c: [0.96, 0.975, 1] });
+    }
+    if (Math.random() < 0.06 * n) { const d = rnd(7, 9.5); FX.clump(tip.x, tip.y, tip.z, tip.x - rx * d + hx * v * 0.8, 0.3, tip.z - rz * d + hz * v * 0.8, rnd(0.18, 0.3), rnd(0.9, 1.15), (x, y, z) => FX.puff(x, 0.3, z, 4, 1.1)); }
   },
   payout(quiet) {
     const amt = this.load; this.load = 0;
@@ -483,13 +603,24 @@ const PL = {
       const f = clamp(loadVis / st.cap, 0, 1.1);
       this.pileVis = damp(this.pileVis, f, 6, dt);
       const p = this.pileVis, bw = st.w;
-      this.pile.visible = p > 0.01;
-      const G = this.geo, ps = 0.8 + G.halfW * 0.18;
-      this.pile.scale.set(bw * 0.5 * (0.7 + 0.3 * p), (0.12 + 1.05 * p) * ps, (0.25 + 1.0 * p) * ps);
-      this.pile.position.set(0, 0, G.pileZ + 0.1 * p);
-      this.beacon.material.color.setHSL(0.08, 1, 0.45 + 0.25 * Math.max(0, Math.sin(performance.now() / 120)));
-      // little bounce
-      this.truckM.position.y = Math.abs(Math.sin(performance.now() / 70)) * 0.015 * this.moveAmt;
+      const G = this.geo, ps = 0.8 + G.halfW * 0.18, now = performance.now();
+      this.pile.visible = p > 0.01 && G.pileZ !== null;
+      if (G.pileZ !== null) { this.pile.scale.set(bw * 0.5 * (0.7 + 0.3 * p), (0.12 + 1.05 * p) * ps, (0.25 + 1.0 * p) * ps); this.pile.position.set(0, 0, G.pileZ + 0.1 * p); }
+      this.beacon.material.color.setHSL(0.08, 1, 0.45 + 0.25 * Math.max(0, Math.sin(now / 120)));
+      // little bounce (the magic sleigh floats)
+      this.truckM.position.y = G.hover ? 0.16 + Math.sin(now / 300) * 0.07 : Math.abs(Math.sin(now / 70)) * 0.015 * this.moveAmt;
+      if (G.head) { const Hd = G.head === 'rotary' ? this.rotary : this.brush; Hd.drum.rotation.x -= dt * (5 + this.moveAmt * 16) * (G.head === 'brush' ? 1.5 : 1); if (G.head === 'rotary') this.rotary.chute.rotation.y = Math.sin(now / 900) * 0.12; }
+      if (G.rider) {
+        this.rider.root.position.y = G.rider[1] + (G.hover ? this.truckM.position.y : 0);
+        animPerson(this.rider, dt, { walk: 0, pose: this.celebrate > 0 ? 'cheer' : 'push', t: now / 1000 });
+        this.rider.legL.rotation.x = this.rider.legR.rotation.x = -1.35; this.rider.body.position.y = 0.0;
+        if (this.celebrate > 0) this.celebrate -= dt;
+      }
+      if (G.gold && this.moveAmt > 0.1 && Math.random() < 0.7) {
+        // a trail of golden sparkles behind the runners
+        const bx = this.x - Math.sin(this.h) * G.rear * 0.9, bz = this.z - Math.cos(this.h) * G.rear * 0.9, sx = Math.cos(this.h), sz = -Math.sin(this.h), sd = Math.random() < 0.5 ? 1 : -1;
+        FX.emit(FX.add, { x: bx + sx * sd * 0.9 + rnd(-0.2, 0.2), y: rnd(0.15, 0.5), z: bz + sz * sd * 0.9 + rnd(-0.2, 0.2), vx: rnd(-0.3, 0.3), vy: rnd(0.3, 1.0), vz: rnd(-0.3, 0.3), life: rnd(0.6, 1.1), s0: rnd(0.16, 0.3), s1: 0.02, a0: 1, a1: 0, fl: 1, dr: 1.2, c: Math.random() < 0.5 ? [1, 0.85, 0.35] : [1, 0.6, 0.9] });
+      }
     }
   }
 };

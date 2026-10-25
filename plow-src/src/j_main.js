@@ -21,7 +21,9 @@ const INPUT = {
     const up = e => { if (e.pointerId === J.id) { J.active = false; J.dx = J.dy = 0; } };
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   },
+  block: false,
   get() {
+    if (this.block) { this.joy.active = false; return { x: 0, y: 0 }; }
     const k = this.keys;
     let x = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
     let y = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
@@ -54,8 +56,19 @@ const CAM = {
     let lx = this.x, ly = 0.5, lz = this.z;
     if (this.intro > 0) {
       const k = smooth(clamp(this.intro, 0, 1));
-      px = lerp(px, 0, k); py = lerp(py, 34, k); pz = lerp(pz, 82, k); lz = lerp(lz, 10, k);
+      const ic = CH.introCam || { from: [0, 34, 82], look: [0, 0.5, 10] };
+      px = lerp(px, ic.from[0], k); py = lerp(py, ic.from[1], k); pz = lerp(pz, ic.from[2], k); lx = lerp(lx, ic.look[0], k); lz = lerp(lz, ic.look[2], k);
       this.intro -= dt / 2.6;
+    }
+    // finale: the camera pulls away to show the big moment, slowly circling it
+    if (this.show) {
+      const S = this.show; S.k = clamp((S.k || 0) + (S.out ? -dt / 1.1 : dt / 1.5), 0, 1); S.a = (S.a || 0) + dt * 0.1;
+      if (S.out && S.k <= 0) this.show = null;
+      else {
+        const k = smooth(S.k), dx = S.from[0] - S.look[0], dz = S.from[2] - S.look[2], ca = Math.cos(S.a), sa = Math.sin(S.a);
+        px = lerp(px, S.look[0] + dx * ca - dz * sa, k); py = lerp(py, S.from[1], k); pz = lerp(pz, S.look[2] + dx * sa + dz * ca, k);
+        lx = lerp(lx, S.look[0], k); ly = lerp(ly, S.look[1], k); lz = lerp(lz, S.look[2], k);
+      }
     }
     if (this.shake > 0) { this.shake = Math.max(0, this.shake - dt); const s = this.shake * 0.5; px += rnd(-s, s); py += rnd(-s, s) * 0.5; }
     if (QS.has('cam')) { const c = QS.get('cam').split(',').map(Number); px = c[0]; py = c[1]; pz = c[2]; lx = c[3]; ly = c[4]; lz = c[5]; }
@@ -121,7 +134,8 @@ function updateWorld(dt) {
     if (H.lit > 0.5 && H.smoke) { H._sm = (H._sm || 0) - dt; if (H._sm <= 0) { H._sm = rnd(0.25, 0.45); FX.smoke(H.smoke.x, H.smoke.y + 0.2, H.smoke.z); } }
   };
   for (const H of WORLD.houses) lit(H);
-  lit(WORLD.bakery);
+  if (WORLD.bakery) lit(WORLD.bakery);
+  if (WORLD.glows) for (const G of WORLD.glows) { if (G.f) G.m.scale.setScalar(G.s * (1 + Math.sin(t * 7 + G.ph) * 0.06 * G.f + Math.sin(t * 13.1 + G.ph * 2) * 0.04 * G.f)); }
 }
 
 // ---------- bot (for pacing tests) ----------
@@ -156,7 +170,7 @@ const BOT = {
   },
   buy() {
     const nt = GAME.nextTool();
-    if (nt && !TIER[nt].gift && UI.shownCoins() >= TIER[nt].cost) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
+    if (nt && !TIER[nt].gift && (GAME.owned[nt] || UI.shownCoins() >= TIER[nt].cost)) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
     for (const k of TIERS) if (GAME.owned[k.key]) this.mark('tool_' + k.key);
     const t = PL.tool, order = [1, 0, 2];
     let best = -1, bc = 1e18;
@@ -177,6 +191,14 @@ const BOT = {
         for (let q = 0; q < n; q++) {
           const c = n > 1 ? lo + (hi - lo) * q / (n - 1) : (lo + hi) / 2;
           let A = alongZ ? [c, r.z0 + 0.3] : [r.x0 + 0.3, c], B = alongZ ? [c, r.z1 - 0.3] : [r.x1 - 0.3, c];
+          if (a.mask) {
+            // shaped area (e.g. an oval lake): keep only the part of the pass that lies inside it
+            let lo2 = null, hi2 = null; const N = 60;
+            for (let k = 0; k <= N; k++) { const x = lerp(A[0], B[0], k / N), z = lerp(A[1], B[1], k / N), kk = SNOW.idx(x, z); if (kk >= 0 && SNOW.A[kk] === a.id) { if (lo2 === null) lo2 = k; hi2 = k; } }
+            if (lo2 === null) continue;
+            const A2 = [lerp(A[0], B[0], lo2 / N), lerp(A[1], B[1], lo2 / N)], B2 = [lerp(A[0], B[0], hi2 / N), lerp(A[1], B[1], hi2 / N)]; A = A2; B = B2;
+            if (Math.hypot(B[0] - A[0], B[1] - A[1]) < 1) continue;
+          }
           if (flip) [A, B] = [B, A]; flip = !flip;
           const dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L, h = Math.atan2(ux, uz);
           let wa = [A[0] - ux * (G.carve + 0.3), A[1] - uz * (G.carve + 0.3)], moved = 0;
@@ -216,8 +238,8 @@ const BOT = {
       if (this.stuckT > 2.5) { this.stuckT = 0; this.jit = truck ? 2.0 : 1.2; this.tgt = null; this.rt = 0; if (truck) this.li++; }
       if (this.jit > 0) {
         this.jit -= dt;
-        if (truck) { // back into open space (middle of the street / lot / square), then try again
-          const inPlaza = PL.x > 5.3 && PL.z < 2.4 && PL.z > -22.4, ox = inPlaza ? 8.2 : 0, oz = inPlaza ? clamp(PL.z, -20, 0) : clamp(PL.z, -55.5, 55.5);
+        if (truck && CH.botOpen) { // back into open space (middle of the street / lot / square), then try again
+          const [ox, oz] = CH.botOpen(PL.x, PL.z);
           const dx = ox - PL.x, dz = oz - PL.z, l = Math.hypot(dx, dz);
           if (l > 0.8) return { x: dx / l, y: -dz / l };
         }
@@ -241,7 +263,7 @@ const BOT = {
         this.rt = 0.35;
         let a = SNOW.areas[SNOW.hlArea] || null;
         let p = a && !a.done ? SNOW.nearestSnow(PL.x + Math.sin(PL.h) * (truck ? 4 : 1), PL.z + Math.cos(PL.h) * (truck ? 4 : 1), a.id, 0.04, 150) : null;
-        if (p && truck && !this.okCell(...this.cell(p.x, p.z), true)) { const c = this.cell(p.x, p.z); p = { x: clamp(p.x, -2.2, 2.2), z: p.z }; }
+        if (p && truck && !this.okCell(...this.cell(p.x, p.z), true) && CH.botTarget) p = CH.botTarget(p);
         if (!p) p = SNOW.nearestSnow(PL.x, PL.z, 0, 0.05, 150);
         this.tgt = p;
       }
@@ -255,18 +277,12 @@ const BOT = {
     let dx = tx - PL.x, dz = tz - PL.z;
     const here = dist[ci + cj * W];
     if (here < 0) this.noPath = (this.noPath || 0) + dt; else this.noPath = 0;
-    const open = (x, z) => (Math.abs(x) < 3.6 && Math.abs(z) < 50) || Math.abs(z) > 50.5;
     if (truck) {
       // route between the open zones (street, end lots, square) through their mouths
-      const zone = (x, z) => z < -50 ? 'N' : z > 50 ? 'S' : (x > 5.3 && z < 2.4 && z > -22.4) ? 'P' : 'R';
-      const zp = zone(PL.x, PL.z), zt = zone(tx, tz);
-      if (zp !== zt) {
-        let wx = null, wz = null;
-        if (zp === 'N') { wx = 0; wz = -45; } else if (zp === 'S') { wx = 0; wz = 45; }
-        else if (zp === 'P') { wx = 1.0; wz = clamp(PL.z, -16, -4); }
-        else if (zt === 'P') { if (PL.x < 0.5 || Math.abs(PL.z - clamp(tz, -16, -4)) > 4) { wx = 1.0; wz = clamp(tz, -16, -4); } }
-        else if (zt === 'N' && PL.z > -44) { wx = 0; wz = -46; } else if (zt === 'S' && PL.z < 44) { wx = 0; wz = 46; }
-        if (wx !== null && Math.hypot(wx - PL.x, wz - PL.z) > 2) { dx = wx - PL.x; dz = wz - PL.z; const l = Math.hypot(dx, dz) || 1; return { x: dx / l, y: -dz / l }; }
+      if (CH.botZone) {
+        const zp = CH.botZone(PL.x, PL.z), zt = CH.botZone(tx, tz);
+        const m = zp !== zt ? CH.botMouth(zp, zt, PL.x, PL.z, tz) : null;
+        if (m && Math.hypot(m[0] - PL.x, m[1] - PL.z) > 2) { dx = m[0] - PL.x; dz = m[1] - PL.z; const l = Math.hypot(dx, dz) || 1; return { x: dx / l, y: -dz / l }; }
       }
       // trucks: straight at the waypoint when the way is clear, otherwise follow the path field a few cells ahead
       const r = PL.geo.halfW + 0.15, L = Math.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L;
@@ -298,17 +314,18 @@ const BOT = {
 
 // ---------- boot ----------
 let renderer, scene;
-async function loadArt() {
+async function loadArt(name) {
+  name = name || 'town';
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/town.glb.gz?v=__VER__'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=__VER__'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/town.glb?v=__VER__'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=__VER__'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -321,21 +338,28 @@ async function boot() {
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
   CAM.init();
+  // which chapter (and your coins, machines and crew) before anything is built
+  pickChapter(GAME.loadMeta());
+  const lm = $('loadmsg'); if (lm) lm.textContent = 'Chapter ' + CH.id + ': ' + CH.name;
   lb.style.width = '25%';
-  const gltf = await loadArt();
+  // scenes are keyed by their name in the file (three.js renames scenes that clash with node names)
+  const addArt = g => g.scenes.forEach((s, i) => { WORLD.art[(g.parser.json.scenes[i] || {}).name || s.name] = s; });
+  WORLD.art = {};
+  const packs = await Promise.all([loadArt(), CH.pack ? loadArt(CH.pack) : null]);
+  for (const g of packs) if (g) addArt(g);
   lb.style.width = '70%';
-  WORLD.art = {}; for (const s of gltf.scenes) WORLD.art[s.name] = s;
   buildWorld(scene);
+  renderer.toneMappingExposure = WORLD.env.exposure;
   FX.init(scene);
   PL.init(scene);
   GUIDE.init(scene);
   TREASURE.init(scene);
   CREW.init(scene);
   if (STORE.get('plowtown_mute') === '1') AUD.muted = true;
-  const resumed = GAME.load();
+  const resumed = GAME.loadChapter();
   for (let i = 0; i < Math.min(GAME.crew || 0, CREW_DEFS.length); i++) CREW.join(i, true);
   // test shortcut: ?skip=truck|dumpplow|groomer jumps to that stage (driveways done, tools owned)
-  if (QS.has('skip')) {
+  if (QS.has('skip') && CH.id === 1) {
     const to = QS.get('skip') || 'truck';
     for (const k of HAND_AREAS) { const a = WORLD.areaByKey[k]; if (!a.done) GAME.completeArea(a, true); }
     for (const t of TIERS) { GAME.owned[t.key] = 1; if (t.key === to) break; }
@@ -343,25 +367,27 @@ async function boot() {
     PL.x = 0; PL.z = 30; PL.h = Math.PI; PL.setTool(to, true); PL.ensureFree();
   }
   UI.init();
+  CHUI.init();
   INPUT.init($('c'));
   if (QS.has('bot')) { BOT.init(); window.__hold = true; }
   lb.style.width = '100%';
   CAM.update(0, true);
-  if (!resumed && !QS.has('bot') && !QS.has('nointro')) CAM.intro = 1;
+  if (!resumed && !QS.has('bot') && !QS.has('nointro')) { CAM.intro = 1; setTimeout(() => CHUI.intro(), 700); }
   onResize(); addEventListener('resize', onResize);
   document.addEventListener('visibilitychange', () => { if (document.hidden) GAME.save(); if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
   // warm up shaders
   renderer.compile(scene, CAM.cam);
   setTimeout(() => { $('loading').classList.add('off'); }, 150);
-  if (!resumed) setTimeout(() => UI.hint(IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag', 5), 1500);
+  if (!resumed) CH.firstHint = IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag';
   else UI.hint('Welcome back!', 2.5);
   console.log('boot ms', Math.round(performance.now() - t0));
   window.__ready = true;
-  window.__render = () => { SNOW.flush(); CAM.update(0, true); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
+  window.__render = () => { SNOW.flush(); CAM.update(0, true); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
   window.__step = (n, dt) => { for (let i = 0; i < n; i++) step(dt || 1 / 30); };
   last = performance.now();
   requestAnimationFrame(frame);
 }
+function placeSun() { const s = WORLD.sun, so = WORLD.env.sunOff; s.position.set(CAM.x + so[0], so[1], CAM.z + so[2]); s.target.position.set(CAM.x, 0, CAM.z - 4); s.target.updateMatrixWorld(); }
 function onResize() {
   renderer.setSize(innerWidth, innerHeight); CAM.cam.aspect = innerWidth / innerHeight; CAM.cam.updateProjectionMatrix();
   FX.uScale.value = innerHeight * renderer.getPixelRatio() / (2 * Math.tan(THREE.MathUtils.degToRad(CAM.cam.fov) / 2));
@@ -376,6 +402,7 @@ function step(dt) {
   LIFE.update(dt);
   TREASURE.update(dt);
   CREW.update(dt);
+  NPC.update(dt);
   updateWorld(dt);
   FX.update(dt);
   UI.tick(dt);
@@ -389,13 +416,13 @@ function frame(now) {
   SNOW.flush();
   SNOW.uni.uTime.value = now / 1000; SNOW.uni.uPulse.value = 0.5 + 0.5 * Math.sin(now / 260);
   CAM.update(dt);
-  if (scene.fog) { const k = Math.max(0, CAM.intro); scene.fog.near = 42 + k * 80; scene.fog.far = 120 + k * 160; }
+  if (scene.fog) { const k = Math.max(0, CAM.intro), E = WORLD.env; scene.fog.near = E.fogNear + k * 80; scene.fog.far = E.fogFar + k * 160; }
   GUIDE.update(dt);
   // x-ray uniforms (player screen pos & depth)
   { const v = XRAY._v || (XRAY._v = new V3()); v.set(PL.x, PL.kind === 'truck' ? 1.2 : 0.6, PL.z).project(CAM.cam); XRAY.uP.value.set(v.x, v.y);
     const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse); XRAY.uD.value = -w.z;
     XRAY.uA.value = innerWidth / innerHeight; XRAY.uR.value = PL.kind === 'truck' ? 0.2 + PL.geo.halfW * 0.05 : 0.15; renderer.getDrawingBufferSize(XRAY.uRes.value); }
-  const s = WORLD.sun; s.position.set(CAM.x + 14, 24, CAM.z + 12); s.target.position.set(CAM.x, 0, CAM.z - 4); s.target.updateMatrixWorld();
+  placeSun();
   FX.center.set(CAM.x, 0, CAM.z);
   AUD.update(dt, { scrape: clamp(PL.carveRate / (PL.kind === 'truck' ? 9 : PL.kind === 'blower' ? 3 : 1.6), 0, 1), tool: PL.kind, move: PL.moveAmt, blowing: PL.blowing });
   UI.update(dt);
