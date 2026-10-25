@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Plow Town</title>
+<style>
+/*FONTS*/
+:root{--ink:#2b3a55;--ink2:#53627d;--gold:#ffc23d;--org:#ff8a1e;--grn:#2fb36a;--red:#e5483c;--card:#ffffff;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;overflow:hidden;background:#cfe0f1;touch-action:none;-webkit-user-select:none;user-select:none;font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+canvas#fx2d{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20;}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10;}
+button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-action:none;}
+#coinBox{position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:8px;background:var(--card);padding:6px 16px 6px 7px;border-radius:999px;box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);}
+#coinIco{width:38px;height:38px;}
+#coinIco svg,.ci svg{width:100%;height:100%;display:block;}
+#coinTxt{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:29px;line-height:1;min-width:30px;letter-spacing:.5px;}
+#coinBox.bump{animation:bump .18s ease-out;}
+@keyframes bump{50%{transform:scale(1.1);}}
+#goal{position:absolute;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--card);padding:7px 14px 7px 8px;border-radius:18px;width:min(440px,calc(100vw - 250px));box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);}
+#goal.pop{animation:gpop .5s cubic-bezier(.2,1.6,.4,1);}
+@keyframes gpop{0%{transform:translateX(-50%) scale(.7);opacity:.2}100%{transform:translateX(-50%) scale(1);opacity:1}}
+#goalIco{width:40px;height:40px;flex:none;background:#eef4fb;border-radius:12px;padding:3px;}
+#goalIco svg{width:100%;height:100%;}
+#goalMain{flex:1;min-width:0;}
+#goalTxt{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#goalBar{height:10px;border-radius:6px;background:#e3eaf3;margin-top:5px;overflow:hidden;}
+#goalBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffb52e,#ff8a1e);border-radius:6px;transition:width .2s;}
+#goalPct{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:18px;min-width:44px;text-align:right;}
+#btnMute{position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));width:48px;height:48px;border-radius:50%;background:var(--card);box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);padding:9px;}
+#btnMute svg{width:100%;height:100%;}
+#ups{position:absolute;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:10px;}
+.up{width:104px;height:108px;border-radius:18px;background:var(--card);box-shadow:0 5px 0 #c9d5e4,0 10px 24px rgba(43,58,85,.2);display:flex;flex-direction:column;align-items:center;padding:7px 6px 6px;position:relative;transition:transform .08s;}
+.up:active{transform:translateY(3px);box-shadow:0 2px 0 #c9d5e4,0 6px 14px rgba(43,58,85,.2);}
+.ui-ico{width:38px;height:38px;background:#eef4fb;border-radius:12px;padding:4px;}
+.ui-ico svg{width:100%;height:100%;display:block;}
+.ui-lbl{font-weight:800;font-size:12.5px;margin-top:3px;white-space:nowrap;}
+.ui-dots{font-size:8px;letter-spacing:1.5px;color:#ff8a1e;height:11px;line-height:11px;}
+.ui-cost{display:flex;align-items:center;gap:3px;margin-top:auto;background:#eef2f7;border-radius:10px;padding:1px 9px 1px 4px;}
+.ui-cost .ci{width:17px;height:17px;}
+.ui-cost b{font-family:'Baloo 2',sans-serif;font-size:16px;line-height:20px;color:#9aa6b6;}
+.up.can .ui-cost{background:var(--grn);}
+.up.can .ui-cost b{color:#fff;}
+.up.can{box-shadow:0 5px 0 #23935a,0 10px 24px rgba(47,179,106,.35),inset 0 0 0 3px var(--grn);}
+.up.max .ui-cost b{color:#ff8a1e;}
+.up.bump{animation:upb .35s cubic-bezier(.2,1.8,.4,1);}
+@keyframes upb{0%{transform:scale(.85)}100%{transform:scale(1)}}
+#ups.nudge .up.can{animation:nud 1s infinite;}
+@keyframes nud{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.toolcard{width:118px;background:linear-gradient(#fff8e6,#fff);}
+.toolcard .ui-ico{background:#ffe9b8;}
+.toolcard .ui-lbl{color:#c26a00;}
+.tc-bar{width:86%;height:6px;background:#f1e2c2;border-radius:4px;overflow:hidden;margin-top:4px;}
+.tc-bar i{display:block;height:100%;width:0;background:var(--gold);}
+.toolcard.can{animation:tcg 1.1s infinite;box-shadow:0 5px 0 #d69a00,0 10px 28px rgba(255,194,61,.6),inset 0 0 0 3px var(--gold);}
+.toolcard.can .ui-cost{background:#ff8a1e;}
+@keyframes tcg{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(-2deg)}}
+#tools{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:8px;}
+.tool{width:56px;height:56px;border-radius:16px;background:var(--card);box-shadow:0 4px 0 #c9d5e4,0 8px 18px rgba(43,58,85,.18);padding:7px;opacity:.75;}
+.tool svg{width:100%;height:100%;}
+.tool.pulse{animation:tpulse .7s infinite;opacity:1;}
+@keyframes tpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18);box-shadow:0 0 0 6px rgba(255,194,61,.7),0 8px 18px rgba(43,58,85,.18)}}
+.tool.on{opacity:1;box-shadow:0 4px 0 #d69a00,inset 0 0 0 3px var(--gold),0 8px 18px rgba(43,58,85,.18);}
+#loadTag{position:absolute;left:0;top:0;display:none;align-items:center;gap:6px;background:rgba(255,255,255,.95);border-radius:999px;padding:3px 9px 3px 4px;box-shadow:0 3px 10px rgba(43,58,85,.25);}
+#loadTag.on{display:flex;}
+#loadTag .lb{width:54px;height:9px;border-radius:5px;background:#dfe7f1;overflow:hidden;}
+#loadTag .lb i{display:block;height:100%;background:linear-gradient(90deg,#9fd0ff,#5aa9f5);}
+#loadTag b{font-family:'Baloo 2',sans-serif;font-size:14px;line-height:16px;}
+#loadTag.full{background:var(--red);color:#fff;animation:fullp .6s infinite;}
+#loadTag.full .lb i{background:#fff;}
+@keyframes fullp{50%{scale:1.12;}}
+#hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:rgba(30,42,64,.82);color:#fff;font-weight:800;font-size:17px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;}
+#hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast{position:absolute;left:50%;top:84px;transform:translateX(-50%);background:rgba(255,255,255,.95);font-weight:800;font-size:14px;padding:8px 16px;border-radius:12px;opacity:0;transition:opacity .3s;box-shadow:0 4px 14px rgba(43,58,85,.2);}
+#toast.on{opacity:1;}
+#banner{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%) scale(.5);text-align:center;opacity:0;pointer-events:none;}
+#banner.on{animation:bnr 2.3s forwards;}
+@keyframes bnr{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}20%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
+.bn-ico{width:64px;height:64px;margin:0 auto -4px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.25));}
+.bn-ico svg{width:100%;height:100%;}
+.bn-t{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:44px;color:#fff;line-height:1.05;white-space:nowrap;-webkit-text-stroke:2px #2b3a55;paint-order:stroke fill;text-shadow:0 5px 0 #2b3a55,0 10px 24px rgba(0,0,0,.25);}
+.bn-s{display:inline-block;margin-top:8px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:22px;color:#2b3a55;background:var(--gold);padding:2px 16px;border-radius:999px;box-shadow:0 4px 0 #d69a00;}
+#bubbles{position:absolute;inset:0;}
+.bubble{position:absolute;left:0;top:0;background:#fff;color:var(--ink);font-weight:800;font-size:15px;padding:8px 13px;border-radius:14px;box-shadow:0 4px 14px rgba(43,58,85,.25);white-space:nowrap;transition:opacity .25s;}
+.bubble:after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-top-color:#fff;border-bottom:0;}
+#endcard{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(20,32,56,.45);pointer-events:auto;z-index:30;}
+#endcard.on{display:flex;animation:fadein .4s;}
+@keyframes fadein{from{opacity:0}}
+.ec{background:#fff;border-radius:24px;padding:24px 28px;text-align:center;max-width:min(420px,90vw);box-shadow:0 10px 40px rgba(0,0,0,.3);}
+.ec h2{font-family:'Baloo 2',sans-serif;font-size:34px;margin:0 0 4px;}
+.ec p{margin:6px 0;font-weight:700;color:var(--ink2);}
+.ec button{margin-top:14px;background:var(--org);color:#fff;font-weight:800;font-size:18px;padding:12px 26px;border-radius:14px;box-shadow:0 5px 0 #c8650a;}
+#loading{position:fixed;inset:0;z-index:50;background:linear-gradient(#7aa7dc,#cfe0f1 70%,#eef4fa);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s;}
+#loading.off{opacity:0;pointer-events:none;}
+.logo{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:min(19vw,104px);color:#fff;line-height:.95;text-align:center;-webkit-text-stroke:4px #2b3a55;paint-order:stroke fill;text-shadow:0 8px 0 #2b3a55,0 16px 30px rgba(0,0,0,.25);position:relative;}
+.logo small{display:block;font-size:.32em;-webkit-text-stroke:2px #2b3a55;color:#ffc23d;margin-top:6px;letter-spacing:1px;}
+.lbar{width:min(300px,70vw);height:14px;border-radius:8px;background:rgba(255,255,255,.6);margin-top:34px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.1);}
+.lbar i{display:block;height:100%;width:5%;background:linear-gradient(90deg,#ffb52e,#ff8a1e);transition:width .4s;}
+#loadmsg{margin-top:12px;font-weight:800;color:#2b3a55;opacity:.7;}
+.flakes{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.flakes i{position:absolute;top:-10px;width:8px;height:8px;border-radius:50%;background:#fff;opacity:.85;animation:fall linear infinite;}
+@keyframes fall{to{transform:translateY(110vh) translateX(30px);}}
+@media (max-width:640px){
+  #goal{top:auto;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 104px);width:calc(100vw - 24px);padding:6px 12px 6px 7px;}
+  #goalIco{width:34px;height:34px;}
+  #goalTxt{font-size:14px;}
+  .up{width:78px;height:94px;border-radius:15px;padding:5px 3px;}
+  .toolcard{width:88px;}
+  .ui-ico{width:32px;height:32px;}
+  .ui-lbl{font-size:10.5px;}
+  .ui-cost b{font-size:14px;}
+  #ups{gap:6px;}
+  #hint{bottom:auto;top:76px;font-size:15px;}
+  .bn-t{font-size:32px;}
+  #tools{bottom:auto;top:70px;}
+  .tool{width:48px;height:48px;}
+  #coinTxt{font-size:25px;}
+}
+@media (max-height:500px){ #hint{bottom:auto;top:70px;} #banner{top:30%;} }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="fx2d"></canvas>
+<div id="hud">
+  <div id="coinBox"><div id="coinIco"></div><span id="coinTxt">0</span></div>
+  <div id="goal"><div id="goalIco"></div><div id="goalMain"><div id="goalTxt"></div><div id="goalBar"><i></i></div></div><div id="goalPct"></div></div>
+  <button id="btnMute" aria-label="sound"></button>
+  <div id="tools"></div>
+  <div id="ups"></div>
+  <div id="loadTag"><div class="lb"><i></i></div><b></b></div>
+  <div id="hint"></div>
+  <div id="toast"></div>
+  <div id="banner"></div>
+  <div id="bubbles"></div>
+  <div id="endcard"><div class="ec"><h2>Maple Lane is saved!</h2><p>Every home is warm and lit again.</p><p id="endStats"></p><p>Pine Street opens soon. Keep plowing for coins!</p><button onclick="document.getElementById('endcard').classList.remove('on')">Keep playing</button></div></div>
+</div>
+<div id="loading"><div class="flakes" id="flakes"></div><div class="logo">PLOW TOWN<small>SNOW CREW</small></div><div class="lbar"><i id="loadbar"></i></div><div id="loadmsg">Loading the town…</div></div>
+<script>(function(){var f=document.getElementById('flakes');for(var i=0;i<40;i++){var e=document.createElement('i');var s=3+Math.random()*7;e.style.left=Math.random()*100+'%';e.style.width=e.style.height=s+'px';e.style.animationDuration=(4+Math.random()*6)+'s';e.style.animationDelay=(-Math.random()*8)+'s';f.appendChild(e);}})();</script>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/artlib.js"></script>
+<script>
+/*GAME*/
+</script>
+</body>
+</html>
