@@ -124,7 +124,7 @@ const TGEO = {
   // Santa's sleigh with a golden blade (no reindeer needed: it's magic)
   sleigh: { model: 'sleigh', scale: 2.25, turn: 2.35, off: 0, rear: 2.55, nose: 2.5, halfW: 1.3, bladeZ: 2.95, bladeS: [1.7, 1.5], gold: true, carve: 3.4, pileZ: 3.55, beacon: null, cam: 1.15, rider: [0, 1.22, -0.85, 1.2], hover: 1 },
   // ice resurfacer with a spinning sweeper brush in front
-  zamboni: { model: 'resurfacer', scale: 1.3, grip: 6.0, turn: 2.0, off: 0.15, rear: 3.25, nose: 2.95, halfW: 1.36, bladeZ: null, head: 'brush', headZ: 3.4, carve: 3.8, pileZ: 3.95, beacon: [0, 3.35, -0.1], cam: 1.18, rider: [0.38, 1.18, 0.55, 1.2] },
+  zamboni: { model: 'resurfacer', scale: 1.3, grip: 6.0, turn: 2.0, off: 0.15, rear: 3.25, nose: 2.95, halfW: 1.36, bladeZ: null, head: 'brush', headZ: 3.4, carve: 3.8, pileZ: 3.95, beacon: [0, 3.35, -0.1], cam: 1.18, rider: [0.38, 1.42, 1.05, 1.2] },
 };
 // ---------- machine attachments (procedural) ----------
 function makeRotary() {
@@ -544,7 +544,7 @@ const PL = {
   payout(quiet) {
     const amt = this.load; this.load = 0;
     if (amt < 0.3) return;
-    const val = amt * GAME.price();
+    const val = amt * GAME.price() * STREAK.mul;
     const src = this.kind === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
     GAME.earn(val);
     const n = clamp(Math.round(4 + Math.log2(val + 1) * 1.4), 5, 18);
@@ -552,7 +552,7 @@ const PL = {
     if (quiet) return;
     const big = this.kind === 'truck';
     FX.puff(src.x, src.y + 0.3, src.z, big ? 14 : 9, big ? 2.0 : 1.1); FX.sparkle(src.x, src.y + 0.5, src.z, big ? 18 : 10, big ? 1.0 : 0.5);
-    UI.floatText(this._v1.set(src.x, src.y + (big ? 2.4 : 1.5), src.z), '+' + fmt(val), '#ffd34d', big ? 36 : 30);
+    UI.floatText(this._v1.set(src.x, src.y + (big ? 2.4 : 1.5), src.z), '+' + fmt(val) + (STREAK.mul > 1 ? '  x' + STREAK.mul : ''), STREAK.COL[STREAK.lv], big ? 36 : 30);
     AUD.cash();
     this.sledBump = 1; this.payFlash = 1;
     GAME.payouts++; UI.onPayout();

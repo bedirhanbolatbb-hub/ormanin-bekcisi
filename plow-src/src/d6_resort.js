@@ -4,9 +4,11 @@ const CH_RESORT = {
   intro: 'The big ski race is today! Open the resort, start the chairlift and groom the race course with the Snow Groomer.',
   twist: 'Watch the mountain... fresh powder means DOUBLE coins!',
   color: '#2f6fe8', icon: 'lift', pack: 'ch5',
+  music: () => SONG_RESORT,
   grid: { X0: -32, Z0: -66, NX: 321, NZ: 631 },
   start: { x: 0, z: 51, h: Math.PI },
   shop: ['truck', 'dumpplow', 'thrower', 'sleigh', 'zamboni', 'groomer'],
+  unlock: { tool: 'groomer', goals: 3 },
   payMul: 4.0, par: [360, 560], reward: 100000,
   crewYard: [-10, 54.5], crewJobs: ['walkV', 'walkL'],
   introCam: { from: [-10, 46, 92], look: [0, 4, -20] },
@@ -65,11 +67,20 @@ const CH_RESORT = {
       const p = g.attributes.position, col = new Float32Array(p.count * 3);
       for (let i = 0; i < p.count; i++) {
         const x = p.getX(i), z = p.getZ(i), y = this.mountH(x, z) - 0.3; p.setY(i, y);
-        const rock = clamp((this.mountH(x + 2, z) - this.mountH(x - 2, z)) ** 2 * 0.004 + (this.mountH(x, z - 2) - this.mountH(x, z + 2)) * 0.02 - 0.4, 0, 1) * (y > 20 ? 1 : 0);
-        const c = lerp(0.95, 0.55, rock); col[i * 3] = c * 0.97; col[i * 3 + 1] = c * 0.98; col[i * 3 + 2] = c * (1.02 - rock * 0.05);
+        // rock shows on steep, high faces; snow everywhere else, a touch bluer in the shade
+        const sx = this.mountH(x + 2, z) - this.mountH(x - 2, z), sz = this.mountH(x, z - 2) - this.mountH(x, z + 2), steep = Math.hypot(sx, sz) / 4;
+        const rock = clamp((steep - 0.55) * 2.2 + (fbm(x * 0.12, z * 0.12) - 0.5) * 1.2, 0, 1) * clamp((y - 14) / 10, 0, 1);
+        const shade = clamp(0.5 - sx * 0.08, 0, 1);
+        const sr = lerp(0.97, 0.82, shade), sg = lerp(0.98, 0.87, shade), sb = 1.0;
+        col[i * 3] = lerp(sr, 0.46, rock); col[i * 3 + 1] = lerp(sg, 0.48, rock); col[i * 3 + 2] = lerp(sb, 0.55, rock);
       }
       g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
       const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 })); m.receiveShadow = true; scene.add(m);
+      const fg = new THREE.PlaneGeometry(700, 120, 70, 12); fg.rotateX(-Math.PI / 2); fg.translate(0, 0, -300);
+      const fp = fg.attributes.position;
+      for (let i = 0; i < fp.count; i++) { const x = fp.getX(i), z = fp.getZ(i), d = clamp((-250 - z) / 110, 0, 1); fp.setY(i, (60 + Math.sin(x * 0.02 + 0.7) * 30 + Math.sin(x * 0.051) * 18 + (fbm(x * 0.01, 3) - 0.5) * 40) * Math.sin(d * Math.PI) * 1.6); }
+      fg.computeVertexNormals();
+      scene.add(new THREE.Mesh(fg, new THREE.MeshStandardMaterial({ color: 0xc8d8ee, roughness: 1 })));
       const fk = ['fir_a', 'fir_b', 'fir_c'], r = mulberry(555);
       for (let i = 0; i < 70; i++) { const x = -120 + r() * 240, z = -70 - r() * 60, y = this.mountH(x, z); if (Math.abs(x) < 16 && z > -80) continue; if (y > 35) continue; const t = place(fk[(r() * 3) | 0], x, z, r() * TAU, 1.4 + r() * 1.2, y - 0.2); t.traverse(c => { if (c.isMesh) c.castShadow = false; }); scene.add(t); }
     }

@@ -33,6 +33,8 @@ ICONS.train = '<svg viewBox="0 0 40 40"><rect x="5" y="15" width="18" height="12
 ICONS.skate = '<svg viewBox="0 0 40 40"><path d="M10 8h9v14h9q5 0 5 5v1H10z" fill="#fff" stroke="#2b3a55" stroke-width="2" stroke-linejoin="round"/><path d="M12 12h5M12 16h5" stroke="#e5483c" stroke-width="2"/><path d="M7 33h28" stroke="#8a95a3" stroke-width="3" stroke-linecap="round"/><path d="M12 28v5M30 28v5" stroke="#8a95a3" stroke-width="2"/></svg>';
 ICONS.lift = '<svg viewBox="0 0 40 40"><path d="M2 8l36 10" stroke="#2b3a55" stroke-width="2"/><path d="M20 13v8" stroke="#2b3a55" stroke-width="2"/><rect x="12" y="21" width="16" height="4" rx="1" fill="#e5483c"/><path d="M12 25v6h16v-6" stroke="#e5483c" stroke-width="2.5" fill="none"/><path d="M5 36l7-12 5 7 4-5 9 10z" fill="#eaf4ff" stroke="#9fb8d6" stroke-width="1.5"/></svg>';
 ICONS.flag = '<svg viewBox="0 0 40 40"><path d="M10 4v32" stroke="#2b3a55" stroke-width="3" stroke-linecap="round"/><path d="M11 6h20l-5 6 5 6H11z" fill="#e5483c"/><path d="M15 9h4v4h-4zM23 13h4v4h-4zM19 13h4v4h-4zM19 9h4" fill="#fff"/></svg>';
+ICONS.lock = '<svg viewBox="0 0 40 40"><rect x="9" y="18" width="22" height="17" rx="4" fill="#fff"/><path d="M14 18v-4a6 6 0 0112 0v4" stroke="#fff" stroke-width="4" fill="none"/><circle cx="20" cy="26" r="2.6" fill="#8a95a8"/></svg>';
+ICONS.flame = '<svg viewBox="0 0 40 40"><path d="M20 3c2 7 11 11 11 21a11 11 0 01-22 0c0-6 4-9 5-14 2 3 2 6 5 7-1-5-1-10 1-14z" fill="#fff6d2"/><path d="M20 19c1 4 6 6 6 10a6 6 0 01-12 0c0-3 4-5 6-10z" fill="#ffc21a"/></svg>';
 const UI = {
   flyers: [], pending: 0, joy: null,
   init() {
@@ -73,6 +75,7 @@ const UI = {
     this._uiT -= dt;
     if (this._uiT <= 0) { this._uiT = 0.1; this._updButtons(shown); this._updGoal(shown); }
     this._updLoadTag();
+    this._updStreak();
     this._draw(dt);
     if (this._hintT > 0) { this._hintT -= dt; if (this._hintT <= 0) $('hint').classList.remove('on'); }
     if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) $('toast').classList.remove('on'); }
@@ -98,8 +101,17 @@ const UI = {
       tb.querySelector('.tc-bar i').style.width = (f * 100).toFixed(1) + '%';
       tb.classList.remove('can'); tb.classList.add('gift');
     }
+    else if (GAME.toolLocked(nt)) {
+      // the town's special machine: shows up after a few jobs
+      const lk = GAME.toolLocked(nt);
+      tb.style.display = lk.n >= 1 || GOALS[GAME.goalIdx()].tool === nt ? '' : 'none';
+      if (tb._t !== nt) { tb.querySelector('.ui-ico').innerHTML = ICONS[nt] || ICONS.truck; tb.querySelector('.ui-lbl').textContent = TIER[nt].name; tb._t = nt; }
+      tb.querySelector('.ui-cost b').textContent = lk.n + '/' + lk.N + ' jobs';
+      tb.querySelector('.tc-bar i').style.width = (lk.n / lk.N * 100).toFixed(1) + '%';
+      tb.classList.remove('can', 'gift'); tb.classList.add('lock');
+    }
     else {
-      tb.classList.remove('gift');
+      tb.classList.remove('gift', 'lock');
       const own = !!GAME.owned[nt], c = own ? 0 : TIER[nt].cost, f = own ? 1 : clamp(shown / c, 0, 1);
       const vis = f >= 0.35 || GOALS[GAME.goalIdx()].tool === nt;
       tb.style.display = vis ? '' : 'none';
@@ -139,8 +151,23 @@ const UI = {
     p.project(CAM.cam);
     el.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
     el.querySelector('i').style.width = (clamp(f, 0, 1) * 100).toFixed(1) + '%';
-    const v = '+' + fmt(Math.floor(PL.load * GAME.price())); if (el._v !== v) { el.querySelector('b').textContent = v; el._v = v; }
+    const v = '+' + fmt(Math.floor(PL.load * GAME.price() * STREAK.mul)); if (el._v !== v) { el.querySelector('b').textContent = v; el._v = v; }
   },
+  // the streak badge floats just above the load tag
+  _updStreak() {
+    const el = $('streak'), S = STREAK;
+    if (!S.lv) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
+    if (!el._on) { el.classList.add('on'); el._on = 1; if (!el._ini) { el._ini = 1; el.querySelector('.fl').innerHTML = ICONS.flame; } }
+    const p = PL.kind === 'truck' ? this._v.set(PL.x, 2.6 + PL.geo.halfW * 0.9, PL.z) : this._v.set(PL.x, 1.75, PL.z);
+    p.project(CAM.cam);
+    const up = $('loadTag')._on ? 40 : 6;
+    el.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight - up).toFixed(1)}px) translate(-50%,-100%)`;
+    const t = 'x' + S.mul; if (el._t !== t) { el.querySelector('b').textContent = t; el._t = t; el.classList.remove('l1', 'l2', 'l3'); el.classList.add('l' + S.lv); }
+    el.querySelector('.hb i').style.width = (clamp(S.heat, 0, 1) * 100).toFixed(1) + '%';
+    el.classList.toggle('cold', S.heat < 0.55);
+  },
+  toolArrived() { const tb = this.toolBtn; this._uiT = 0; tb.classList.remove('arrive'); void tb.offsetWidth; tb.classList.add('arrive'); setTimeout(() => tb.classList.remove('arrive'), 2400); this._toolHinted = 0; },
+  streakPop() { const el = $('streak'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); },
   onPayout() {
     if (GAME.payouts === 1 && CH.id === 1) this.hint(PL.kind === 'truck' ? 'A full blade turns into coins!' : 'A full sled turns into coins!', 3);
     const el = $('loadTag'); if (el) { el.classList.remove('paid'); void el.offsetWidth; el.classList.add('paid'); }
@@ -173,6 +200,7 @@ const UI = {
     const t = '+' + fmt(rate) + '/s'; if (el._t !== t) { el.querySelector('b').textContent = t; el._t = t; el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); }
   },
   hint(t, dur) { const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; },
+  unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; },
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },
   banner(title, sub, ico, dur) {
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;

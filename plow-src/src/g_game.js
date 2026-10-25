@@ -42,11 +42,14 @@ const GAME = {
   // the next machine after the one you use (machines you already own come back for free, e.g. when you replay a chapter)
   nextTool() { const s = CH.shop, i = s.indexOf(PL.tool); return i >= 0 && i + 1 < s.length ? s[i + 1] : (i < 0 ? s.find(k => !this.owned[k]) || null : null); },
   handDone() { let n = 0; for (const k of HAND_AREAS) if (this.done[k]) n++; return n; },
+  // each town's own special machine arrives part-way through the chapter (so buying it is a mid-chapter highlight)
+  jobsDone() { let n = 0; for (const g of GOALS) if (g.a && this.done[g.a]) n++; return n; },
+  toolLocked(t) { const U = CH.unlock; if (!U || U.tool !== t || this.owned[t]) return null; const n = this.jobsDone(); return n >= U.goals ? null : { n, N: U.goals }; },
   best(kind) { let b = null; for (const t of TIERS) if (this.owned[t.key] && (kind === 'hand' ? t.kind !== 'truck' : t.kind === 'truck')) b = t.key; return b; },
   buyUp(i) {
     const t = PL.tool, c = this.upCost(t, i);
     if (!isFinite(c) || UI.shownCoins() + 1e-6 < c || !this.spend(c)) { AUD.deny(); return false; }
-    this.L(t)[i]++; PL.applyTool(); PL.ensureFree(); PL.bump = 1;
+    this.L(t)[i]++; PL.applyTool(); PL.ensureFree(); PL.bump = 1; STREAK.heat = 1;
     AUD.buy(); this.firstUp = true;
     UI.onUpgrade(i);
     const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
@@ -58,15 +61,18 @@ const GAME = {
   _v: new V3(),
   buyTool(t, free) {
     const T = TIER[t], had = !!this.owned[t], c = free || had ? 0 : T.cost;
+    const lk = !free && this.toolLocked(t);
+    if (lk) { AUD.deny(); UI.hint(T.name + ' arrives after ' + lk.N + ' jobs in this town (' + lk.n + '/' + lk.N + ')', 3); return false; }
     if (!free && !had && (T.gift || UI.shownCoins() + 1e-6 < c || !this.spend(c))) { AUD.deny(); return false; }
-    this.owned[t] = 1; AUD.newTool();
+    this.owned[t] = 1; AUD.newTool(); STREAK.heat = 1;
     PL.setTool(t, true); PL.celebrate = 1.0; PL.bump = 1;
     const p = T.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.confetti(p.x, 1.5, p.z, 70); FX.sparkle(p.x, 0.8, p.z, 34, 1.5); FX.puff(p.x, 0.4, p.z, 16, 1.6);
     const sub = had ? 'Your machine is back!' : T.gift ? 'A gift from the town!' : 'x' + T.pay + ' coins!';
     UI.banner(T.name.toUpperCase() + '!', sub, t, T.gift ? 3.2 : 2.2);
     if (T.kind === 'truck') AUD.horn();
-    UI.refreshTools(); this.save();
+    if (!had && !QS.has('bot')) CAM.heroShot(2.2);
+    UI.unhint('New tool ready'); UI.refreshTools(); this.save();
     return true;
   },
   goalIdx() {
@@ -81,6 +87,8 @@ const GAME = {
     return GOALS.length - 1;
   },
   update(dt) {
+    // a new machine's hero shot is a little cinematic pause: the clock and the chapter wait for it
+    if (CAM.hero > 0.3) return;
     if (!this.ended && !CHUI.open) this.time += dt;
     this.totalTime += dt;
     this.checkT -= dt;
@@ -104,6 +112,7 @@ const GAME = {
     if (this.giftT > 0) { this.giftT -= dt; const nt = this.nextTool(); if (this.giftT <= 0 && nt && TIER[nt].gift) { this.giftT = 0; this.buyTool(nt, true); } }
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
+    STREAK.update(dt);
   },
   completeArea(a, silent) {
     a.done = true; this.done[a.key] = 1;
@@ -122,6 +131,11 @@ const GAME = {
       FX.coinBurst(pos.x, 1.5, pos.z, Math.min(30, 8 + Math.round(Math.log2(tip + 1) * 2)), tip, { up: 1.1 });
       UI.floatText(this._v.set(pos.x, 2.6, pos.z), '+' + fmt(tip), '#ffd34d', 34);
       if (!a.quiet) UI.banner(a.title || doneTitle(a), '+' + fmt(tip) + ' tip', a.lot ? 'house' : (a.ico || 'road'));
+      // this job brought the town's special machine: announce it right after the job banner
+      const U = CH.unlock;
+      if (U && !this.owned[U.tool] && GOALS.some(g => g.a === a.key) && this.jobsDone() === U.goals) later(a.quiet ? 0.2 : 2.3, () => {
+        const T = TIER[U.tool]; UI.banner('NEW MACHINE!', T.name + ' is here! Tap it below', T.key, 2.8); AUD.newTool(); UI.toolArrived();
+      });
       this.save();
     }
   },
@@ -143,7 +157,7 @@ const GAME = {
   },
   // ---- save ----
   save(fresh) {
-    if (QS.has('nosave') || QS.has('bot')) return;
+    if (QS.has('nosave') || (QS.has('bot') && !QS.has('botsave'))) return;
     const cs = fresh ? null : { id: CH.id, time: this.time, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), ended: this.ended, extra: CH.save ? CH.save() : null };
     const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now() };
     STORE.set('plowtown_v4', JSON.stringify(o));
@@ -151,7 +165,7 @@ const GAME = {
   // before the world is built: coins, machines, crew and which chapter to play
   loadMeta() {
     let o = null;
-    if (!QS.has('fresh') && !QS.has('bot')) { try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; } }
+    if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) { try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; } }
     // coming from the old single-street version: keep everything; if Maple Lane was already saved, go straight on to chapter 2
     if (!o && !QS.has('fresh') && !QS.has('bot')) {
       try {
@@ -234,6 +248,33 @@ function applyLit(H, k) {
   if (H.pool) H.pool.material.opacity = 0;
 }
 
+// ---------- snow streak: keep plowing without a break and every full load pays x2, x3, x4 ----------
+const STREAK = {
+  t: 0, heat: 0, lv: 0, mul: 1, LV: [0, 5, 14, 28], MUL: [1, 2, 3, 4], COL: ['#ffd34d', '#ffa21e', '#ff5a3c', '#d75cff'], _fx: 0, _v: new V3(),
+  reset() { this.t = 0; this.heat = 0; this.lv = 0; this.mul = 1; },
+  update(dt) {
+    if (CAM.hero > 0 || CAM.intro > 0.05 || CAM.show || QS.has('nostreak')) return;
+    const st = PL.stats(), on = PL.carveRate > st.w * st.spd * 0.06;
+    if (on) { this.t += dt; this.heat = 1; }
+    else if (this.t > 0) { this.heat -= dt / (this.lv ? 3.0 : 1.4); if (this.heat <= 0) this.reset(); }
+    let lv = 0; for (let i = 1; i < this.LV.length; i++) if (this.t >= this.LV[i]) lv = i;
+    const tr = PL.kind === 'truck', p = tr ? PL.truck.position : PL.kid.root.position;
+    if (lv > this.lv) {
+      this.lv = lv; this.mul = this.MUL[lv];
+      UI.floatText(this._v.set(p.x, tr ? 4.4 : 2.5, p.z), 'STREAK x' + this.mul + '!', this.COL[lv], 40);
+      FX.sparkle(p.x, tr ? 1.6 : 0.9, p.z, 14 + lv * 8, tr ? 1.8 : 1.0, lv >= 3 ? [0.9, 0.5, 1] : lv >= 2 ? [1, 0.6, 0.3] : [1, 0.85, 0.4]);
+      AUD.streak(lv); UI.streakPop();
+    }
+    // a sparkly trail at the blade while the streak is hot
+    if (this.lv >= 2 && on) {
+      this._fx -= dt;
+      if (this._fx <= 0) {
+        this._fx = 0.06; const fx = Math.sin(PL.h), fz = Math.cos(PL.h), d = tr ? PL.geo.carve : 0.7;
+        FX.sparkle(p.x + fx * d, 0.35, p.z + fz * d, tr ? 2 : 1, tr ? 1.1 : 0.4, this.lv >= 3 ? [0.92, 0.55, 1] : [1, 0.78, 0.35]);
+      }
+    }
+  }
+};
 // ---------- snowstorms (endless loop after the street is saved) ----------
 const STORM = {
   phase: 'idle', t: 0, next: 45, mult: 1, multT: 0, acc: 0,

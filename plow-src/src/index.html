@@ -64,6 +64,15 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .toolcard.gift .ui-cost .ci{display:none;}
 .toolcard.gift .ui-cost{padding:1px 9px;}
 .toolcard.gift .ui-cost b{color:#fff;font-size:13px;}
+.toolcard.lock{background:linear-gradient(#eef1f6,#fff);}
+.toolcard.lock .ui-ico{background:#dfe5ee;filter:grayscale(.35);}
+.toolcard.lock .ui-lbl{color:#5b6b85;}
+.toolcard.lock .tc-bar i{background:#8a95a8;}
+.toolcard.lock .ui-cost{background:#8a95a8;padding:1px 9px;}
+.toolcard.lock .ui-cost .ci{display:none;}
+.toolcard.lock .ui-cost b{color:#fff;font-size:13px;}
+.toolcard.arrive{animation:tarr .6s ease-out 4;}
+@keyframes tarr{0%{transform:scale(1)}40%{transform:scale(1.22) rotate(-3deg);box-shadow:0 0 0 8px rgba(255,194,61,.75),0 10px 28px rgba(255,194,61,.6)}100%{transform:scale(1)}}
 @keyframes tcg{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(-2deg)}}
 #tools{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:8px;}
 .tool{width:56px;height:56px;border-radius:16px;background:var(--card);box-shadow:0 4px 0 #c9d5e4,0 8px 18px rgba(43,58,85,.18);padding:7px;opacity:.75;}
@@ -79,6 +88,19 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #loadTag.paid{animation:paid .35s ease-out;}
 @keyframes paid{0%{transform-origin:center}40%{filter:brightness(1.3)}100%{filter:none}}
 #loadTag b{font-family:'Baloo 2',sans-serif;font-size:14px;line-height:16px;}
+#streak{position:absolute;left:0;top:0;display:none;align-items:center;gap:2px;padding:3px 10px 3px 4px;border-radius:999px;background:linear-gradient(180deg,#ffbe45,#ff8a1e);color:#fff;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px;line-height:1;text-shadow:0 2px 0 rgba(160,60,0,.35);box-shadow:0 3px 0 #d0600a,0 6px 14px rgba(255,122,26,.45);}
+#streak.on{display:flex;}
+#streak .fl{width:22px;height:22px;display:block;}#streak .fl svg{width:100%;height:100%;display:block;}
+#streak b{padding-top:2px;}
+#streak .hb{position:absolute;left:12px;right:12px;bottom:-7px;height:4px;border-radius:2px;background:rgba(43,58,85,.25);overflow:hidden;}
+#streak .hb i{display:block;height:100%;background:#fff;border-radius:2px;}
+#streak.l2{background:linear-gradient(180deg,#ff8a64,#ea3a2a);box-shadow:0 3px 0 #a8221a,0 6px 16px rgba(234,58,42,.5);}
+#streak.l3{background:linear-gradient(180deg,#e88aff,#9a3ae8);box-shadow:0 3px 0 #62209e,0 6px 18px rgba(170,70,240,.55);}
+#streak.pop{animation:spop .45s ease-out;}
+@keyframes spop{0%{scale:.4}45%{scale:1.4}100%{scale:1}}
+#streak.cold .fl{animation:sblink .32s infinite;}
+#streak.cold .hb i{background:#ffe1dc;}
+@keyframes sblink{50%{opacity:.25}}
 @keyframes fullp{50%{scale:1.12;}}
 #hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:rgba(30,42,64,.82);color:#fff;font-weight:800;font-size:17px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;}
 #hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -217,6 +239,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   <div id="tools"></div>
   <div id="ups"></div>
   <div id="loadTag"><span class="ci"></span><div class="lb"><i></i></div><b></b></div>
+  <div id="streak"><span class="fl"></span><b>x2</b><div class="hb"><i></i></div></div>
   <div id="hint"></div>
   <div id="toast"></div>
   <div id="banner"></div>

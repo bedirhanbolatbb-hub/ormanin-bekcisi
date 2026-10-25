@@ -71,6 +71,15 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .toolcard.gift .ui-cost .ci{display:none;}
 .toolcard.gift .ui-cost{padding:1px 9px;}
 .toolcard.gift .ui-cost b{color:#fff;font-size:13px;}
+.toolcard.lock{background:linear-gradient(#eef1f6,#fff);}
+.toolcard.lock .ui-ico{background:#dfe5ee;filter:grayscale(.35);}
+.toolcard.lock .ui-lbl{color:#5b6b85;}
+.toolcard.lock .tc-bar i{background:#8a95a8;}
+.toolcard.lock .ui-cost{background:#8a95a8;padding:1px 9px;}
+.toolcard.lock .ui-cost .ci{display:none;}
+.toolcard.lock .ui-cost b{color:#fff;font-size:13px;}
+.toolcard.arrive{animation:tarr .6s ease-out 4;}
+@keyframes tarr{0%{transform:scale(1)}40%{transform:scale(1.22) rotate(-3deg);box-shadow:0 0 0 8px rgba(255,194,61,.75),0 10px 28px rgba(255,194,61,.6)}100%{transform:scale(1)}}
 @keyframes tcg{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(-2deg)}}
 #tools{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:8px;}
 .tool{width:56px;height:56px;border-radius:16px;background:var(--card);box-shadow:0 4px 0 #c9d5e4,0 8px 18px rgba(43,58,85,.18);padding:7px;opacity:.75;}
@@ -86,6 +95,19 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #loadTag.paid{animation:paid .35s ease-out;}
 @keyframes paid{0%{transform-origin:center}40%{filter:brightness(1.3)}100%{filter:none}}
 #loadTag b{font-family:'Baloo 2',sans-serif;font-size:14px;line-height:16px;}
+#streak{position:absolute;left:0;top:0;display:none;align-items:center;gap:2px;padding:3px 10px 3px 4px;border-radius:999px;background:linear-gradient(180deg,#ffbe45,#ff8a1e);color:#fff;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px;line-height:1;text-shadow:0 2px 0 rgba(160,60,0,.35);box-shadow:0 3px 0 #d0600a,0 6px 14px rgba(255,122,26,.45);}
+#streak.on{display:flex;}
+#streak .fl{width:22px;height:22px;display:block;}#streak .fl svg{width:100%;height:100%;display:block;}
+#streak b{padding-top:2px;}
+#streak .hb{position:absolute;left:12px;right:12px;bottom:-7px;height:4px;border-radius:2px;background:rgba(43,58,85,.25);overflow:hidden;}
+#streak .hb i{display:block;height:100%;background:#fff;border-radius:2px;}
+#streak.l2{background:linear-gradient(180deg,#ff8a64,#ea3a2a);box-shadow:0 3px 0 #a8221a,0 6px 16px rgba(234,58,42,.5);}
+#streak.l3{background:linear-gradient(180deg,#e88aff,#9a3ae8);box-shadow:0 3px 0 #62209e,0 6px 18px rgba(170,70,240,.55);}
+#streak.pop{animation:spop .45s ease-out;}
+@keyframes spop{0%{scale:.4}45%{scale:1.4}100%{scale:1}}
+#streak.cold .fl{animation:sblink .32s infinite;}
+#streak.cold .hb i{background:#ffe1dc;}
+@keyframes sblink{50%{opacity:.25}}
 @keyframes fullp{50%{scale:1.12;}}
 #hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:rgba(30,42,64,.82);color:#fff;font-weight:800;font-size:17px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;}
 #hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -224,6 +246,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   <div id="tools"></div>
   <div id="ups"></div>
   <div id="loadTag"><span class="ci"></span><div class="lb"><i></i></div><b></b></div>
+  <div id="streak"><span class="fl"></span><b>x2</b><div class="hb"><i></i></div></div>
   <div id="hint"></div>
   <div id="toast"></div>
   <div id="banner"></div>
@@ -534,36 +557,57 @@ const AUD = {
   bell() { if (!this.ok || this.muted) return; for (let i = 0; i < 8; i++) { this._bell(1046.5, 0.08, i * 0.12, 0.5); this._bell(1318.5, 0.04, i * 0.12 + 0.01, 0.35); } },
   jingle(v) { if (!this.ok || this.muted) return; const t = this.ctx.currentTime; if (t - (this._jT || 0) < 0.11) return; this._jT = t; this._bell(2093 * (1 + Math.random() * 0.06), 0.03 * (v || 1), 0, 0.18); this._bell(2637 * (1 + Math.random() * 0.06), 0.022 * (v || 1), 0.03, 0.15); },
   cheer() { if (!this.ok || this.muted) return; for (let i = 0; i < 6; i++) this._nz('bandpass', 900 + Math.random() * 900, 1500 + Math.random() * 800, 0.5 + Math.random() * 0.4, 0.05, i * 0.05, 3); [0, 4, 7].forEach((s, i) => this._bell(784 * Math.pow(2, s / 12), 0.05, 0.1 + i * 0.07, 0.4)); },
+  streak(lv) { if (!this.ok || this.muted) return; const b = [0, 784, 988, 1175][lv] || 1175; [0, 4, 7, 12].forEach((st, i) => { this._bell(b * Math.pow(2, st / 12), 0.075, i * 0.055, 0.4); this._tone('triangle', b * Math.pow(2, st / 12) / 2, b * Math.pow(2, st / 12) / 2, 0.09, 0.05, i * 0.055); }); this._nz('bandpass', 1500, 5200, 0.35, 0.05, 0, 1.2); },
   whoosh() { if (!this.ok || this.muted) return; this._nz('bandpass', 400, 2400, 0.45, 0.12, 0, 1.5); },
   firework() { if (!this.ok || this.muted) return; this._nz('lowpass', 2500, 200, 0.6, 0.2, 0, 0.6); this._tone('sine', 90, 40, 0.4, 0.2); },
   thump() { if (!this.ok || this.muted) return; this._tone('sine', 140, 50, 0.18, 0.2); this._nz('lowpass', 500, 100, 0.15, 0.12); },
   // ------- music: gentle music-box loop (original) -------
+  // chapter songs (original): a little data format the loop below plays
+  song: null,
   _music() {
     const ctx = this.ctx; if (!ctx) return;
     const target = this.musicOn && !this.muted ? 0.16 : 0;
     this.mus.gain.setTargetAtTime(target, ctx.currentTime, 0.8);
     if (!this.musicOn) return;
-    const bpm = 84, s8 = 60 / bpm / 2;
-    // chords per bar (2 bars each) : C  Am  F  G  C  Em  F G
-    const prog = [[48, 52, 55], [45, 48, 52], [41, 45, 48], [43, 47, 50], [48, 52, 55], [40, 43, 47], [41, 45, 48], [43, 47, 50]];
-    const mel = [76, 79, 81, 79, 76, 74, 72, 74, 76, 76, 74, 72, 69, 72, 74, -1,
-      72, 74, 76, 74, 72, 69, 67, 69, 72, 72, 74, 76, 79, 76, 74, -1,
-      77, 76, 74, 72, 74, 76, 79, 81, 79, 76, 74, 76, 72, 74, 72, -1,
-      69, 72, 74, 76, 74, 72, 74, 79, 76, 74, 72, 74, 72, -1, -1, -1];
+    const S = this.song || SONG_MAPLE, step = 60 / S.bpm / (S.div || 2), spb = S.spb || 8, cpb = S.cpb || 1;
+    const mf = m => 440 * Math.pow(2, (m - 69) / 12);
     while (this._musT < ctx.currentTime + 0.4) {
       const st = this._musStep, t = this._musT;
-      const bar = Math.floor(st / 8) % 16, chord = prog[Math.floor(bar / 2) % 8];
-      if (st % 8 === 0) {
-        chord.forEach((m, i) => { const f = 440 * Math.pow(2, (m - 69) / 12); this._pad(f, t, s8 * 8, 0.05); });
-        this._pad(440 * Math.pow(2, (chord[0] - 12 - 69) / 12), t, s8 * 8, 0.07);
+      const bar = Math.floor(st / spb), chord = S.prog[Math.floor(bar / cpb) % S.prog.length], inBar = st % spb;
+      if (S.bass !== 'waltz' && st % (spb * cpb) === 0) {
+        chord.forEach(m => this._pad(mf(m), t, step * spb * cpb, 0.045 * (S.padV || 1)));
+        this._pad(mf(chord[0] - 12), t, step * spb * cpb, 0.06 * (S.padV || 1));
       }
-      const m = mel[st % mel.length];
-      if (m > 0 && (st % 64) < 60) {
-        const f = 440 * Math.pow(2, (m - 69) / 12);
-        this._box(f, t, 0.16);
-      }
-      this._musT += s8; this._musStep++;
+      if (S.bass === 'pulse' && inBar % 2 === 0) this._pluck(mf(chord[0] - 12), t, 0.09, 380);
+      if (S.bass === 'drive') this._pluck(mf(chord[0] - (inBar % 2 ? 0 : 12)), t, 0.075, 520);
+      if (S.bass === 'waltz') { if (inBar === 0) this._pluck(mf(chord[0] - 12), t, 0.12, 360); else chord.forEach(m => this._pluck(mf(m), t, 0.035, 1400)); }
+      if (S.shaker) this._tick(t, inBar % 2 ? 0.012 : 0.02, 7000);
+      if (S.hat && inBar % 2 === 1) this._tick(t, 0.03, 8000);
+      const m = S.mel[st % S.mel.length];
+      if (m > 0 && (S.gap === undefined || (st % (S.mel.length)) < S.mel.length - S.gap)) this['_' + (S.inst || 'box')](mf(m), t, S.melV || 0.16);
+      this._musT += step; this._musStep++;
     }
+  },
+  _pluck(f, t, v, cut) {
+    const ctx = this.ctx, o = ctx.createOscillator(), o2 = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = f; o2.type = 'square'; o2.frequency.value = f * 1.002; fl.type = 'lowpass'; fl.frequency.value = cut || 2400;
+    const g2 = ctx.createGain(); g2.gain.value = 0.25;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.32);
+    o.connect(fl); o2.connect(g2); g2.connect(fl); fl.connect(g); g.connect(this.mus); o.start(t); o2.start(t); o.stop(t + 0.36); o2.stop(t + 0.36);
+  },
+  _bellI(f, t, v) {
+    const ctx = this.ctx;
+    for (const [m, a, d] of [[1, 1, 0.9], [2.76, 0.35, 0.35], [5.4, 0.12, 0.15]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f * m;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * a, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0004, t + d);
+      o.connect(g); g.connect(this.mus); o.start(t); o.stop(t + d + 0.05);
+    }
+  },
+  _tick(t, v, f) {
+    const ctx = this.ctx, s = ctx.createBufferSource(); s.buffer = this.noise;
+    const fl = ctx.createBiquadFilter(); fl.type = 'highpass'; fl.frequency.value = f || 6000;
+    const g = ctx.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0003, t + 0.05);
+    s.connect(fl); fl.connect(g); g.connect(this.mus); s.start(t, Math.random() * 1.5, 0.07);
   },
   _box(f, t, v) {
     const ctx = this.ctx;
@@ -583,6 +627,32 @@ const AUD = {
     o.connect(fl); fl.connect(g); g.connect(this.mus); o.start(t); o.stop(t + d + 0.4);
   }
 };
+
+// ---------- chapter songs (original melodies) ----------
+const SONG_MAPLE = { bpm: 84, spb: 8, cpb: 2, inst: 'box', gap: 4,
+  prog: [[48, 52, 55], [45, 48, 52], [41, 45, 48], [43, 47, 50], [48, 52, 55], [40, 43, 47], [41, 45, 48], [43, 47, 50]],
+  mel: [76, 79, 81, 79, 76, 74, 72, 74, 76, 76, 74, 72, 69, 72, 74, -1, 72, 74, 76, 74, 72, 69, 67, 69, 72, 72, 74, 76, 79, 76, 74, -1,
+    77, 76, 74, 72, 74, 76, 79, 81, 79, 76, 74, 76, 72, 74, 72, -1, 69, 72, 74, 76, 74, 72, 74, 79, 76, 74, 72, 74, 72, -1, -1, -1] };
+// school morning: bouncy D major
+const SONG_SCHOOL = { bpm: 108, spb: 8, inst: 'pluck', bass: 'pulse', melV: 0.12, padV: 0.7,
+  prog: [[50, 54, 57], [45, 49, 52], [47, 50, 54], [43, 47, 50], [50, 54, 57], [45, 49, 52], [43, 47, 50], [45, 49, 52]],
+  mel: [74, -1, 78, -1, 81, 78, 74, -1, 73, -1, 76, -1, 81, 76, 73, -1, 71, 74, 78, 74, 71, 74, 78, 81, 79, -1, 78, -1, 76, -1, 74, -1,
+    74, 78, 81, 86, 81, 78, 74, 78, 76, 73, 69, 73, 76, 81, 76, 73, 71, 74, 79, 74, 71, 74, 79, 83, 81, -1, 79, -1, 76, -1, 73, -1] };
+// market evening: bells in a gentle six
+const SONG_MARKET = { bpm: 92, spb: 6, inst: 'bellI', shaker: true, melV: 0.13,
+  prog: [[41, 45, 48], [38, 41, 45], [46, 50, 53], [48, 52, 55], [41, 45, 48], [38, 41, 45], [43, 46, 50], [48, 52, 55]],
+  mel: [77, -1, 81, 84, -1, 81, 81, 79, 77, 74, -1, 77, 82, -1, 81, 79, -1, 77, 79, -1, 76, 72, -1, -1,
+    77, 81, 84, 86, 84, 81, 81, 77, 74, 77, 81, 77, 79, 82, 79, 77, 76, 74, 72, -1, -1, 76, 79, -1] };
+// frozen lake: a skating waltz
+const SONG_LAKE = { bpm: 150, div: 1, spb: 3, cpb: 2, inst: 'box', bass: 'waltz', melV: 0.15,
+  prog: [[43, 47, 50], [40, 43, 47], [48, 52, 55], [50, 54, 57], [43, 47, 50], [40, 43, 47], [48, 52, 55], [50, 54, 57]],
+  mel: [83, -1, -1, 86, 83, 81, 79, -1, 76, 79, 83, 86, 84, -1, -1, 88, 84, 81, 81, -1, 78, 74, -1, -1,
+    79, 83, 86, 91, -1, 86, 83, -1, 79, 76, 79, 83, 84, 88, 91, 88, -1, 84, 86, -1, 81, 78, -1, -1] };
+// race day: driving A minor
+const SONG_RESORT = { bpm: 124, spb: 8, inst: 'pluck', bass: 'drive', hat: true, melV: 0.11, padV: 0.6,
+  prog: [[45, 48, 52], [41, 45, 48], [48, 52, 55], [43, 47, 50], [45, 48, 52], [41, 45, 48], [43, 47, 50], [40, 44, 47]],
+  mel: [76, -1, 81, -1, 84, 83, 81, 79, 77, -1, 81, -1, 84, -1, 86, 84, 84, -1, 79, -1, 76, 79, 84, 86, 83, -1, 79, -1, 74, -1, 79, 83,
+    81, 84, 88, 84, 81, 84, 88, 91, 89, 88, 86, 84, 86, 84, 81, 77, 79, 83, 86, 83, 79, 83, 86, 88, 88, -1, 83, -1, 80, -1, 76, -1] };
 
 // ==== c_snow.js ====
 // ---------- deformable snow heightfield ----------
@@ -1132,9 +1202,11 @@ const CH_SCHOOL = {
   intro: 'The school bus leaves at 7:30! Plow the road ahead of it and get every kid to school on time.',
   twist: 'Every stretch has a countdown. Beat it for a big bonus!',
   color: '#ffc21a', icon: 'bus', pack: 'ch2',
+  music: () => SONG_SCHOOL,
   grid: { X0: -24, Z0: -78, NX: 241, NZ: 701 },
   start: { x: -2.6, z: 53.6, h: Math.PI },
   shop: ['truck', 'dumpplow', 'thrower'],
+  unlock: { tool: 'thrower', goals: 2 },
   payMul: 1.6, par: [300, 480], reward: 6000,
   crewYard: [-4.5, 59.6], crewJobs: ['padA', 'padB', 'padC', 'frontwalk'],
   introCam: { from: [6, 30, 88], look: [0, 0.5, 22] },
@@ -1483,9 +1555,11 @@ const CH_MARKET = {
   intro: 'The Christmas market opens tonight! Clear the lanes: every stall you open starts selling and pays you coins.',
   twist: 'Open stalls earn coins for you, even while you plow!',
   color: '#e5483c', icon: 'stall', pack: 'ch3',
+  music: () => SONG_MARKET,
   grid: { X0: -30, Z0: -74, NX: 301, NZ: 671 },
   start: { x: 0, z: 52.5, h: Math.PI },
   shop: ['truck', 'dumpplow', 'thrower', 'sleigh'],
+  unlock: { tool: 'sleigh', goals: 2 },
   payMul: 2.4, par: [330, 520], reward: 15000,
   crewYard: [-8.5, 55.5], crewJobs: ['walkN', 'walkE', 'walkW'],
   introCam: { from: [0, 34, 92], look: [0, 0.5, 14] },
@@ -1734,9 +1808,11 @@ const CH_LAKE = {
   intro: 'The lake froze overnight! Clear the ice so everyone can skate. Careful: machines slide on ice!',
   twist: 'Slide sideways on the ice to DRIFT for bonus coins!',
   color: '#3a9be0', icon: 'skate', pack: 'ch4',
+  music: () => SONG_LAKE,
   grid: { X0: -30, Z0: -64, NX: 301, NZ: 621 },
   start: { x: 0, z: 49.5, h: Math.PI },
   shop: ['truck', 'dumpplow', 'thrower', 'sleigh', 'zamboni'],
+  unlock: { tool: 'zamboni', goals: 2 },
   payMul: 3.2, par: [330, 520], reward: 40000,
   crewYard: [-9.5, 52.5], crewJobs: ['shoreW', 'shoreE'],
   introCam: { from: [0, 42, 90], look: [0, 0.5, 4] },
@@ -1943,9 +2019,11 @@ const CH_RESORT = {
   intro: 'The big ski race is today! Open the resort, start the chairlift and groom the race course with the Snow Groomer.',
   twist: 'Watch the mountain... fresh powder means DOUBLE coins!',
   color: '#2f6fe8', icon: 'lift', pack: 'ch5',
+  music: () => SONG_RESORT,
   grid: { X0: -32, Z0: -66, NX: 321, NZ: 631 },
   start: { x: 0, z: 51, h: Math.PI },
   shop: ['truck', 'dumpplow', 'thrower', 'sleigh', 'zamboni', 'groomer'],
+  unlock: { tool: 'groomer', goals: 3 },
   payMul: 4.0, par: [360, 560], reward: 100000,
   crewYard: [-10, 54.5], crewJobs: ['walkV', 'walkL'],
   introCam: { from: [-10, 46, 92], look: [0, 4, -20] },
@@ -2004,11 +2082,20 @@ const CH_RESORT = {
       const p = g.attributes.position, col = new Float32Array(p.count * 3);
       for (let i = 0; i < p.count; i++) {
         const x = p.getX(i), z = p.getZ(i), y = this.mountH(x, z) - 0.3; p.setY(i, y);
-        const rock = clamp((this.mountH(x + 2, z) - this.mountH(x - 2, z)) ** 2 * 0.004 + (this.mountH(x, z - 2) - this.mountH(x, z + 2)) * 0.02 - 0.4, 0, 1) * (y > 20 ? 1 : 0);
-        const c = lerp(0.95, 0.55, rock); col[i * 3] = c * 0.97; col[i * 3 + 1] = c * 0.98; col[i * 3 + 2] = c * (1.02 - rock * 0.05);
+        // rock shows on steep, high faces; snow everywhere else, a touch bluer in the shade
+        const sx = this.mountH(x + 2, z) - this.mountH(x - 2, z), sz = this.mountH(x, z - 2) - this.mountH(x, z + 2), steep = Math.hypot(sx, sz) / 4;
+        const rock = clamp((steep - 0.55) * 2.2 + (fbm(x * 0.12, z * 0.12) - 0.5) * 1.2, 0, 1) * clamp((y - 14) / 10, 0, 1);
+        const shade = clamp(0.5 - sx * 0.08, 0, 1);
+        const sr = lerp(0.97, 0.82, shade), sg = lerp(0.98, 0.87, shade), sb = 1.0;
+        col[i * 3] = lerp(sr, 0.46, rock); col[i * 3 + 1] = lerp(sg, 0.48, rock); col[i * 3 + 2] = lerp(sb, 0.55, rock);
       }
       g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
       const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 })); m.receiveShadow = true; scene.add(m);
+      const fg = new THREE.PlaneGeometry(700, 120, 70, 12); fg.rotateX(-Math.PI / 2); fg.translate(0, 0, -300);
+      const fp = fg.attributes.position;
+      for (let i = 0; i < fp.count; i++) { const x = fp.getX(i), z = fp.getZ(i), d = clamp((-250 - z) / 110, 0, 1); fp.setY(i, (60 + Math.sin(x * 0.02 + 0.7) * 30 + Math.sin(x * 0.051) * 18 + (fbm(x * 0.01, 3) - 0.5) * 40) * Math.sin(d * Math.PI) * 1.6); }
+      fg.computeVertexNormals();
+      scene.add(new THREE.Mesh(fg, new THREE.MeshStandardMaterial({ color: 0xc8d8ee, roughness: 1 })));
       const fk = ['fir_a', 'fir_b', 'fir_c'], r = mulberry(555);
       for (let i = 0; i < 70; i++) { const x = -120 + r() * 240, z = -70 - r() * 60, y = this.mountH(x, z); if (Math.abs(x) < 16 && z > -80) continue; if (y > 35) continue; const t = place(fk[(r() * 3) | 0], x, z, r() * TAU, 1.4 + r() * 1.2, y - 0.2); t.traverse(c => { if (c.isMesh) c.castShadow = false; }); scene.add(t); }
     }
@@ -2248,7 +2335,7 @@ function addGlow(x, y, z, size, color, flick) {
 // ==== d_world.js ====
 // ---------- world: layout, ground, buildings, props ----------
 const WORLD = {
-  scene: null, art: null, houses: [], melters: [], cars: [], decorGroups: [], lamps: [], smokers: [],
+  scene: null, art: null, houses: [], melters: [], cars: [], decorGroups: [], lamps: [], smokers: [], occ: [],
   sun: null, hemi: null, plaza: null, tree: null, snowmen: [],
   bounds: { x0: -23.5, x1: 23.5, z0: -67, z1: 67 },
 };
@@ -2339,10 +2426,14 @@ function makeTextures() {
   });
   // chapter ground textures
   TEX.ice = canvasTex(256, 256, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#5fb0e8'); gr.addColorStop(0.5, '#7cc4f0'); gr.addColorStop(1, '#93d2f6'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-    const r = mulberry(21); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 1.2;
-    for (let i = 0; i < 9; i++) { let x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 90; y += (r() - 0.5) * 90; g.lineTo(x, y); } g.stroke(); }
-    speckle(g, w, h, 600, ['#ffffff', '#d8f1ff'], 0.15, 0.45, 1, 3);
+    // seamless: flat base, soft wrapped blobs, white cracks (no gradient across the tile)
+    g.fillStyle = '#74bfec'; g.fillRect(0, 0, w, h);
+    const r = mulberry(21);
+    for (let i = 0; i < 26; i++) { const x = r() * w, y = r() * h, rad = 20 + r() * 50, c = r() < 0.5 ? 'rgba(140,210,248,0.35)' : 'rgba(92,170,226,0.3)';
+      for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad); gr.addColorStop(0, c); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2); } }
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 1.2;
+    for (let i = 0; i < 9; i++) { let x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 70; y += (r() - 0.5) * 70; g.lineTo(x, y); } g.stroke(); }
+    speckle(g, w, h, 500, ['#ffffff', '#d8f1ff'], 0.15, 0.4, 1, 3);
   });
   TEX.piste = canvasTex(256, 256, (g, w, h) => {
     g.fillStyle = '#c9d8ec'; g.fillRect(0, 0, w, h);
@@ -2387,6 +2478,8 @@ function solidDisc(x, z, r) { const T = SNOW.T; SNOW.paint(x - r, z - r, x + r, 
 function decor(key, x, z, rotY, s, y, opts) {
   const o = place(key, x, z, rotY, s, y);
   o.updateMatrixWorld(true);
+  // remember tall things, so special camera moves can avoid flying through them
+  { const bb = new THREE.Box3().setFromObject(o); if (bb.max.y > 1.4 && bb.max.x - bb.min.x < 70 && bb.max.z - bb.min.z < 70) WORLD.occ.push(bb); }
   if (opts && opts.solid !== undefined) solidUnder(o, opts.solid, opts.paved);
   if (opts && opts.trunk) solidDisc(x, z, opts.trunk);
   o.traverse(c => { if (c.isMesh) DECOR.items.push({ geo: c.geometry, mat: c.material, m: c.matrixWorld.clone(), cast: !(opts && opts.noShadow) }); });
@@ -2635,7 +2728,7 @@ const TGEO = {
   // Santa's sleigh with a golden blade (no reindeer needed: it's magic)
   sleigh: { model: 'sleigh', scale: 2.25, turn: 2.35, off: 0, rear: 2.55, nose: 2.5, halfW: 1.3, bladeZ: 2.95, bladeS: [1.7, 1.5], gold: true, carve: 3.4, pileZ: 3.55, beacon: null, cam: 1.15, rider: [0, 1.22, -0.85, 1.2], hover: 1 },
   // ice resurfacer with a spinning sweeper brush in front
-  zamboni: { model: 'resurfacer', scale: 1.3, grip: 6.0, turn: 2.0, off: 0.15, rear: 3.25, nose: 2.95, halfW: 1.36, bladeZ: null, head: 'brush', headZ: 3.4, carve: 3.8, pileZ: 3.95, beacon: [0, 3.35, -0.1], cam: 1.18, rider: [0.38, 1.18, 0.55, 1.2] },
+  zamboni: { model: 'resurfacer', scale: 1.3, grip: 6.0, turn: 2.0, off: 0.15, rear: 3.25, nose: 2.95, halfW: 1.36, bladeZ: null, head: 'brush', headZ: 3.4, carve: 3.8, pileZ: 3.95, beacon: [0, 3.35, -0.1], cam: 1.18, rider: [0.38, 1.42, 1.05, 1.2] },
 };
 // ---------- machine attachments (procedural) ----------
 function makeRotary() {
@@ -3055,7 +3148,7 @@ const PL = {
   payout(quiet) {
     const amt = this.load; this.load = 0;
     if (amt < 0.3) return;
-    const val = amt * GAME.price();
+    const val = amt * GAME.price() * STREAK.mul;
     const src = this.kind === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
     GAME.earn(val);
     const n = clamp(Math.round(4 + Math.log2(val + 1) * 1.4), 5, 18);
@@ -3063,7 +3156,7 @@ const PL = {
     if (quiet) return;
     const big = this.kind === 'truck';
     FX.puff(src.x, src.y + 0.3, src.z, big ? 14 : 9, big ? 2.0 : 1.1); FX.sparkle(src.x, src.y + 0.5, src.z, big ? 18 : 10, big ? 1.0 : 0.5);
-    UI.floatText(this._v1.set(src.x, src.y + (big ? 2.4 : 1.5), src.z), '+' + fmt(val), '#ffd34d', big ? 36 : 30);
+    UI.floatText(this._v1.set(src.x, src.y + (big ? 2.4 : 1.5), src.z), '+' + fmt(val) + (STREAK.mul > 1 ? '  x' + STREAK.mul : ''), STREAK.COL[STREAK.lv], big ? 36 : 30);
     AUD.cash();
     this.sledBump = 1; this.payFlash = 1;
     GAME.payouts++; UI.onPayout();
@@ -3371,11 +3464,14 @@ const GAME = {
   // the next machine after the one you use (machines you already own come back for free, e.g. when you replay a chapter)
   nextTool() { const s = CH.shop, i = s.indexOf(PL.tool); return i >= 0 && i + 1 < s.length ? s[i + 1] : (i < 0 ? s.find(k => !this.owned[k]) || null : null); },
   handDone() { let n = 0; for (const k of HAND_AREAS) if (this.done[k]) n++; return n; },
+  // each town's own special machine arrives part-way through the chapter (so buying it is a mid-chapter highlight)
+  jobsDone() { let n = 0; for (const g of GOALS) if (g.a && this.done[g.a]) n++; return n; },
+  toolLocked(t) { const U = CH.unlock; if (!U || U.tool !== t || this.owned[t]) return null; const n = this.jobsDone(); return n >= U.goals ? null : { n, N: U.goals }; },
   best(kind) { let b = null; for (const t of TIERS) if (this.owned[t.key] && (kind === 'hand' ? t.kind !== 'truck' : t.kind === 'truck')) b = t.key; return b; },
   buyUp(i) {
     const t = PL.tool, c = this.upCost(t, i);
     if (!isFinite(c) || UI.shownCoins() + 1e-6 < c || !this.spend(c)) { AUD.deny(); return false; }
-    this.L(t)[i]++; PL.applyTool(); PL.ensureFree(); PL.bump = 1;
+    this.L(t)[i]++; PL.applyTool(); PL.ensureFree(); PL.bump = 1; STREAK.heat = 1;
     AUD.buy(); this.firstUp = true;
     UI.onUpgrade(i);
     const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
@@ -3387,15 +3483,18 @@ const GAME = {
   _v: new V3(),
   buyTool(t, free) {
     const T = TIER[t], had = !!this.owned[t], c = free || had ? 0 : T.cost;
+    const lk = !free && this.toolLocked(t);
+    if (lk) { AUD.deny(); UI.hint(T.name + ' arrives after ' + lk.N + ' jobs in this town (' + lk.n + '/' + lk.N + ')', 3); return false; }
     if (!free && !had && (T.gift || UI.shownCoins() + 1e-6 < c || !this.spend(c))) { AUD.deny(); return false; }
-    this.owned[t] = 1; AUD.newTool();
+    this.owned[t] = 1; AUD.newTool(); STREAK.heat = 1;
     PL.setTool(t, true); PL.celebrate = 1.0; PL.bump = 1;
     const p = T.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.confetti(p.x, 1.5, p.z, 70); FX.sparkle(p.x, 0.8, p.z, 34, 1.5); FX.puff(p.x, 0.4, p.z, 16, 1.6);
     const sub = had ? 'Your machine is back!' : T.gift ? 'A gift from the town!' : 'x' + T.pay + ' coins!';
     UI.banner(T.name.toUpperCase() + '!', sub, t, T.gift ? 3.2 : 2.2);
     if (T.kind === 'truck') AUD.horn();
-    UI.refreshTools(); this.save();
+    if (!had && !QS.has('bot')) CAM.heroShot(2.2);
+    UI.unhint('New tool ready'); UI.refreshTools(); this.save();
     return true;
   },
   goalIdx() {
@@ -3410,6 +3509,8 @@ const GAME = {
     return GOALS.length - 1;
   },
   update(dt) {
+    // a new machine's hero shot is a little cinematic pause: the clock and the chapter wait for it
+    if (CAM.hero > 0.3) return;
     if (!this.ended && !CHUI.open) this.time += dt;
     this.totalTime += dt;
     this.checkT -= dt;
@@ -3433,6 +3534,7 @@ const GAME = {
     if (this.giftT > 0) { this.giftT -= dt; const nt = this.nextTool(); if (this.giftT <= 0 && nt && TIER[nt].gift) { this.giftT = 0; this.buyTool(nt, true); } }
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
+    STREAK.update(dt);
   },
   completeArea(a, silent) {
     a.done = true; this.done[a.key] = 1;
@@ -3451,6 +3553,11 @@ const GAME = {
       FX.coinBurst(pos.x, 1.5, pos.z, Math.min(30, 8 + Math.round(Math.log2(tip + 1) * 2)), tip, { up: 1.1 });
       UI.floatText(this._v.set(pos.x, 2.6, pos.z), '+' + fmt(tip), '#ffd34d', 34);
       if (!a.quiet) UI.banner(a.title || doneTitle(a), '+' + fmt(tip) + ' tip', a.lot ? 'house' : (a.ico || 'road'));
+      // this job brought the town's special machine: announce it right after the job banner
+      const U = CH.unlock;
+      if (U && !this.owned[U.tool] && GOALS.some(g => g.a === a.key) && this.jobsDone() === U.goals) later(a.quiet ? 0.2 : 2.3, () => {
+        const T = TIER[U.tool]; UI.banner('NEW MACHINE!', T.name + ' is here! Tap it below', T.key, 2.8); AUD.newTool(); UI.toolArrived();
+      });
       this.save();
     }
   },
@@ -3472,7 +3579,7 @@ const GAME = {
   },
   // ---- save ----
   save(fresh) {
-    if (QS.has('nosave') || QS.has('bot')) return;
+    if (QS.has('nosave') || (QS.has('bot') && !QS.has('botsave'))) return;
     const cs = fresh ? null : { id: CH.id, time: this.time, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), ended: this.ended, extra: CH.save ? CH.save() : null };
     const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now() };
     STORE.set('plowtown_v4', JSON.stringify(o));
@@ -3480,7 +3587,7 @@ const GAME = {
   // before the world is built: coins, machines, crew and which chapter to play
   loadMeta() {
     let o = null;
-    if (!QS.has('fresh') && !QS.has('bot')) { try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; } }
+    if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) { try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; } }
     // coming from the old single-street version: keep everything; if Maple Lane was already saved, go straight on to chapter 2
     if (!o && !QS.has('fresh') && !QS.has('bot')) {
       try {
@@ -3563,6 +3670,33 @@ function applyLit(H, k) {
   if (H.pool) H.pool.material.opacity = 0;
 }
 
+// ---------- snow streak: keep plowing without a break and every full load pays x2, x3, x4 ----------
+const STREAK = {
+  t: 0, heat: 0, lv: 0, mul: 1, LV: [0, 5, 14, 28], MUL: [1, 2, 3, 4], COL: ['#ffd34d', '#ffa21e', '#ff5a3c', '#d75cff'], _fx: 0, _v: new V3(),
+  reset() { this.t = 0; this.heat = 0; this.lv = 0; this.mul = 1; },
+  update(dt) {
+    if (CAM.hero > 0 || CAM.intro > 0.05 || CAM.show || QS.has('nostreak')) return;
+    const st = PL.stats(), on = PL.carveRate > st.w * st.spd * 0.06;
+    if (on) { this.t += dt; this.heat = 1; }
+    else if (this.t > 0) { this.heat -= dt / (this.lv ? 3.0 : 1.4); if (this.heat <= 0) this.reset(); }
+    let lv = 0; for (let i = 1; i < this.LV.length; i++) if (this.t >= this.LV[i]) lv = i;
+    const tr = PL.kind === 'truck', p = tr ? PL.truck.position : PL.kid.root.position;
+    if (lv > this.lv) {
+      this.lv = lv; this.mul = this.MUL[lv];
+      UI.floatText(this._v.set(p.x, tr ? 4.4 : 2.5, p.z), 'STREAK x' + this.mul + '!', this.COL[lv], 40);
+      FX.sparkle(p.x, tr ? 1.6 : 0.9, p.z, 14 + lv * 8, tr ? 1.8 : 1.0, lv >= 3 ? [0.9, 0.5, 1] : lv >= 2 ? [1, 0.6, 0.3] : [1, 0.85, 0.4]);
+      AUD.streak(lv); UI.streakPop();
+    }
+    // a sparkly trail at the blade while the streak is hot
+    if (this.lv >= 2 && on) {
+      this._fx -= dt;
+      if (this._fx <= 0) {
+        this._fx = 0.06; const fx = Math.sin(PL.h), fz = Math.cos(PL.h), d = tr ? PL.geo.carve : 0.7;
+        FX.sparkle(p.x + fx * d, 0.35, p.z + fz * d, tr ? 2 : 1, tr ? 1.1 : 0.4, this.lv >= 3 ? [0.92, 0.55, 1] : [1, 0.78, 0.35]);
+      }
+    }
+  }
+};
 // ---------- snowstorms (endless loop after the street is saved) ----------
 const STORM = {
   phase: 'idle', t: 0, next: 45, mult: 1, multT: 0, acc: 0,
@@ -4194,6 +4328,8 @@ ICONS.train = '<svg viewBox="0 0 40 40"><rect x="5" y="15" width="18" height="12
 ICONS.skate = '<svg viewBox="0 0 40 40"><path d="M10 8h9v14h9q5 0 5 5v1H10z" fill="#fff" stroke="#2b3a55" stroke-width="2" stroke-linejoin="round"/><path d="M12 12h5M12 16h5" stroke="#e5483c" stroke-width="2"/><path d="M7 33h28" stroke="#8a95a3" stroke-width="3" stroke-linecap="round"/><path d="M12 28v5M30 28v5" stroke="#8a95a3" stroke-width="2"/></svg>';
 ICONS.lift = '<svg viewBox="0 0 40 40"><path d="M2 8l36 10" stroke="#2b3a55" stroke-width="2"/><path d="M20 13v8" stroke="#2b3a55" stroke-width="2"/><rect x="12" y="21" width="16" height="4" rx="1" fill="#e5483c"/><path d="M12 25v6h16v-6" stroke="#e5483c" stroke-width="2.5" fill="none"/><path d="M5 36l7-12 5 7 4-5 9 10z" fill="#eaf4ff" stroke="#9fb8d6" stroke-width="1.5"/></svg>';
 ICONS.flag = '<svg viewBox="0 0 40 40"><path d="M10 4v32" stroke="#2b3a55" stroke-width="3" stroke-linecap="round"/><path d="M11 6h20l-5 6 5 6H11z" fill="#e5483c"/><path d="M15 9h4v4h-4zM23 13h4v4h-4zM19 13h4v4h-4zM19 9h4" fill="#fff"/></svg>';
+ICONS.lock = '<svg viewBox="0 0 40 40"><rect x="9" y="18" width="22" height="17" rx="4" fill="#fff"/><path d="M14 18v-4a6 6 0 0112 0v4" stroke="#fff" stroke-width="4" fill="none"/><circle cx="20" cy="26" r="2.6" fill="#8a95a8"/></svg>';
+ICONS.flame = '<svg viewBox="0 0 40 40"><path d="M20 3c2 7 11 11 11 21a11 11 0 01-22 0c0-6 4-9 5-14 2 3 2 6 5 7-1-5-1-10 1-14z" fill="#fff6d2"/><path d="M20 19c1 4 6 6 6 10a6 6 0 01-12 0c0-3 4-5 6-10z" fill="#ffc21a"/></svg>';
 const UI = {
   flyers: [], pending: 0, joy: null,
   init() {
@@ -4234,6 +4370,7 @@ const UI = {
     this._uiT -= dt;
     if (this._uiT <= 0) { this._uiT = 0.1; this._updButtons(shown); this._updGoal(shown); }
     this._updLoadTag();
+    this._updStreak();
     this._draw(dt);
     if (this._hintT > 0) { this._hintT -= dt; if (this._hintT <= 0) $('hint').classList.remove('on'); }
     if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) $('toast').classList.remove('on'); }
@@ -4259,8 +4396,17 @@ const UI = {
       tb.querySelector('.tc-bar i').style.width = (f * 100).toFixed(1) + '%';
       tb.classList.remove('can'); tb.classList.add('gift');
     }
+    else if (GAME.toolLocked(nt)) {
+      // the town's special machine: shows up after a few jobs
+      const lk = GAME.toolLocked(nt);
+      tb.style.display = lk.n >= 1 || GOALS[GAME.goalIdx()].tool === nt ? '' : 'none';
+      if (tb._t !== nt) { tb.querySelector('.ui-ico').innerHTML = ICONS[nt] || ICONS.truck; tb.querySelector('.ui-lbl').textContent = TIER[nt].name; tb._t = nt; }
+      tb.querySelector('.ui-cost b').textContent = lk.n + '/' + lk.N + ' jobs';
+      tb.querySelector('.tc-bar i').style.width = (lk.n / lk.N * 100).toFixed(1) + '%';
+      tb.classList.remove('can', 'gift'); tb.classList.add('lock');
+    }
     else {
-      tb.classList.remove('gift');
+      tb.classList.remove('gift', 'lock');
       const own = !!GAME.owned[nt], c = own ? 0 : TIER[nt].cost, f = own ? 1 : clamp(shown / c, 0, 1);
       const vis = f >= 0.35 || GOALS[GAME.goalIdx()].tool === nt;
       tb.style.display = vis ? '' : 'none';
@@ -4300,8 +4446,23 @@ const UI = {
     p.project(CAM.cam);
     el.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
     el.querySelector('i').style.width = (clamp(f, 0, 1) * 100).toFixed(1) + '%';
-    const v = '+' + fmt(Math.floor(PL.load * GAME.price())); if (el._v !== v) { el.querySelector('b').textContent = v; el._v = v; }
+    const v = '+' + fmt(Math.floor(PL.load * GAME.price() * STREAK.mul)); if (el._v !== v) { el.querySelector('b').textContent = v; el._v = v; }
   },
+  // the streak badge floats just above the load tag
+  _updStreak() {
+    const el = $('streak'), S = STREAK;
+    if (!S.lv) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
+    if (!el._on) { el.classList.add('on'); el._on = 1; if (!el._ini) { el._ini = 1; el.querySelector('.fl').innerHTML = ICONS.flame; } }
+    const p = PL.kind === 'truck' ? this._v.set(PL.x, 2.6 + PL.geo.halfW * 0.9, PL.z) : this._v.set(PL.x, 1.75, PL.z);
+    p.project(CAM.cam);
+    const up = $('loadTag')._on ? 40 : 6;
+    el.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight - up).toFixed(1)}px) translate(-50%,-100%)`;
+    const t = 'x' + S.mul; if (el._t !== t) { el.querySelector('b').textContent = t; el._t = t; el.classList.remove('l1', 'l2', 'l3'); el.classList.add('l' + S.lv); }
+    el.querySelector('.hb i').style.width = (clamp(S.heat, 0, 1) * 100).toFixed(1) + '%';
+    el.classList.toggle('cold', S.heat < 0.55);
+  },
+  toolArrived() { const tb = this.toolBtn; this._uiT = 0; tb.classList.remove('arrive'); void tb.offsetWidth; tb.classList.add('arrive'); setTimeout(() => tb.classList.remove('arrive'), 2400); this._toolHinted = 0; },
+  streakPop() { const el = $('streak'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); },
   onPayout() {
     if (GAME.payouts === 1 && CH.id === 1) this.hint(PL.kind === 'truck' ? 'A full blade turns into coins!' : 'A full sled turns into coins!', 3);
     const el = $('loadTag'); if (el) { el.classList.remove('paid'); void el.offsetWidth; el.classList.add('paid'); }
@@ -4334,6 +4495,7 @@ const UI = {
     const t = '+' + fmt(rate) + '/s'; if (el._t !== t) { el.querySelector('b').textContent = t; el._t = t; el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); }
   },
   hint(t, dur) { const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; },
+  unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; },
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },
   banner(title, sub, ico, dur) {
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;
@@ -4451,6 +4613,35 @@ const INPUT = {
 const CAM = {
   cam: null, x: 0, z: 50, d: 13, shake: 0, intro: 0, lx: 0, lz: 0,
   init() { this.cam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.3, 260); },
+  // pick a clear spot in front of the machine (nothing tall in the way or right next to the lens) and fly there for a moment
+  heroShot(T) {
+    const tr = PL.kind === 'truck', gk = tr ? PL.geo.cam : 1, ly = tr ? 1.5 * gk : 0.75, port = innerWidth / innerHeight < 0.9;
+    const D = tr ? (port ? 15 : 11) * gk : (port ? 6.5 : 4.8), dir = new V3(), hit = new V3(), ray = new THREE.Ray(), cp = new V3();
+    // everything tall: static decor plus buildings, buses, stalls... (whatever stands in the scene right now)
+    const occ = WORLD.occ.slice(), skip = new Set([PL.truck, PL.kid && PL.kid.root, PL.sled, PL.rope, GUIDE.arrow, GUIDE.beam, ...WORLD.decorGroups]);
+    for (const c of WORLD.scene.children) {
+      if (skip.has(c) || c.isLight || c.isPoints || c.isLine || !c.visible) continue;
+      const bb = new THREE.Box3().setFromObject(c), lim = c.isGroup ? 70 : 25;
+      if (!bb.isEmpty() && bb.max.y > 2.0 && bb.max.x - bb.min.x < lim && bb.max.z - bb.min.z < lim) occ.push(bb);
+    }
+    // the machine and a little space around it must be in plain view
+    const sx = Math.cos(PL.h), sz = -Math.sin(PL.h), fx = Math.sin(PL.h), fz = Math.cos(PL.h), r = tr ? 2.4 * gk : 0.9;
+    const tg = [[0, 0, ly], [r, 0, ly * 0.6], [-r, 0, ly * 0.6], [0, r * 1.2, ly * 0.6], [0, -r, ly * 0.6]].map(([s, f, y]) => new V3(PL.x + sx * s + fx * f, y, PL.z + sz * s + fz * f));
+    const clear = (a, D, y) => {
+      const ang = PL.h + a, cx = PL.x + Math.sin(ang) * D, cz = PL.z + Math.cos(ang) * D, B = WORLD.bounds;
+      if (cx < B.x0 - 14 || cx > B.x1 + 14 || cz < B.z0 - 14 || cz > B.z1 + 14) return false;
+      cp.set(cx, y, cz);
+      for (const b of occ) if (b.distanceToPoint(cp) < (tr ? 3.2 : 1.6)) return false;
+      for (const o of tg) {
+        dir.subVectors(cp, o); const len = dir.length(); dir.divideScalar(len); ray.set(o, dir);
+        for (const b of occ) { if (b.containsPoint(o)) continue; if (ray.intersectBox(b, hit) && hit.distanceTo(o) < len) return false; }
+      }
+      return true;
+    };
+    for (const y of tr ? [(port ? 5.2 : 4.2) * gk, 7.5 * gk, 11 * gk] : [port ? 2.6 : 2.1, 3.8, 6]) for (const a of [0.5, -0.5, 0.8, -0.8, 0.22, -0.22, 1.15, -1.15, 1.6, -1.6, 2.3, -2.3])
+      for (const d of [D, D * 0.75]) if (clear(a, d, y)) { this.heroS = { a, D: d, y, ly, h: PL.h, T: T || 2.2 }; this.hero = this.heroS.T; return true; }
+    return false;
+  },
   update(dt, snap) {
     const t = PL.kind, asp = innerWidth / innerHeight, gk = t === 'truck' ? PL.geo.cam : 1;
     const port = asp < 0.9;
@@ -4472,6 +4663,18 @@ const CAM = {
       const ic = CH.introCam || { from: [0, 34, 82], look: [0, 0.5, 10] };
       px = lerp(px, ic.from[0], k); py = lerp(py, ic.from[1], k); pz = lerp(pz, ic.from[2], k); lx = lerp(lx, ic.look[0], k); lz = lerp(lz, ic.look[2], k);
       this.intro -= dt / 2.6;
+    }
+    // new machine: a quick hero shot from the front (slowly circling), then back behind it
+    if (this.hero > 0) {
+      this.hero = Math.max(0, this.hero - dt);
+      const H = this.heroS, u = 1 - this.hero / H.T, k = smooth(clamp(Math.min(u, 1 - u) / 0.3, 0, 1));
+      const tr = PL.kind === 'truck', f = tr ? 1.2 * PL.geo.cam : 0.3;
+      // swing around the machine (not through it): blend angle, distance and height around it
+      const angN = Math.atan2(px - PL.x, pz - PL.z), dN = Math.hypot(px - PL.x, pz - PL.z);
+      let da = H.h + H.a + (u - 0.5) * 0.35 * Math.sign(H.a || 1) - angN; da = Math.atan2(Math.sin(da), Math.cos(da));
+      const ang = angN + da * k, dd = lerp(dN, H.D, k);
+      px = PL.x + Math.sin(ang) * dd; pz = PL.z + Math.cos(ang) * dd; py = lerp(py, H.y, k);
+      lx = lerp(lx, PL.x + Math.sin(H.h) * f, k); ly = lerp(ly, H.ly, k); lz = lerp(lz, PL.z + Math.cos(H.h) * f, k);
     }
     // finale: the camera pulls away to show the big moment, slowly circling it
     if (this.show) {
@@ -4583,7 +4786,7 @@ const BOT = {
   },
   buy() {
     const nt = GAME.nextTool();
-    if (nt && !TIER[nt].gift && (GAME.owned[nt] || UI.shownCoins() >= TIER[nt].cost)) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
+    if (nt && !TIER[nt].gift && !GAME.toolLocked(nt) && (GAME.owned[nt] || UI.shownCoins() >= TIER[nt].cost)) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
     for (const k of TIERS) if (GAME.owned[k.key]) this.mark('tool_' + k.key);
     const t = PL.tool, order = [1, 0, 2];
     let best = -1, bc = 1e18;
@@ -4732,13 +4935,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.1'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.1'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -4763,6 +4966,7 @@ async function boot() {
   lb.style.width = '70%';
   buildWorld(scene);
   renderer.toneMappingExposure = WORLD.env.exposure;
+  AUD.song = CH.music ? CH.music() : null;
   FX.init(scene);
   PL.init(scene);
   GUIDE.init(scene);
@@ -4808,7 +5012,7 @@ function onResize() {
 let last = 0, frameN = 0;
 const FAST = QS.has('fast') ? Math.max(1, +QS.get('fast')) : 1;
 function step(dt) {
-  const inp = QS.has('bot') ? BOT.get(dt) : (CAM.intro > 0.05 ? { x: 0, y: 0 } : INPUT.get());
+  const inp = QS.has('bot') ? BOT.get(dt) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : INPUT.get());
   if (CAM.intro > 0 && (Math.abs(inp.x) + Math.abs(inp.y) > 0 || INPUT.joy.active)) CAM.intro = Math.min(CAM.intro, 0.05);
   PL.update(dt, inp);
   GAME.update(dt);

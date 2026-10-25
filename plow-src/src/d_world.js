@@ -1,6 +1,6 @@
 // ---------- world: layout, ground, buildings, props ----------
 const WORLD = {
-  scene: null, art: null, houses: [], melters: [], cars: [], decorGroups: [], lamps: [], smokers: [],
+  scene: null, art: null, houses: [], melters: [], cars: [], decorGroups: [], lamps: [], smokers: [], occ: [],
   sun: null, hemi: null, plaza: null, tree: null, snowmen: [],
   bounds: { x0: -23.5, x1: 23.5, z0: -67, z1: 67 },
 };
@@ -91,10 +91,14 @@ function makeTextures() {
   });
   // chapter ground textures
   TEX.ice = canvasTex(256, 256, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#5fb0e8'); gr.addColorStop(0.5, '#7cc4f0'); gr.addColorStop(1, '#93d2f6'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-    const r = mulberry(21); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 1.2;
-    for (let i = 0; i < 9; i++) { let x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 90; y += (r() - 0.5) * 90; g.lineTo(x, y); } g.stroke(); }
-    speckle(g, w, h, 600, ['#ffffff', '#d8f1ff'], 0.15, 0.45, 1, 3);
+    // seamless: flat base, soft wrapped blobs, white cracks (no gradient across the tile)
+    g.fillStyle = '#74bfec'; g.fillRect(0, 0, w, h);
+    const r = mulberry(21);
+    for (let i = 0; i < 26; i++) { const x = r() * w, y = r() * h, rad = 20 + r() * 50, c = r() < 0.5 ? 'rgba(140,210,248,0.35)' : 'rgba(92,170,226,0.3)';
+      for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad); gr.addColorStop(0, c); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2); } }
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 1.2;
+    for (let i = 0; i < 9; i++) { let x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 70; y += (r() - 0.5) * 70; g.lineTo(x, y); } g.stroke(); }
+    speckle(g, w, h, 500, ['#ffffff', '#d8f1ff'], 0.15, 0.4, 1, 3);
   });
   TEX.piste = canvasTex(256, 256, (g, w, h) => {
     g.fillStyle = '#c9d8ec'; g.fillRect(0, 0, w, h);
@@ -139,6 +143,8 @@ function solidDisc(x, z, r) { const T = SNOW.T; SNOW.paint(x - r, z - r, x + r, 
 function decor(key, x, z, rotY, s, y, opts) {
   const o = place(key, x, z, rotY, s, y);
   o.updateMatrixWorld(true);
+  // remember tall things, so special camera moves can avoid flying through them
+  { const bb = new THREE.Box3().setFromObject(o); if (bb.max.y > 1.4 && bb.max.x - bb.min.x < 70 && bb.max.z - bb.min.z < 70) WORLD.occ.push(bb); }
   if (opts && opts.solid !== undefined) solidUnder(o, opts.solid, opts.paved);
   if (opts && opts.trunk) solidDisc(x, z, opts.trunk);
   o.traverse(c => { if (c.isMesh) DECOR.items.push({ geo: c.geometry, mat: c.material, m: c.matrixWorld.clone(), cast: !(opts && opts.noShadow) }); });

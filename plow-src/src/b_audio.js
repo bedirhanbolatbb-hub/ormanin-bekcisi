@@ -174,36 +174,57 @@ const AUD = {
   bell() { if (!this.ok || this.muted) return; for (let i = 0; i < 8; i++) { this._bell(1046.5, 0.08, i * 0.12, 0.5); this._bell(1318.5, 0.04, i * 0.12 + 0.01, 0.35); } },
   jingle(v) { if (!this.ok || this.muted) return; const t = this.ctx.currentTime; if (t - (this._jT || 0) < 0.11) return; this._jT = t; this._bell(2093 * (1 + Math.random() * 0.06), 0.03 * (v || 1), 0, 0.18); this._bell(2637 * (1 + Math.random() * 0.06), 0.022 * (v || 1), 0.03, 0.15); },
   cheer() { if (!this.ok || this.muted) return; for (let i = 0; i < 6; i++) this._nz('bandpass', 900 + Math.random() * 900, 1500 + Math.random() * 800, 0.5 + Math.random() * 0.4, 0.05, i * 0.05, 3); [0, 4, 7].forEach((s, i) => this._bell(784 * Math.pow(2, s / 12), 0.05, 0.1 + i * 0.07, 0.4)); },
+  streak(lv) { if (!this.ok || this.muted) return; const b = [0, 784, 988, 1175][lv] || 1175; [0, 4, 7, 12].forEach((st, i) => { this._bell(b * Math.pow(2, st / 12), 0.075, i * 0.055, 0.4); this._tone('triangle', b * Math.pow(2, st / 12) / 2, b * Math.pow(2, st / 12) / 2, 0.09, 0.05, i * 0.055); }); this._nz('bandpass', 1500, 5200, 0.35, 0.05, 0, 1.2); },
   whoosh() { if (!this.ok || this.muted) return; this._nz('bandpass', 400, 2400, 0.45, 0.12, 0, 1.5); },
   firework() { if (!this.ok || this.muted) return; this._nz('lowpass', 2500, 200, 0.6, 0.2, 0, 0.6); this._tone('sine', 90, 40, 0.4, 0.2); },
   thump() { if (!this.ok || this.muted) return; this._tone('sine', 140, 50, 0.18, 0.2); this._nz('lowpass', 500, 100, 0.15, 0.12); },
   // ------- music: gentle music-box loop (original) -------
+  // chapter songs (original): a little data format the loop below plays
+  song: null,
   _music() {
     const ctx = this.ctx; if (!ctx) return;
     const target = this.musicOn && !this.muted ? 0.16 : 0;
     this.mus.gain.setTargetAtTime(target, ctx.currentTime, 0.8);
     if (!this.musicOn) return;
-    const bpm = 84, s8 = 60 / bpm / 2;
-    // chords per bar (2 bars each) : C  Am  F  G  C  Em  F G
-    const prog = [[48, 52, 55], [45, 48, 52], [41, 45, 48], [43, 47, 50], [48, 52, 55], [40, 43, 47], [41, 45, 48], [43, 47, 50]];
-    const mel = [76, 79, 81, 79, 76, 74, 72, 74, 76, 76, 74, 72, 69, 72, 74, -1,
-      72, 74, 76, 74, 72, 69, 67, 69, 72, 72, 74, 76, 79, 76, 74, -1,
-      77, 76, 74, 72, 74, 76, 79, 81, 79, 76, 74, 76, 72, 74, 72, -1,
-      69, 72, 74, 76, 74, 72, 74, 79, 76, 74, 72, 74, 72, -1, -1, -1];
+    const S = this.song || SONG_MAPLE, step = 60 / S.bpm / (S.div || 2), spb = S.spb || 8, cpb = S.cpb || 1;
+    const mf = m => 440 * Math.pow(2, (m - 69) / 12);
     while (this._musT < ctx.currentTime + 0.4) {
       const st = this._musStep, t = this._musT;
-      const bar = Math.floor(st / 8) % 16, chord = prog[Math.floor(bar / 2) % 8];
-      if (st % 8 === 0) {
-        chord.forEach((m, i) => { const f = 440 * Math.pow(2, (m - 69) / 12); this._pad(f, t, s8 * 8, 0.05); });
-        this._pad(440 * Math.pow(2, (chord[0] - 12 - 69) / 12), t, s8 * 8, 0.07);
+      const bar = Math.floor(st / spb), chord = S.prog[Math.floor(bar / cpb) % S.prog.length], inBar = st % spb;
+      if (S.bass !== 'waltz' && st % (spb * cpb) === 0) {
+        chord.forEach(m => this._pad(mf(m), t, step * spb * cpb, 0.045 * (S.padV || 1)));
+        this._pad(mf(chord[0] - 12), t, step * spb * cpb, 0.06 * (S.padV || 1));
       }
-      const m = mel[st % mel.length];
-      if (m > 0 && (st % 64) < 60) {
-        const f = 440 * Math.pow(2, (m - 69) / 12);
-        this._box(f, t, 0.16);
-      }
-      this._musT += s8; this._musStep++;
+      if (S.bass === 'pulse' && inBar % 2 === 0) this._pluck(mf(chord[0] - 12), t, 0.09, 380);
+      if (S.bass === 'drive') this._pluck(mf(chord[0] - (inBar % 2 ? 0 : 12)), t, 0.075, 520);
+      if (S.bass === 'waltz') { if (inBar === 0) this._pluck(mf(chord[0] - 12), t, 0.12, 360); else chord.forEach(m => this._pluck(mf(m), t, 0.035, 1400)); }
+      if (S.shaker) this._tick(t, inBar % 2 ? 0.012 : 0.02, 7000);
+      if (S.hat && inBar % 2 === 1) this._tick(t, 0.03, 8000);
+      const m = S.mel[st % S.mel.length];
+      if (m > 0 && (S.gap === undefined || (st % (S.mel.length)) < S.mel.length - S.gap)) this['_' + (S.inst || 'box')](mf(m), t, S.melV || 0.16);
+      this._musT += step; this._musStep++;
     }
+  },
+  _pluck(f, t, v, cut) {
+    const ctx = this.ctx, o = ctx.createOscillator(), o2 = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = f; o2.type = 'square'; o2.frequency.value = f * 1.002; fl.type = 'lowpass'; fl.frequency.value = cut || 2400;
+    const g2 = ctx.createGain(); g2.gain.value = 0.25;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.32);
+    o.connect(fl); o2.connect(g2); g2.connect(fl); fl.connect(g); g.connect(this.mus); o.start(t); o2.start(t); o.stop(t + 0.36); o2.stop(t + 0.36);
+  },
+  _bellI(f, t, v) {
+    const ctx = this.ctx;
+    for (const [m, a, d] of [[1, 1, 0.9], [2.76, 0.35, 0.35], [5.4, 0.12, 0.15]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f * m;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * a, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0004, t + d);
+      o.connect(g); g.connect(this.mus); o.start(t); o.stop(t + d + 0.05);
+    }
+  },
+  _tick(t, v, f) {
+    const ctx = this.ctx, s = ctx.createBufferSource(); s.buffer = this.noise;
+    const fl = ctx.createBiquadFilter(); fl.type = 'highpass'; fl.frequency.value = f || 6000;
+    const g = ctx.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0003, t + 0.05);
+    s.connect(fl); fl.connect(g); g.connect(this.mus); s.start(t, Math.random() * 1.5, 0.07);
   },
   _box(f, t, v) {
     const ctx = this.ctx;
@@ -223,3 +244,29 @@ const AUD = {
     o.connect(fl); fl.connect(g); g.connect(this.mus); o.start(t); o.stop(t + d + 0.4);
   }
 };
+
+// ---------- chapter songs (original melodies) ----------
+const SONG_MAPLE = { bpm: 84, spb: 8, cpb: 2, inst: 'box', gap: 4,
+  prog: [[48, 52, 55], [45, 48, 52], [41, 45, 48], [43, 47, 50], [48, 52, 55], [40, 43, 47], [41, 45, 48], [43, 47, 50]],
+  mel: [76, 79, 81, 79, 76, 74, 72, 74, 76, 76, 74, 72, 69, 72, 74, -1, 72, 74, 76, 74, 72, 69, 67, 69, 72, 72, 74, 76, 79, 76, 74, -1,
+    77, 76, 74, 72, 74, 76, 79, 81, 79, 76, 74, 76, 72, 74, 72, -1, 69, 72, 74, 76, 74, 72, 74, 79, 76, 74, 72, 74, 72, -1, -1, -1] };
+// school morning: bouncy D major
+const SONG_SCHOOL = { bpm: 108, spb: 8, inst: 'pluck', bass: 'pulse', melV: 0.12, padV: 0.7,
+  prog: [[50, 54, 57], [45, 49, 52], [47, 50, 54], [43, 47, 50], [50, 54, 57], [45, 49, 52], [43, 47, 50], [45, 49, 52]],
+  mel: [74, -1, 78, -1, 81, 78, 74, -1, 73, -1, 76, -1, 81, 76, 73, -1, 71, 74, 78, 74, 71, 74, 78, 81, 79, -1, 78, -1, 76, -1, 74, -1,
+    74, 78, 81, 86, 81, 78, 74, 78, 76, 73, 69, 73, 76, 81, 76, 73, 71, 74, 79, 74, 71, 74, 79, 83, 81, -1, 79, -1, 76, -1, 73, -1] };
+// market evening: bells in a gentle six
+const SONG_MARKET = { bpm: 92, spb: 6, inst: 'bellI', shaker: true, melV: 0.13,
+  prog: [[41, 45, 48], [38, 41, 45], [46, 50, 53], [48, 52, 55], [41, 45, 48], [38, 41, 45], [43, 46, 50], [48, 52, 55]],
+  mel: [77, -1, 81, 84, -1, 81, 81, 79, 77, 74, -1, 77, 82, -1, 81, 79, -1, 77, 79, -1, 76, 72, -1, -1,
+    77, 81, 84, 86, 84, 81, 81, 77, 74, 77, 81, 77, 79, 82, 79, 77, 76, 74, 72, -1, -1, 76, 79, -1] };
+// frozen lake: a skating waltz
+const SONG_LAKE = { bpm: 150, div: 1, spb: 3, cpb: 2, inst: 'box', bass: 'waltz', melV: 0.15,
+  prog: [[43, 47, 50], [40, 43, 47], [48, 52, 55], [50, 54, 57], [43, 47, 50], [40, 43, 47], [48, 52, 55], [50, 54, 57]],
+  mel: [83, -1, -1, 86, 83, 81, 79, -1, 76, 79, 83, 86, 84, -1, -1, 88, 84, 81, 81, -1, 78, 74, -1, -1,
+    79, 83, 86, 91, -1, 86, 83, -1, 79, 76, 79, 83, 84, 88, 91, 88, -1, 84, 86, -1, 81, 78, -1, -1] };
+// race day: driving A minor
+const SONG_RESORT = { bpm: 124, spb: 8, inst: 'pluck', bass: 'drive', hat: true, melV: 0.11, padV: 0.6,
+  prog: [[45, 48, 52], [41, 45, 48], [48, 52, 55], [43, 47, 50], [45, 48, 52], [41, 45, 48], [43, 47, 50], [40, 44, 47]],
+  mel: [76, -1, 81, -1, 84, 83, 81, 79, 77, -1, 81, -1, 84, -1, 86, 84, 84, -1, 79, -1, 76, 79, 84, 86, 83, -1, 79, -1, 74, -1, 79, 83,
+    81, 84, 88, 84, 81, 84, 88, 91, 89, 88, 86, 84, 86, 84, 81, 77, 79, 83, 86, 83, 79, 83, 86, 88, 88, -1, 83, -1, 80, -1, 76, -1] };

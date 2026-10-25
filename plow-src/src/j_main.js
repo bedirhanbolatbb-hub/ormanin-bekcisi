@@ -38,6 +38,35 @@ const INPUT = {
 const CAM = {
   cam: null, x: 0, z: 50, d: 13, shake: 0, intro: 0, lx: 0, lz: 0,
   init() { this.cam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.3, 260); },
+  // pick a clear spot in front of the machine (nothing tall in the way or right next to the lens) and fly there for a moment
+  heroShot(T) {
+    const tr = PL.kind === 'truck', gk = tr ? PL.geo.cam : 1, ly = tr ? 1.5 * gk : 0.75, port = innerWidth / innerHeight < 0.9;
+    const D = tr ? (port ? 15 : 11) * gk : (port ? 6.5 : 4.8), dir = new V3(), hit = new V3(), ray = new THREE.Ray(), cp = new V3();
+    // everything tall: static decor plus buildings, buses, stalls... (whatever stands in the scene right now)
+    const occ = WORLD.occ.slice(), skip = new Set([PL.truck, PL.kid && PL.kid.root, PL.sled, PL.rope, GUIDE.arrow, GUIDE.beam, ...WORLD.decorGroups]);
+    for (const c of WORLD.scene.children) {
+      if (skip.has(c) || c.isLight || c.isPoints || c.isLine || !c.visible) continue;
+      const bb = new THREE.Box3().setFromObject(c), lim = c.isGroup ? 70 : 25;
+      if (!bb.isEmpty() && bb.max.y > 2.0 && bb.max.x - bb.min.x < lim && bb.max.z - bb.min.z < lim) occ.push(bb);
+    }
+    // the machine and a little space around it must be in plain view
+    const sx = Math.cos(PL.h), sz = -Math.sin(PL.h), fx = Math.sin(PL.h), fz = Math.cos(PL.h), r = tr ? 2.4 * gk : 0.9;
+    const tg = [[0, 0, ly], [r, 0, ly * 0.6], [-r, 0, ly * 0.6], [0, r * 1.2, ly * 0.6], [0, -r, ly * 0.6]].map(([s, f, y]) => new V3(PL.x + sx * s + fx * f, y, PL.z + sz * s + fz * f));
+    const clear = (a, D, y) => {
+      const ang = PL.h + a, cx = PL.x + Math.sin(ang) * D, cz = PL.z + Math.cos(ang) * D, B = WORLD.bounds;
+      if (cx < B.x0 - 14 || cx > B.x1 + 14 || cz < B.z0 - 14 || cz > B.z1 + 14) return false;
+      cp.set(cx, y, cz);
+      for (const b of occ) if (b.distanceToPoint(cp) < (tr ? 3.2 : 1.6)) return false;
+      for (const o of tg) {
+        dir.subVectors(cp, o); const len = dir.length(); dir.divideScalar(len); ray.set(o, dir);
+        for (const b of occ) { if (b.containsPoint(o)) continue; if (ray.intersectBox(b, hit) && hit.distanceTo(o) < len) return false; }
+      }
+      return true;
+    };
+    for (const y of tr ? [(port ? 5.2 : 4.2) * gk, 7.5 * gk, 11 * gk] : [port ? 2.6 : 2.1, 3.8, 6]) for (const a of [0.5, -0.5, 0.8, -0.8, 0.22, -0.22, 1.15, -1.15, 1.6, -1.6, 2.3, -2.3])
+      for (const d of [D, D * 0.75]) if (clear(a, d, y)) { this.heroS = { a, D: d, y, ly, h: PL.h, T: T || 2.2 }; this.hero = this.heroS.T; return true; }
+    return false;
+  },
   update(dt, snap) {
     const t = PL.kind, asp = innerWidth / innerHeight, gk = t === 'truck' ? PL.geo.cam : 1;
     const port = asp < 0.9;
@@ -59,6 +88,18 @@ const CAM = {
       const ic = CH.introCam || { from: [0, 34, 82], look: [0, 0.5, 10] };
       px = lerp(px, ic.from[0], k); py = lerp(py, ic.from[1], k); pz = lerp(pz, ic.from[2], k); lx = lerp(lx, ic.look[0], k); lz = lerp(lz, ic.look[2], k);
       this.intro -= dt / 2.6;
+    }
+    // new machine: a quick hero shot from the front (slowly circling), then back behind it
+    if (this.hero > 0) {
+      this.hero = Math.max(0, this.hero - dt);
+      const H = this.heroS, u = 1 - this.hero / H.T, k = smooth(clamp(Math.min(u, 1 - u) / 0.3, 0, 1));
+      const tr = PL.kind === 'truck', f = tr ? 1.2 * PL.geo.cam : 0.3;
+      // swing around the machine (not through it): blend angle, distance and height around it
+      const angN = Math.atan2(px - PL.x, pz - PL.z), dN = Math.hypot(px - PL.x, pz - PL.z);
+      let da = H.h + H.a + (u - 0.5) * 0.35 * Math.sign(H.a || 1) - angN; da = Math.atan2(Math.sin(da), Math.cos(da));
+      const ang = angN + da * k, dd = lerp(dN, H.D, k);
+      px = PL.x + Math.sin(ang) * dd; pz = PL.z + Math.cos(ang) * dd; py = lerp(py, H.y, k);
+      lx = lerp(lx, PL.x + Math.sin(H.h) * f, k); ly = lerp(ly, H.ly, k); lz = lerp(lz, PL.z + Math.cos(H.h) * f, k);
     }
     // finale: the camera pulls away to show the big moment, slowly circling it
     if (this.show) {
@@ -170,7 +211,7 @@ const BOT = {
   },
   buy() {
     const nt = GAME.nextTool();
-    if (nt && !TIER[nt].gift && (GAME.owned[nt] || UI.shownCoins() >= TIER[nt].cost)) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
+    if (nt && !TIER[nt].gift && !GAME.toolLocked(nt) && (GAME.owned[nt] || UI.shownCoins() >= TIER[nt].cost)) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
     for (const k of TIERS) if (GAME.owned[k.key]) this.mark('tool_' + k.key);
     const t = PL.tool, order = [1, 0, 2];
     let best = -1, bc = 1e18;
@@ -350,6 +391,7 @@ async function boot() {
   lb.style.width = '70%';
   buildWorld(scene);
   renderer.toneMappingExposure = WORLD.env.exposure;
+  AUD.song = CH.music ? CH.music() : null;
   FX.init(scene);
   PL.init(scene);
   GUIDE.init(scene);
@@ -395,7 +437,7 @@ function onResize() {
 let last = 0, frameN = 0;
 const FAST = QS.has('fast') ? Math.max(1, +QS.get('fast')) : 1;
 function step(dt) {
-  const inp = QS.has('bot') ? BOT.get(dt) : (CAM.intro > 0.05 ? { x: 0, y: 0 } : INPUT.get());
+  const inp = QS.has('bot') ? BOT.get(dt) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : INPUT.get());
   if (CAM.intro > 0 && (Math.abs(inp.x) + Math.abs(inp.y) > 0 || INPUT.joy.active)) CAM.intro = Math.min(CAM.intro, 0.05);
   PL.update(dt, inp);
   GAME.update(dt);
