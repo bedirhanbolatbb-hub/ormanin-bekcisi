@@ -37,18 +37,19 @@ const CAM = {
   cam: null, x: 0, z: 50, d: 13, shake: 0, intro: 0, lx: 0, lz: 0,
   init() { this.cam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.3, 260); },
   update(dt, snap) {
-    const t = PL.tool, asp = innerWidth / innerHeight;
+    const t = PL.kind, asp = innerWidth / innerHeight, gk = t === 'truck' ? PL.geo.cam : 1;
     const port = asp < 0.9;
     const base = port ? (t === 'truck' ? 15 : t === 'blower' ? 11.5 : 10.5) : (t === 'truck' ? 18 : t === 'blower' ? 13 : 11.8);
     const wantW = port ? (t === 'truck' ? 13 : t === 'blower' ? 9.5 : 8.2) : (t === 'truck' ? 20 : t === 'blower' ? 13 : 11.5);
     const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * asp);
-    const d = Math.max(base, (wantW / 2) / Math.tan(hf / 2) * 0.82);
+    const d = Math.max(base * gk, (wantW * gk / 2) / Math.tan(hf / 2) * 0.82);
     this.d = snap ? d : damp(this.d, d, 2.2, dt);
     const fx = Math.sin(PL.h), fz = Math.cos(PL.h);
     const ahead = t === 'truck' ? 1.0 + Math.max(0, PL.spd) * 0.15 : 0.45 + PL.moveAmt * 0.8;
     const tx = PL.x + fx * ahead, tz = PL.z + fz * ahead - (t === 'truck' ? 0.6 : 0.5);
     this.x = snap ? tx : damp(this.x, tx, 4.5, dt); this.z = snap ? tz : damp(this.z, tz, 4.5, dt);
-    const pitch = 0.74;
+    // bigger machines -> camera climbs higher (you can feel yourself growing, and the blade in front stays in view)
+    const pitch = 0.74 + (gk - 1) * 0.55;
     let px = this.x, py = Math.sin(pitch) * this.d, pz = this.z + Math.cos(pitch) * this.d;
     let lx = this.x, ly = 0.5, lz = this.z;
     if (this.intro > 0) {
@@ -83,18 +84,18 @@ const GUIDE = {
       for (const M of WORLD.melters) { const d = Math.hypot(M.zone.x - PL.x, M.zone.z - PL.z); if (d < bd) { bd = d; best = M; } }
       if (best) { tx = best.zone.x; tz = best.zone.z; beam = best; }
     } else if (!GAME.ended) {
-      const g = GOALS[GAME.goalIdx()];
-      if (g && g.a) {
+      const a = SNOW.areas[SNOW.hlArea];
+      if (a) {
         this._rt = (this._rt || 0) - dt;
-        if (this._rt <= 0 || !this._tgt) { this._rt = 0.5; const a = WORLD.areaByKey[g.a]; this._tgt = a && !a.done ? SNOW.nearestSnow(PL.x, PL.z, a.id, 0.05, 140) : null; }
+        if (this._rt <= 0 || !this._tgt) { this._rt = 0.5; this._tgt = a && !a.done ? SNOW.nearestSnow(PL.x, PL.z, a.id, 0.05, 140) : null; }
         if (this._tgt && Math.hypot(this._tgt.x - PL.x, this._tgt.z - PL.z) > 7) { tx = this._tgt.x; tz = this._tgt.z; }
       }
     }
     const A = this.arrow;
     if (tx !== null) {
-      const ang = Math.atan2(tx - PL.x, tz - PL.z), r = PL.tool === 'truck' ? 4.8 : 1.6 + Math.sin(this.t * 6) * 0.15;
+      const ang = Math.atan2(tx - PL.x, tz - PL.z), r = PL.kind === 'truck' ? PL.geo.carve + 1.2 : 1.6 + Math.sin(this.t * 6) * 0.15;
       A.visible = true; A.position.set(PL.x + Math.sin(ang) * r, 0.12, PL.z + Math.cos(ang) * r);
-      A.rotation.y = ang + Math.PI; A.scale.setScalar(PL.tool === 'truck' ? 2.2 : 1.1);
+      A.rotation.y = ang + Math.PI; A.scale.setScalar(PL.kind === 'truck' ? 2.2 * PL.geo.cam : 1.1);
       A.material.opacity = 0.75 + 0.25 * Math.sin(this.t * 6);
     } else A.visible = false;
     const B = this.beam;
@@ -139,7 +140,8 @@ const BOT = {
   okCell(i, j, truck) {
     const x = WORLD.bounds.x0 + (i + 0.5) * this.CS, z = WORLD.bounds.z0 + (j + 0.5) * this.CS;
     if (!truck) return PL.kidFree(x, z);
-    for (const [a, b] of [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) if (!SNOW.walk(x + a, z + b)) return false;
+    const r = PL.geo.halfW + 0.1;
+    for (const [a, b] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) if (!SNOW.walk(x + a, z + b)) return false;
     return true;
   },
   field(tx, tz, truck) {
@@ -158,7 +160,7 @@ const BOT = {
   },
   buy() {
     const nt = GAME.nextTool();
-    if (nt && UI.shownCoins() >= TOOLS[nt].cost) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
+    if (nt && UI.shownCoins() >= TIER[nt].cost) { GAME.buyTool(nt); this.mark('tool_' + nt); return; }
     if (nt && GOALS[GAME.goalIdx()].tool) return; // save up for the tool
     const t = PL.tool, order = [1, 0, 2];
     let best = -1, bc = 1e18;
@@ -171,7 +173,7 @@ const BOT = {
       const wx = r.x1 - r.x0, wz = r.z1 - r.z0, sp = Math.max(0.5, w * 0.8), m = Math.min(w * 0.45, 0.6);
       if (truck && Math.min(wx, wz) < 2.4) {
         // narrow strip (sidewalk): one pass with the truck hugging it from the street side
-        if (wz > wx) { const cx = (r.x0 + r.x1) / 2, edge = cx > 0 ? r.x1 : r.x0, lx = edge + (cx > 0 ? -1.12 : 1.12); pts.push([[lx, r.z0 + 0.4], [lx, r.z1 - 0.4]]); }
+        if (wz > wx) { const cx = (r.x0 + r.x1) / 2, edge = cx > 0 ? r.x1 : r.x0, o = PL.geo.halfW + 0.04, lx = edge + (cx > 0 ? -o : o); pts.push([[lx, r.z0 + 0.4], [lx, r.z1 - 0.4]]); }
         continue;
       }
       const across = wx >= wz ? wz : wx, n = Math.max(1, Math.ceil((across - 2 * m) / sp) + 1), stp = n > 1 ? (across - 2 * m) / (n - 1) : 0;
@@ -189,10 +191,10 @@ const BOT = {
   get(dt) {
     this.buy();
     // pick the right tool for the job (like a player would)
-    { const g = GOALS[GAME.goalIdx()]; const a = g && g.a ? WORLD.areaByKey[g.a] : null;
-      if (a) { const want = a.lot ? (GAME.owned.blower ? 'blower' : 'shovel') : (GAME.owned.truck ? 'truck' : GAME.owned.blower ? 'blower' : 'shovel');
+    { const a = SNOW.areas[SNOW.hlArea] || null;
+      if (a) { const want = a.lot ? GAME.best('hand') : (GAME.best('truck') || GAME.best('hand'));
         if (want !== PL.tool && !PL.dumping) { PL.setTool(want); UI.refreshTools(); this.laneArea = null; } } }
-    const truck = PL.tool === 'truck';
+    const truck = PL.kind === 'truck';
     let tx, tz, key;
     const st = PL.stats();
     if (PL.load >= st.cap * 0.97 || (this.goingDump && PL.load > 1)) {
@@ -207,7 +209,7 @@ const BOT = {
       if (this.stuckT > 2.5) { this.stuckT = 0; this.jit = 1.2; this.tgt = null; this.rt = 0; }
       if (this.jit > 0) { this.jit -= dt; const a = GAME.time * 1.7; return { x: Math.cos(a), y: Math.sin(a) }; }
       // lane sweeping on the goal area (efficient, human-like)
-      const g0 = GOALS[GAME.goalIdx()], a0 = g0 && g0.a ? WORLD.areaByKey[g0.a] : null;
+      const a0 = SNOW.areas[SNOW.hlArea] || null;
       if (a0 && !a0.done) {
         if (this.laneArea !== a0.id + PL.tool) { this.laneArea = a0.id + PL.tool; this.laneList = this.lanes(a0, PL.stats().w, truck); this.li = 0; this.lp = 0; }
         while (this.li < this.laneList.length && this.lp === 0 && !this.laneHasSnow(this.laneList[this.li])) this.li++;
@@ -220,8 +222,7 @@ const BOT = {
       }
       if ((this.rt <= 0 || !this.tgt) && (!a0 || this.li >= (this.laneList || []).length)) {
         this.rt = 0.35;
-        const g = GOALS[GAME.goalIdx()];
-        let a = g && g.a ? WORLD.areaByKey[g.a] : null;
+        let a = SNOW.areas[SNOW.hlArea] || null;
         let p = a && !a.done ? SNOW.nearestSnow(PL.x + Math.sin(PL.h) * (truck ? 4 : 1), PL.z + Math.cos(PL.h) * (truck ? 4 : 1), a.id, 0.04, 150) : null;
         if (p && truck && !this.okCell(...this.cell(p.x, p.z), true)) { const c = this.cell(p.x, p.z); p = { x: clamp(p.x, -2.2, 2.2), z: p.z }; }
         if (!p) p = SNOW.nearestSnow(PL.x, PL.z, 0, 0.05, 150);
@@ -237,6 +238,8 @@ const BOT = {
     let dx = tx - PL.x, dz = tz - PL.z;
     const here = dist[ci + cj * W];
     if (here < 0) this.noPath = (this.noPath || 0) + dt; else this.noPath = 0;
+    const open = (x, z) => (Math.abs(x) < 3.6 && Math.abs(z) < 50) || Math.abs(z) > 50.5;
+    if (truck && open(PL.x, PL.z) && open(tx, tz)) { const l = Math.hypot(dx, dz) || 1; return { x: dx / l, y: -dz / l }; }
     if (here > 1) {
       let bi = ci, bj = cj, bv = here;
       for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
@@ -256,13 +259,13 @@ async function loadArt() {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/town.glb.gz'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/town.glb.gz?v=__VER__'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/town.glb'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/town.glb?v=__VER__'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -283,11 +286,12 @@ async function boot() {
   FX.init(scene);
   PL.init(scene);
   GUIDE.init(scene);
+  TREASURE.init(scene);
   if (STORE.get('plowtown_mute') === '1') AUD.muted = true;
   const resumed = GAME.load();
   UI.init();
   INPUT.init($('c'));
-  if (QS.has('bot')) BOT.init();
+  if (QS.has('bot')) { BOT.init(); window.__hold = true; }
   lb.style.width = '100%';
   CAM.update(0, true);
   if (!resumed && !QS.has('bot') && !QS.has('nointro')) CAM.intro = 1;
@@ -317,6 +321,7 @@ function step(dt) {
   PL.update(dt, inp);
   GAME.update(dt);
   LIFE.update(dt);
+  TREASURE.update(dt);
   updateWorld(dt);
   FX.update(dt);
   UI.tick(dt);
@@ -333,12 +338,12 @@ function frame(now) {
   if (scene.fog) { const k = Math.max(0, CAM.intro); scene.fog.near = 42 + k * 80; scene.fog.far = 120 + k * 160; }
   GUIDE.update(dt);
   // x-ray uniforms (player screen pos & depth)
-  { const v = XRAY._v || (XRAY._v = new V3()); v.set(PL.x, PL.tool === 'truck' ? 1.2 : 0.6, PL.z).project(CAM.cam); XRAY.uP.value.set(v.x, v.y);
+  { const v = XRAY._v || (XRAY._v = new V3()); v.set(PL.x, PL.kind === 'truck' ? 1.2 : 0.6, PL.z).project(CAM.cam); XRAY.uP.value.set(v.x, v.y);
     const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse); XRAY.uD.value = -w.z;
-    XRAY.uA.value = innerWidth / innerHeight; XRAY.uR.value = PL.tool === 'truck' ? 0.26 : 0.15; renderer.getDrawingBufferSize(XRAY.uRes.value); }
+    XRAY.uA.value = innerWidth / innerHeight; XRAY.uR.value = PL.kind === 'truck' ? 0.2 + PL.geo.halfW * 0.05 : 0.15; renderer.getDrawingBufferSize(XRAY.uRes.value); }
   const s = WORLD.sun; s.position.set(CAM.x + 14, 24, CAM.z + 12); s.target.position.set(CAM.x, 0, CAM.z - 4); s.target.updateMatrixWorld();
   FX.center.set(CAM.x, 0, CAM.z);
-  AUD.update(dt, { scrape: clamp(PL.carveRate / (PL.tool === 'truck' ? 9 : PL.tool === 'blower' ? 3 : 1.6), 0, 1), tool: PL.tool, move: PL.moveAmt, blowing: PL.blowing });
+  AUD.update(dt, { scrape: clamp(PL.carveRate / (PL.kind === 'truck' ? 9 : PL.kind === 'blower' ? 3 : 1.6), 0, 1), tool: PL.kind, move: PL.moveAmt, blowing: PL.blowing });
   UI.update(dt);
   frameN++;
   if (!QS.has('norender') || frameN % 30 === 0) renderer.render(scene, CAM.cam);

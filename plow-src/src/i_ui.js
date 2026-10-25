@@ -7,6 +7,7 @@ const ICONS = {
   shovel: '<svg viewBox="0 0 40 40"><path d="M27 6l-9 17" stroke="#b07a46" stroke-width="3.5" stroke-linecap="round"/><path d="M8 24l12 4 3-6-12-4z" fill="#ff8a1e" stroke="#c8650a" stroke-width="2" stroke-linejoin="round"/><circle cx="28" cy="5" r="3" fill="none" stroke="#2c3138" stroke-width="2.5"/></svg>',
   blower: '<svg viewBox="0 0 40 40"><rect x="6" y="18" width="20" height="13" rx="3" fill="#d6302a"/><path d="M21 18V8l6-3" stroke="#d6302a" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="12" cy="32" r="4" fill="#2c3138"/><path d="M26 22l9-9" stroke="#8a95a3" stroke-width="3" stroke-linecap="round"/></svg>',
   truck: '<svg viewBox="0 0 40 40"><rect x="10" y="14" width="16" height="12" rx="2" fill="#f2f2ee" stroke="#9aa3ad" stroke-width="1.5"/><rect x="18" y="16" width="7" height="5" fill="#5a6b80"/><rect x="2" y="20" width="9" height="9" rx="1.5" fill="#ffcf3a" stroke="#d69a00" stroke-width="1.5"/><circle cx="15" cy="28" r="3.6" fill="#2c3138"/><circle cx="25" cy="28" r="3.6" fill="#2c3138"/><circle cx="20" cy="12" r="2" fill="#ff9a1a"/><rect x="26" y="20" width="10" height="6" fill="#f2f2ee" stroke="#9aa3ad" stroke-width="1.5"/></svg>',
+  groomer: '<svg viewBox="0 0 40 40"><rect x="9" y="13" width="18" height="11" rx="2" fill="#d6302a"/><rect x="18" y="15" width="7" height="5" fill="#9fd0ff"/><rect x="7" y="24" width="24" height="8" rx="4" fill="#2c3138"/><circle cx="11" cy="28" r="2" fill="#8a95a3"/><circle cx="19" cy="28" r="2" fill="#8a95a3"/><circle cx="27" cy="28" r="2" fill="#8a95a3"/><path d="M31 16h6v16h-6z" fill="#ff8a1e"/><circle cx="14" cy="11" r="2" fill="#ffb020"/></svg>',
   house: '<svg viewBox="0 0 40 40"><path d="M6 19L20 7l14 12" fill="#fff" stroke="#c8323c" stroke-width="3" stroke-linejoin="round"/><rect x="10" y="18" width="20" height="15" fill="#e7b27a"/><rect x="17" y="24" width="6" height="9" fill="#c8323c"/><rect x="12" y="21" width="4" height="4" fill="#ffd34d"/></svg>',
   car: '<svg viewBox="0 0 40 40"><path d="M6 25l3-8q1-3 4-3h14q3 0 4 3l3 8v5H6z" fill="#2f7fd6"/><rect x="12" y="16" width="16" height="6" rx="1.5" fill="#bfe1f5"/><circle cx="12" cy="30" r="3.5" fill="#2c3138"/><circle cx="28" cy="30" r="3.5" fill="#2c3138"/><path d="M9 14q11-7 22 0" stroke="#fff" stroke-width="3" fill="none"/></svg>',
   walk: '<svg viewBox="0 0 40 40"><rect x="8" y="5" width="12" height="30" fill="#b9bdc2"/><path d="M8 15h12M8 25h12" stroke="#8a8f95"/><rect x="21" y="5" width="11" height="30" fill="#4a5059"/><path d="M26.5 8v6M26.5 20v6" stroke="#ffd34d" stroke-width="2"/></svg>',
@@ -18,6 +19,9 @@ const ICONS = {
   mute: '<svg viewBox="0 0 40 40"><path d="M8 16h6l8-7v22l-8-7H8z" fill="#2b3a55"/><path d="M27 15l9 10M36 15l-9 10" stroke="#c8323c" stroke-width="3" stroke-linecap="round"/></svg>',
   arrow: '<svg viewBox="0 0 40 40"><path d="M20 4l12 14h-7v16h-10V18H8z" fill="#fff" stroke="#2b3a55" stroke-width="2.5" stroke-linejoin="round"/></svg>',
 };
+ICONS.bigshovel = ICONS.shovel.replace('#ff8a1e', '#2f8cff').replace('#c8650a', '#1f5fb3');
+ICONS.megablower = ICONS.blower.replace(/#d6302a/g, '#2f6fe8');
+ICONS.dumpplow = ICONS.truck.replace('#f2f2ee', '#f07a12');
 const UI = {
   flyers: [], pending: 0, joy: null,
   init() {
@@ -42,15 +46,15 @@ const UI = {
   resize() { const d = Math.min(2, devicePixelRatio || 1); this.dpr = d; this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this._coinRect = null; },
   shownCoins() { return GAME.coins - this.pending; },
   pulseTool(t) {
-    const box = $('tools'); const i = TOOL_ORDER.filter(x => GAME.owned[x]).indexOf(t); const b = box.children[i];
+    const box = $('tools'); const b = [...box.children].find(x => x.dataset.t === t);
     if (b) { b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 6000); }
   },
   refreshTools() {
     const box = $('tools'); box.innerHTML = '';
-    const owned = TOOL_ORDER.filter(t => GAME.owned[t]);
+    const owned = [GAME.best('hand'), GAME.best('truck')].filter(Boolean);
     box.style.display = owned.length > 1 ? 'flex' : 'none';
     for (const t of owned) {
-      const b = document.createElement('button'); b.className = 'tool' + (PL.tool === t ? ' on' : ''); b.innerHTML = ICONS[t];
+      const b = document.createElement('button'); b.className = 'tool' + (PL.tool === t ? ' on' : ''); b.innerHTML = ICONS[t]; b.dataset.t = t;
       b.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); if (PL.tool !== t) { PL.setTool(t); this.refreshTools(); GAME.save(); } });
       box.appendChild(b);
     }
@@ -69,26 +73,26 @@ const UI = {
     if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) $('toast').classList.remove('on'); }
   },
   _updButtons(shown) {
-    const t = PL.tool, T = TOOLS[t];
+    const t = PL.tool, T = TIER[t], LB = UPLABELS[T.kind];
     for (let i = 0; i < 3; i++) {
-      const b = this.upBtns[i], c = GAME.upCost(t, i), L = GAME.lv[t][i];
+      const b = this.upBtns[i], c = GAME.upCost(t, i), L = GAME.L(t)[i];
       const can = isFinite(c) && shown >= c;
       b.classList.toggle('can', can); b.classList.toggle('max', !isFinite(c));
-      const lbl = T.labels[i]; if (b._lbl !== lbl) { b.querySelector('.ui-lbl').textContent = lbl; b._lbl = lbl; }
+      const lbl = LB[i]; if (b._lbl !== lbl) { b.querySelector('.ui-lbl').textContent = lbl; b._lbl = lbl; }
       const ct = isFinite(c) ? fmt(c) : 'MAX'; if (b._ct !== ct) { b.querySelector('.ui-cost b').textContent = ct; b._ct = ct; }
-      const dots = '●'.repeat(L) + '○'.repeat(Math.max(0, T.max - L)); if (b._d !== dots) { b.querySelector('.ui-dots').textContent = dots; b._d = dots; }
+      const dots = '●'.repeat(L) + '○'.repeat(Math.max(0, UPMAX - L)); if (b._d !== dots) { b.querySelector('.ui-dots').textContent = dots; b._d = dots; }
     }
     const nt = GAME.nextTool(), tb = this.toolBtn;
     if (!nt) { tb.style.display = 'none'; }
     else {
-      const c = TOOLS[nt].cost, f = clamp(shown / c, 0, 1);
+      const c = TIER[nt].cost, f = clamp(shown / c, 0, 1);
       const vis = f >= 0.35 || GOALS[GAME.goalIdx()].tool === nt;
       tb.style.display = vis ? '' : 'none';
-      if (tb._t !== nt) { tb.querySelector('.ui-ico').innerHTML = ICONS[nt]; tb.querySelector('.ui-lbl').textContent = TOOLS[nt].name; tb._t = nt; }
+      if (tb._t !== nt) { tb.querySelector('.ui-ico').innerHTML = ICONS[nt]; tb.querySelector('.ui-lbl').textContent = TIER[nt].name; tb._t = nt; }
       tb.querySelector('.ui-cost b').textContent = fmt(c);
       tb.querySelector('.tc-bar i').style.width = (f * 100).toFixed(1) + '%';
       tb.classList.toggle('can', f >= 1);
-      if (f >= 1 && !this._toolHinted) { this._toolHinted = 1; this.hint('New tool ready! Tap ' + TOOLS[nt].name, 4); }
+      if (f >= 1 && !this._toolHinted) { this._toolHinted = 1; this.hint('New tool ready! Tap ' + TIER[nt].name, 4); }
       if (f < 1) this._toolHinted = 0;
     }
     if (!GAME.firstUp && this.upBtns.some(b => b.classList.contains('can')) && !this._upHint) { this._upHint = 1; this.hint('Tap an upgrade below!', 4); $('ups').classList.add('nudge'); }
@@ -103,7 +107,7 @@ const UI = {
     }
     let f = 1, lab = '';
     if (g.a) { const a = WORLD.areaByKey[g.a]; f = SNOW.prog(a); lab = Math.floor(f * 100) + '%'; }
-    else if (g.tool) { const c = TOOLS[g.tool].cost; f = clamp(shown / c, 0, 1); lab = fmt(Math.min(shown, c)) + '/' + fmt(c); }
+    else if (g.tool) { const c = TIER[g.tool].cost; f = clamp(shown / c, 0, 1); lab = fmt(Math.min(shown, c)) + '/' + fmt(c); }
     else if (STORM.phase === 'bonus') { f = STORM.multT / 90; lab = 'x2 ' + Math.ceil(STORM.multT) + 's'; }
     else if (STORM.phase === 'storm') { f = STORM.t / 12; lab = 'storm'; }
     else { lab = '★'; }
@@ -116,7 +120,7 @@ const UI = {
     const st = PL.stats(), f = PL.load / st.cap;
     if (f <= 0.02 && !PL.dumping) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
     if (!el._on) { el.classList.add('on'); el._on = 1; }
-    const p = PL.tool === 'truck' ? this._v.set(PL.x, 3.4, PL.z) : this._v.set(PL.x, 1.75, PL.z);
+    const p = PL.kind === 'truck' ? this._v.set(PL.x, 2.6 + PL.geo.halfW * 0.9, PL.z) : this._v.set(PL.x, 1.75, PL.z);
     p.project(CAM.cam);
     el.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
     const full = f >= 0.999;
@@ -125,7 +129,7 @@ const UI = {
     el.querySelector('b').textContent = full ? 'FULL!' : Math.floor(PL.load) + '/' + Math.floor(st.cap);
   },
   onFull() {
-    if (!GAME.firstFull) { GAME.firstFull = true; this.hint(PL.tool === 'truck' ? 'Blade is full! Push it into a MELTER' : 'Sled is full! Empty it at the MELTER', 5); }
+    if (!GAME.firstFull) { GAME.firstFull = true; this.hint(PL.kind === 'truck' ? 'Blade is full! Push it into a MELTER' : 'Sled is full! Empty it at the MELTER', 5); }
   },
   onDump() { if (GAME.dumps === 0) this.hint('Snow melts into coins!', 3); },
   onUpgrade(i) { const b = this.upBtns[i]; b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); },
@@ -145,6 +149,15 @@ const UI = {
     const p = this._v.copy(wp).project(CAM.cam);
     d.style.transform = `translate(${((p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - p.y) / 2 * innerHeight).toFixed(1)}px) translate(-50%,-100%)`;
     d.style.opacity = vis && p.z < 1 ? 1 : 0;
+  },
+  // ---- floating texts (+coins, WIDER!, ...) ----
+  texts: [],
+  floatText(wp, text, color, size) {
+    // keep the WORLD position and project it every frame, so the text stays glued to the spot while the camera moves
+    let stack = 0;
+    for (const T of this.texts) if (T.t < 0.45 && Math.hypot(T.wx - wp.x, T.wz - wp.z) < 2.5) stack++;
+    this.texts.push({ wx: wp.x, wy: wp.y, wz: wp.z, oy: stack * 34, t: 0, d: 1.15, text, color: color || '#ffd34d', size: size || 28 });
+    if (this.texts.length > 24) this.texts.shift();
   },
   // ---- 2D coins flying to the counter ----
   flyCoin(wp, v) {
@@ -166,6 +179,17 @@ const UI = {
       g.globalAlpha = 0.9; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(J.ox + J.dx * 52, J.oy + J.dy * 52, 22, 0, TAU); g.fill();
       g.globalAlpha = 1;
     }
+    // floating texts
+    for (let i = this.texts.length - 1; i >= 0; i--) {
+      const T = this.texts[i]; const k = T.t / T.d; if (k >= 1) continue;
+      const p = this._v.set(T.wx, T.wy, T.wz).project(CAM.cam); if (p.z > 1) continue;
+      const sx = (p.x + 1) / 2 * innerWidth, sy = (1 - p.y) / 2 * innerHeight;
+      const sc = k < 0.15 ? easeOutBack(k / 0.15) : 1, a = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
+      g.save(); g.globalAlpha = a; g.translate(sx, sy - T.oy - 60 * easeOutCubic(k)); g.scale(sc, sc);
+      g.font = `800 ${T.size}px "Baloo 2", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = Math.max(4, T.size * 0.2); g.strokeStyle = '#2b3a55'; g.lineJoin = 'round'; g.strokeText(T.text, 0, 0);
+      g.fillStyle = T.color; g.fillText(T.text, 0, 0); g.restore();
+    }
     // flyers
     for (let i = this.flyers.length - 1; i >= 0; i--) {
       const f = this.flyers[i];
@@ -178,6 +202,7 @@ const UI = {
     }
   },
   tick(dt) {
+    for (let i = this.texts.length - 1; i >= 0; i--) { const T = this.texts[i]; T.t += dt; if (T.t >= T.d) this.texts.splice(i, 1); }
     for (let i = this.flyers.length - 1; i >= 0; i--) {
       const f = this.flyers[i]; f.t += dt;
       if (f.t >= f.d) {

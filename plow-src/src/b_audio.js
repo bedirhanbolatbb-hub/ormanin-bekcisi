@@ -147,6 +147,12 @@ const AUD = {
     this._nz('bandpass', 400, 3000, 0.5, 0.1, 0, 0.8);
     [0, 5, 9, 12, 16, 19].forEach((s, i) => this._bell(523.25 * Math.pow(2, s / 12), 0.07, 0.1 + i * 0.07, 0.6));
   },
+  treasure(gift) {
+    if (!this.ok || this.muted) return;
+    const n = gift ? [784, 988, 1175, 1568, 1976] : [1319, 1568, 2093];
+    n.forEach((f, i) => this._bell(f, gift ? 0.07 : 0.06, i * (gift ? 0.06 : 0.045), gift ? 0.6 : 0.35));
+    if (gift) this._nz('bandpass', 3000, 6000, 0.4, 0.05, 0.05, 2);
+  },
   horn() { if (!this.ok || this.muted) return; this._tone('sawtooth', 330, 330, 0.28, 0.05); this._tone('sawtooth', 415, 415, 0.28, 0.04); },
   firework() { if (!this.ok || this.muted) return; this._nz('lowpass', 2500, 200, 0.6, 0.2, 0, 0.6); this._tone('sine', 90, 40, 0.4, 0.2); },
   thump() { if (!this.ok || this.muted) return; this._tone('sine', 140, 50, 0.18, 0.2); this._nz('lowpass', 500, 100, 0.15, 0.12); },

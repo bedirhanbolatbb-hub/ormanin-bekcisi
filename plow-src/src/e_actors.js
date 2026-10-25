@@ -113,6 +113,12 @@ function poseShovel(S, w, toss) {
   S.grip.position.set(hx, hy + 0.04, hz - 0.02); S.grip.rotation.x = -0.4;
 }
 
+// ---------- truck shapes (per tier) ----------
+const TGEO = {
+  pickup: { model: 'pickup', off: 0, rear: 2.6, nose: 2.6, halfW: 1.08, bladeZ: 3.25, bladeS: [1.9, 1.7], carve: 3.62, pileZ: 3.75, beacon: [0, 1.95, -0.3], cam: 1 },
+  tipper: { model: 'tipper', off: 1.97, rear: 3.65, nose: 3.6, halfW: 1.46, bladeZ: 4.62, bladeS: [2.8, 2.0], carve: 5.06, pileZ: 5.2, beacon: [0, 3.25, 3.0], cam: 1.16, tint: 0xf07a12 },
+  groomer: { model: 'groomer', off: 0.34, rear: 4.45, nose: 4.1, halfW: 2.25, bladeZ: null, carve: 4.5, pileZ: 4.65, beacon: [0, 3.5, 1.9], cam: 1.32, pivot: true },
+};
 // ---------- player ----------
 const PL = {
   x: -6.0, z: 46.4, h: -Math.PI / 2 - 0.15, vx: 0, vz: 0, spd: 0, tool: 'shovel', loads: { sled: 0, truck: 0 },
@@ -127,6 +133,9 @@ const PL = {
     this.blowerG = new THREE.Group(); this.kid.root.add(this.blowerG);
     this.blowerM = ownMats(artScene('blower').clone(true)); this.blowerM.traverse(c => { if (c.isMesh) c.castShadow = true; });
     this.blowerG.add(this.blowerM); this.blowerG.position.set(0, 0, 1.18); this.blowerG.visible = false;
+    this.blowerRed = []; this.blowerM.traverse(c => { if (c.isMesh && c.material.name === 'red') this.blowerRed.push(c.material); });
+    this.shovelMat = new THREE.MeshStandardMaterial({ color: 0xff8a1e, roughness: 0.5, metalness: 0.1 });
+    this.shovel.plate.material = this.shovelMat; this.shovel.lip.material = this.shovelMat;
     // sled
     this.sled = new THREE.Group(); scene.add(this.sled);
     this.sledM = ownMats(artScene('sled').clone(true)); this.sledM.traverse(c => { if (c.isMesh) { c.castShadow = true; } });
@@ -136,10 +145,15 @@ const PL = {
     this.mound.castShadow = true; this.sled.add(this.mound); this.mound.position.set(0, 0.33, -0.05);
     const rg = new THREE.BufferGeometry().setFromPoints([new V3(), new V3()]);
     this.rope = new THREE.Line(rg, new THREE.LineBasicMaterial({ color: 0x6b4a2e })); this.rope.frustumCulled = false; scene.add(this.rope);
-    // truck
+    // trucks (one model per tier, only the current one visible)
     this.truck = new THREE.Group(); scene.add(this.truck); this.truck.visible = false;
-    this.truckM = ownMats(artScene('pickup').clone(true)); this.truckM.traverse(c => { if (c.isMesh) c.castShadow = true; });
-    this.truck.add(this.truckM);
+    this.truckMs = {};
+    for (const k in TGEO) {
+      const G = TGEO[k], m = ownMats(artScene(G.model).clone(true));
+      m.traverse(c => { if (c.isMesh) { c.castShadow = true; if (G.tint && c.material.name === 'paint') c.material.color.setHex(G.tint); } });
+      m.position.z = G.off; m.visible = false; this.truck.add(m); this.truckMs[k] = m;
+    }
+    this.truckM = this.truckMs.pickup;
     this.bladeG = new THREE.Group(); this.truck.add(this.bladeG);
     this.bladeM = ownMats(artScene('blade').clone(true)); this.bladeM.traverse(c => { if (c.isMesh) c.castShadow = true; });
     this.bladeG.add(this.bladeM); this.bladeG.position.set(0, 0.05, 3.25);
@@ -149,32 +163,48 @@ const PL = {
     this.beacon = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffa020 })); this.beacon.position.set(0, 1.95, -0.3); this.truck.add(this.beacon);
     this.applyTool();
   },
-  get load() { return this.tool === 'truck' ? this.loads.truck : this.loads.sled; },
-  set load(v) { if (this.tool === 'truck') this.loads.truck = v; else this.loads.sled = v; },
+  get kind() { return TIER[this.tool].kind; },
+  get geo() { return TGEO[TIER[this.tool].geo || 'pickup']; },
+  get load() { return this.kind === 'truck' ? this.loads.truck : this.loads.sled; },
+  set load(v) { if (this.kind === 'truck') this.loads.truck = v; else this.loads.sled = v; },
   stats() { return GAME.stats(this.tool); },
   applyTool() {
-    const t = this.tool, st = this.stats();
-    const walking = t !== 'truck';
+    const t = this.tool, k = this.kind, st = this.stats();
+    const walking = k !== 'truck';
     this.kid.root.visible = walking; this.sled.visible = walking; this.rope.visible = walking;
-    this.shovel.g.visible = t === 'shovel'; this.blowerG.visible = t === 'blower';
-    this.truck.visible = t === 'truck';
-    if (t === 'blower') { this.blowerM.scale.set(st.w / 0.8, 0.82, 0.82); }
-    if (t === 'truck') { this.bladeM.scale.set(st.w / 1.06, 1.9, 1.7); }
-    const sc = clamp(0.8 + GAME.lv[t][1] * 0.08 + (t === 'blower' ? 0.25 : 0), 0.8, 1.8);
+    this.shovel.g.visible = k === 'shovel'; this.blowerG.visible = k === 'blower';
+    this.truck.visible = k === 'truck';
+    if (k === 'shovel') { this.shovelMat.color.setHex(t === 'bigshovel' ? 0x2f8cff : 0xff8a1e); }
+    if (k === 'blower') {
+      const mega = t === 'megablower', sc = mega ? 0.9 : 0.82;
+      this.blowerM.scale.set(st.w / 0.8, sc, sc); this.blowerG.position.z = 1.17 * sc + 0.22; this.blowerOff = this.blowerG.position.z + 0.8 * sc + 0.06; this.blowerS = sc;
+      for (const m of this.blowerRed) m.color.setHex(mega ? 0x2f6fe8 : 0xd1211c);
+    }
+    if (k === 'truck') {
+      const G = this.geo;
+      for (const key in this.truckMs) this.truckMs[key].visible = TGEO[key] === G;
+      this.truckM = this.truckMs[Object.keys(TGEO).find(key => TGEO[key] === G)];
+      this.bladeG.visible = G.bladeZ !== null;
+      if (G.bladeZ !== null) { this.bladeG.position.z = G.bladeZ; this.bladeM.scale.set(st.w / 1.06, G.bladeS[0], G.bladeS[1]); }
+      this.beacon.position.set(G.beacon[0], G.beacon[1], G.beacon[2]);
+    }
+    const bonus = { shovel: 0, bigshovel: 0.15, blower: 0.3, megablower: 0.5 }[t] || 0;
+    const sc = clamp(0.8 + GAME.L(t)[1] * 0.1 + bonus, 0.8, 2.0);
     this.sledScale = walking ? sc : 1; this.sled.scale.setScalar(this.sledScale);
   },
   setTool(t, silent) {
     if (t === this.tool) return;
-    const was = this.tool;
-    if (t === 'truck') {
+    const was = this.tool, wasK = TIER[was].kind, newK = TIER[t].kind;
+    if (newK === 'truck') {
+      this.tool = t;
       // find a spot for the truck near the player (on a walkable lane)
-      const spot = this.findTruckSpot(this.x, this.z);
-      this.x = spot.x; this.z = spot.z; this.h = spot.h; this.spd = 0;
-    } else if (was === 'truck') {
+      if (wasK !== 'truck' || !this.truckFree(this.x, this.z, this.h)) { const spot = this.findTruckSpot(this.x, this.z); this.x = spot.x; this.z = spot.z; this.h = spot.h; }
+      this.spd = 0;
+    } else if (wasK === 'truck') {
       // drop the kid beside the truck on a walkable cell
-      const sx = Math.cos(this.h), sz = -Math.sin(this.h);
+      const sx = Math.cos(this.h), sz = -Math.sin(this.h), hw = this.geo.halfW;
       let ok = null;
-      for (const d of [1.7, -1.7, 2.4, -2.4, 3.2, -3.2]) { const x = this.x + sx * d, z = this.z + sz * d; if (this.kidFree(x, z)) { ok = { x, z }; break; } }
+      for (const d of [hw + 0.6, -(hw + 0.6), hw + 1.3, -(hw + 1.3), hw + 2.2, -(hw + 2.2)]) { const x = this.x + sx * d, z = this.z + sz * d; if (this.kidFree(x, z)) { ok = { x, z }; break; } }
       if (!ok) ok = { x: this.x, z: this.z };
       this.x = ok.x; this.z = ok.z; this.sledX = this.x - Math.sin(this.h) * 1.4; this.sledZ = this.z - Math.cos(this.h) * 1.4;
     }
@@ -182,16 +212,17 @@ const PL = {
     if (!silent) { FX.puff(this.x, 0.5, this.z, 14, 1.4); AUD.newTool && AUD.click(); }
   },
   findTruckSpot(x, z) {
-    // prefer the nearest street centerline point, heading along the street
+    // nearest spot on the street (or the two end lots) where the current truck fits
+    let h0 = this.h; if (Math.abs(Math.sin(h0)) > 0.7) h0 = z > 0 ? Math.PI : 0;
     let best = null, bd = 1e9;
-    for (let zz = -48; zz <= 48; zz += 2) for (const xx of [-1.75, 1.75]) {
-      const d = (xx - x) ** 2 + (zz - z) ** 2; if (d < bd) { bd = d; best = { x: xx, z: zz }; }
+    const cand = [];
+    for (let zz = -46; zz <= 46; zz += 2) for (const xx of [-1.75, 0, 1.75]) cand.push([xx, zz]);
+    for (const xx of [-5, -2.5, 0, 2.5, 5]) { cand.push([xx, 54.5]); cand.push([xx, -54.5]); }
+    for (const [xx, zz] of cand) {
+      const d = (xx - x) ** 2 + (zz - z) ** 2; if (d >= bd) continue;
+      for (const hh of [h0, h0 + Math.PI, Math.PI / 2, -Math.PI / 2]) if (this.truckFree(xx, zz, hh)) { bd = d; best = { x: xx, z: zz, h: hh }; break; }
     }
-    if (z > 49) best = { x: clamp(x, -6, 6), z: 54 };
-    if (z < -49) best = { x: clamp(x, -6, 6), z: -54.5 };
-    let h = this.h; if (Math.abs(Math.sin(h)) > 0.7) h = z > 0 ? Math.PI : 0;
-    if (!this.truckFree(best.x, best.z, h)) h = h + Math.PI;
-    return { x: best.x, z: best.z, h };
+    return best || { x: 0, z: 30, h: Math.PI };
   },
   kidFree(x, z) {
     const r = 0.24;
@@ -203,15 +234,15 @@ const PL = {
     return SNOW.walk(px + rx * w, pz + rz * w) && SNOW.walk(px - rx * w, pz - rz * w) && SNOW.walk(x + fx * 1.0, z + fz * 1.0);
   },
   truckFree(x, z, h) {
-    const fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx;
-    const bw = Math.max(1.08, this.stats().w * 0.5 - 0.22);
-    const pts = [[1.05, -2.6], [-1.05, -2.6], [1.08, 0], [-1.08, 0], [1.08, 2.5], [-1.08, 2.5], [bw, 3.5], [-bw, 3.5], [bw * 0.5, 3.5], [-bw * 0.5, 3.5], [0, 3.6]];
+    const G = this.geo, fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx, hw = G.halfW;
+    const bw = Math.max(hw, this.stats().w * 0.5 - 0.22), bz = G.carve - 0.12;
+    const pts = [[hw - 0.03, -G.rear], [-hw + 0.03, -G.rear], [hw, 0], [-hw, 0], [hw, -G.rear * 0.5], [-hw, -G.rear * 0.5], [hw, G.nose], [-hw, G.nose], [bw, bz], [-bw, bz], [bw * 0.5, bz], [-bw * 0.5, bz], [0, G.carve]];
     for (const [a, b] of pts) if (!SNOW.walk(x + rx * a + fx * b, z + rz * a + fz * b)) return false;
     return true;
   },
   // ---- main update ----
   update(dt, inp) {
-    const st = this.stats(); const t = this.tool;
+    const st = this.stats(); const t = this.kind;
     if (this.h > Math.PI * 4 || this.h < -Math.PI * 4) this.h = Math.atan2(Math.sin(this.h), Math.cos(this.h));
     this.full = this.load >= st.cap - 0.01;
     let mvx = inp.x, mvz = -inp.y, mag = Math.min(1, Math.hypot(mvx, mvz));
@@ -227,7 +258,7 @@ const PL = {
     this._visuals(dt, st);
   },
   _walk(dt, st, mx, mz, mag) {
-    const isB = this.tool === 'blower';
+    const isB = this.kind === 'blower';
     let sp = st.spd * (this.full ? 0.9 : 1);
     const tvx = mx * sp * mag, tvz = mz * sp * mag;
     const acc = mag > 0 ? 20 : 26;
@@ -247,7 +278,7 @@ const PL = {
     // carve
     let removed = 0;
     const fx = Math.sin(this.h), fz = Math.cos(this.h);
-    const off = isB ? 1.9 : 0.66, hl = isB ? 0.2 : 0.16;
+    const off = isB ? (this.blowerOff || 1.9) : 0.66 + (st.w > 0.9 ? 0.06 : 0), hl = isB ? 0.2 : 0.16;
     const cx = this.x + fx * off, cz = this.z + fz * off;
     if (!this.full && v > 0.15) {
       const steps = this._lastCx === undefined ? 1 : Math.min(6, Math.ceil(Math.hypot(cx - this._lastCx, cz - this._lastCz) / 0.15));
@@ -260,7 +291,7 @@ const PL = {
     this._lastCx = cx; this._lastCz = cz;
     if (removed > 0) {
       const rx = fz, rz = -fx;
-      if (this.tool === 'shovel') {
+      if (this.kind === 'shovel') {
         this.scoop += removed;
         if (Math.random() < 0.6) FX.spray(cx + rx * st.w * 0.5 * (Math.random() < 0.5 ? 1 : -1), 0.25, cz, fx * 0.5 + rx * rnd(-1, 1), fz * 0.5 + rz * rnd(-1, 1), 2, 2.2, 0.1);
         const tq = 0.55 + st.cap * 0.02;
@@ -268,11 +299,14 @@ const PL = {
       } else {
         this.blowing = 1;
         // stream from chute into the sled
-        const n = Math.min(9, 2 + removed * 40);
-        const ch = this.blowerG.localToWorld(this._v1.set(0.05 * st.w, 1.2, 0.3));
+        const n = Math.min(7, 2 + removed * 36);
+        const bs = this.blowerS || 0.82; const ch = this.blowerG.localToWorld(this._v1.set(0.05 * st.w, 1.46 * bs, 0.37 * bs));
+        // the stream arcs out to the chute side and back into the sled, so it never hides the kid
+        const side = 0.55 + st.w * 0.25;
         for (let i = 0; i < n; i++) {
           const T = rnd(0.5, 0.7), tx = this.sledX + rnd(-0.25, 0.25), tz = this.sledZ + rnd(-0.4, 0.4), ty = 0.6;
-          FX.emit(FX.norm, { x: ch.x, y: ch.y, z: ch.z, vx: (tx - ch.x) / T + rnd(-0.35, 0.35), vy: (ty - ch.y) / T + 0.5 * 9 * T + rnd(-0.3, 0.3), vz: (tz - ch.z) / T + rnd(-0.35, 0.35), gr: 9, life: T, s0: rnd(0.16, 0.3), s1: 0.34, a0: 1, a1: 0.85, c: [0.96, 0.975, 1] });
+          const v0 = 4 * side / T, a = -8 * side / (T * T);
+          FX.emit(FX.norm, { x: ch.x, y: ch.y, z: ch.z, vx: (tx - ch.x) / T + rx * v0 + rnd(-0.3, 0.3), vy: (ty - ch.y) / T + 0.5 * 9 * T + rnd(-0.3, 0.3), vz: (tz - ch.z) / T + rz * v0 + rnd(-0.3, 0.3), ax: rx * a, az: rz * a, gr: 9, life: T, s0: rnd(0.14, 0.26), s1: 0.3, a0: 1, a1: 0.8, c: [0.96, 0.975, 1] });
         }
         if (Math.random() < 0.5) FX.spray(cx, 0.3, cz, fx, fz, 1, 1.5, 0.12);
       }
@@ -290,8 +324,10 @@ const PL = {
     AUD.toss();
   },
   _drive(dt, st, mx, mz, mag) {
+    const G = this.geo;
     const want = mag > 0 ? Math.atan2(mx, mz) : this.h;
     const a = angDiff(this.h, want);
+    if (G.pivot) return this._drivePivot(dt, st, mag, a, G);
     if (mag > 0 && Math.abs(a) > 2.3 && this.spd < 1.2) this.rev = true;
     if (this.rev && !this.autoRev && (mag === 0 || Math.abs(a) < 1.2)) this.rev = false;
     // assist: stuck nose-first against something while pushing forward -> back up a little
@@ -300,7 +336,7 @@ const PL = {
     let target;
     if (this.rev) target = -3.2 * mag;
     else target = st.spd * mag * (Math.abs(a) < 1.9 ? 1 - 0.42 * Math.abs(a) / 1.9 : 0.4);
-    if (this.full && SNOW.depth(this.x + Math.sin(this.h) * 3.8, this.z + Math.cos(this.h) * 3.8) > 0.1) target *= 0.55;
+    if (this.full && SNOW.depth(this.x + Math.sin(this.h) * (G.carve + 0.2), this.z + Math.cos(this.h) * (G.carve + 0.2)) > 0.1) target *= 0.55;
     const ac = Math.sign(target - this.spd) === Math.sign(this.spd) || this.spd === 0 ? 7 : 12;
     this.spd += clamp(target - this.spd, -ac * dt, ac * dt);
     const om = clamp((Math.abs(this.spd) + 1.0) / 3.0, 0.4, 2.3);
@@ -330,10 +366,31 @@ const PL = {
       }
     } else this.stuckT = 0;
     this.moveAmt = clamp(Math.abs(this.spd) / st.spd, 0, 1);
-    // carve with blade
+    return this._bladeCarve(dt, st, G);
+  },
+  // tracked machines (groomer) turn on the spot
+  _drivePivot(dt, st, mag, a, G) {
+    let target = mag === 0 ? 0 : st.spd * mag * (Math.abs(a) < 0.5 ? 1 : Math.abs(a) < 1.2 ? 0.55 : 0.12);
+    if (this.full && SNOW.depth(this.x + Math.sin(this.h) * (G.carve + 0.2), this.z + Math.cos(this.h) * (G.carve + 0.2)) > 0.1) target *= 0.55;
+    this.spd += clamp(target - this.spd, -9 * dt, 6 * dt);
+    const yaw = mag === 0 ? 0 : clamp(a * 2.6, -1.35, 1.35);
+    const nh = this.h + yaw * dt, fx = Math.sin(nh), fz = Math.cos(nh);
+    const nx = this.x + fx * this.spd * dt, nz = this.z + fz * this.spd * dt;
+    if (this.truckFree(nx, nz, nh)) { this.x = nx; this.z = nz; this.h = nh; }
+    else if (this.truckFree(this.x, this.z, nh)) { this.h = nh; this.spd *= 0.4; }
+    else if (this.truckFree(nx, this.z, this.h)) { this.x = nx; this.spd *= 0.7; }
+    else if (this.truckFree(this.x, nz, this.h)) { this.z = nz; this.spd *= 0.7; }
+    else {
+      this.spd = 0;
+      for (let k = 0; k < 8; k++) { const ang = k / 8 * TAU, ox = this.x + Math.sin(ang) * 0.15, oz = this.z + Math.cos(ang) * 0.15; if (this.truckFree(ox, oz, nh)) { this.x = ox; this.z = oz; this.h = nh; break; } }
+    }
+    this.moveAmt = clamp(Math.abs(this.spd) / st.spd, 0, 1);
+    return this._bladeCarve(dt, st, G);
+  },
+  _bladeCarve(dt, st, G) {
     let removed = 0;
     const hx = Math.sin(this.h), hz = Math.cos(this.h);
-    const cx = this.x + hx * 3.62, cz = this.z + hz * 3.62;
+    const cx = this.x + hx * G.carve, cz = this.z + hz * G.carve;
     if (!this.full && this.spd > 0.2) {
       const steps = this._lastCx === undefined ? 1 : Math.min(8, Math.ceil(Math.hypot(cx - this._lastCx, cz - this._lastCz) / 0.18));
       for (let s = 1; s <= steps; s++) {
@@ -356,9 +413,11 @@ const PL = {
       const M = D.M;
       while (D.sent < D.n && D.t >= D.sent * D.iv) {
         const part = D.amount / D.n; D.sent++;
-        const src = this.tool === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
-        const sz = this.tool === 'truck' ? 0.5 : 0.28;
+        const src = this.kind === 'truck' ? this.pile.getWorldPosition(this._v2) : this.sled.getWorldPosition(this._v2);
+        const sz = this.kind === 'truck' ? 0.5 + this.geo.halfW * 0.15 : 0.28;
+        const first = D.sent === 1;
         FX.clump(src.x, src.y + 0.5, src.z, M.x + rnd(-0.3, 0.3), 1.05, M.z + rnd(-0.3, 0.3), sz * rnd(0.8, 1.2), 0.38, () => {
+          if (first) UI.floatText(this._v2.set(M.x, 2.6, M.z), '+' + fmt(D.amount * GAME.price()), '#ffd34d', 34);
           M.heat = Math.min(1.8, M.heat + 0.5); M.shake = 0.2;
           FX.steam(M.x, 1.1, M.z, 5, true); FX.glow(M.x, 1.2, M.z, 2.5); AUD.sizzle();
           const val = part * GAME.price();
@@ -371,12 +430,12 @@ const PL = {
       return;
     }
     if (this.load < 0.3) return;
-    const isT = this.tool === 'truck', fx = Math.sin(this.h), fz = Math.cos(this.h);
+    const isT = this.kind === 'truck', fx = Math.sin(this.h), fz = Math.cos(this.h), G = this.geo;
     for (const M of WORLD.melters) {
       let d;
       if (isT) { // distance from zone center to the truck's long axis (rear .. blade)
-        const rx = M.zone.x - this.x, rz = M.zone.z - this.z, t = clamp(rx * fx + rz * fz, -2.4, 3.9);
-        d = Math.hypot(rx - fx * t, rz - fz * t) - 0.9;
+        const rx = M.zone.x - this.x, rz = M.zone.z - this.z, t = clamp(rx * fx + rz * fz, -G.rear, G.carve + 0.3);
+        d = Math.hypot(rx - fx * t, rz - fz * t) - G.halfW * 0.8;
       } else d = Math.hypot(this.x - M.zone.x, this.z - M.zone.z);
       if (d < M.r) {
         const amt = this.load; this.load = 0; this.full = false;
@@ -388,8 +447,11 @@ const PL = {
     }
   },
   _visuals(dt, st) {
-    const t = this.tool, walking = t !== 'truck';
+    const t = this.kind, walking = t !== 'truck';
     const loadVis = this.load + (this.dumping ? this.dumping.vis : 0);
+    this.bump = Math.max(0, (this.bump || 0) - dt * 3.2);
+    const bsc = this.bump > 0 ? 1 + Math.sin((1 - this.bump) * Math.PI) * 0.2 : 1;
+    this.kid.root.scale.setScalar(bsc); this.truck.scale.setScalar(bsc);
     if (walking) {
       this.kid.root.position.set(this.x, 0, this.z); this.kid.root.rotation.y = this.h;
       // sled follow
@@ -431,8 +493,9 @@ const PL = {
       this.pileVis = damp(this.pileVis, f, 6, dt);
       const p = this.pileVis, bw = st.w;
       this.pile.visible = p > 0.01;
-      this.pile.scale.set(bw * 0.5 * (0.7 + 0.3 * p), 0.12 + 1.05 * p, 0.25 + 1.0 * p);
-      this.pile.position.set(0, 0, 3.75 + 0.1 * p);
+      const G = this.geo, ps = 0.8 + G.halfW * 0.18;
+      this.pile.scale.set(bw * 0.5 * (0.7 + 0.3 * p), (0.12 + 1.05 * p) * ps, (0.25 + 1.0 * p) * ps);
+      this.pile.position.set(0, 0, G.pileZ + 0.1 * p);
       this.beacon.material.color.setHSL(0.08, 1, 0.45 + 0.25 * Math.max(0, Math.sin(performance.now() / 120)));
       // little bounce
       this.truckM.position.y = Math.abs(Math.sin(performance.now() / 70)) * 0.015 * this.moveAmt;

@@ -34,7 +34,7 @@ const FX = {
     });
     const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.renderOrder = 5; scene.add(pts);
     const S = { pts, geo, max, n: 0, p: [] };
-    for (let i = 0; i < max; i++) S.p.push({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, l: 0, ml: 1, s0: 0.1, s1: 0.1, r: 1, g: 1, b: 1, a0: 1, a1: 0, gr: 0, dr: 0, fl: 0 });
+    for (let i = 0; i < max; i++) S.p.push({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, l: 0, ml: 1, s0: 0.1, s1: 0.1, r: 1, g: 1, b: 1, a0: 1, a1: 0, gr: 0, dr: 0, fl: 0, ax: 0, az: 0 });
     this.sys.push(S);
     return S;
   },
@@ -44,7 +44,7 @@ const FX = {
     p.x = o.x; p.y = o.y; p.z = o.z; p.vx = o.vx || 0; p.vy = o.vy || 0; p.vz = o.vz || 0;
     p.l = 0; p.ml = o.life || 1; p.s0 = o.s0 != null ? o.s0 : 0.2; p.s1 = o.s1 != null ? o.s1 : p.s0;
     const c = o.c || [1, 1, 1]; p.r = c[0]; p.g = c[1]; p.b = c[2];
-    p.a0 = o.a0 != null ? o.a0 : 1; p.a1 = o.a1 != null ? o.a1 : 0; p.gr = o.gr || 0; p.dr = o.dr || 0; p.fl = o.fl || 0;
+    p.a0 = o.a0 != null ? o.a0 : 1; p.a1 = o.a1 != null ? o.a1 : 0; p.gr = o.gr || 0; p.dr = o.dr || 0; p.fl = o.fl || 0; p.ax = o.ax || 0; p.az = o.az || 0;
     return p;
   },
   update(dt) {
@@ -55,7 +55,7 @@ const FX = {
         const p = S.p[i];
         p.l += dt;
         if (p.l >= p.ml) { S.n--; const t = S.p[i]; S.p[i] = S.p[S.n]; S.p[S.n] = t; continue; }
-        p.vy -= p.gr * dt; const d = Math.exp(-p.dr * dt); p.vx *= d; p.vy *= d; p.vz *= d;
+        p.vy -= p.gr * dt; p.vx += p.ax * dt; p.vz += p.az * dt; const d = Math.exp(-p.dr * dt); p.vx *= d; p.vy *= d; p.vz *= d;
         p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
         if (p.gr > 0 && p.y < 0.02) { p.y = 0.02; p.vy *= -0.2; p.vx *= 0.6; p.vz *= 0.6; }
         const t = p.l / p.ml;

@@ -60,11 +60,13 @@ const SNOW = {
   },
   newArea(o) { o.id = this.areas.length; o.total = 0; o.cleared = 0; o.done = false; this.areas.push(o); return o; },
   finalizeAreas() {
-    for (const a of this.areas) if (a) { a.total = 0; a.cleared = 0; }
-    const H = this.H, T = this.T, A = this.A;
+    const first = this.areas.some(a => a && a.units0 === undefined);
+    for (const a of this.areas) if (a) { a.total = 0; a.cleared = 0; if (first) a._u = 0; }
+    const H = this.H, T = this.T, A = this.A, f = this.C * this.C / this.UNIT;
     for (let k = 0; k < H.length; k++) {
-      if (A[k] && T[k] === 1) { const a = this.areas[A[k]]; a.total++; if (H[k] < this.THR) a.cleared++; }
+      if (A[k] && T[k] === 1) { const a = this.areas[A[k]]; a.total++; if (H[k] < this.THR) a.cleared++; if (first) a._u += H[k] * f; }
     }
+    if (first) for (const a of this.areas) if (a && a.units0 === undefined) a.units0 = a._u;
   },
   prog(a) { return a.total ? a.cleared / a.total : 1; },
 
