@@ -199,6 +199,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .chnext{display:flex;align-items:center;gap:12px;margin-top:12px;text-align:left;background:#f3f7fc;border-radius:16px;padding:8px 10px;}
 .chnext b{display:block;font-size:16px;}
 .chnext span{display:block;font-weight:700;font-size:14px;color:#6b7a93;}
+.chback{margin-top:10px;font-weight:800;font-size:14px;color:#2a6fd6;}
 .chwrap.map{width:min(460px,94vw);}
 .chlist{margin-top:14px;width:100%;display:flex;flex-direction:column;gap:9px;overflow-y:auto;max-height:68vh;padding:2px;}
 .chrow{display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:9px 12px;box-shadow:0 5px 0 #c9d5e4;cursor:pointer;}
@@ -234,7 +235,13 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   .tool{width:48px;height:48px;}
   #coinTxt{font-size:25px;}
 }
-@media (max-height:500px){ #hint{bottom:auto;top:70px;} #banner{top:30%;} }
+@media (max-height:500px){ #hint{bottom:auto;top:70px;} #banner{top:30%;}
+  /* short landscape screens (phones on their side, small game frames): slimmer cards so the road stays visible */
+  #ups{transform:translateX(-50%) scale(.8);transform-origin:50% 100%;}
+  #goal{padding:5px 12px 5px 7px;}
+  #goalIco{width:32px;height:32px;}
+  .bn-t{font-size:34px;}
+}
 </style>
 </head>
 <body>
@@ -3903,6 +3910,25 @@ const STREAK = {
     }
   }
 };
+// ---------- daily gift: come back tomorrow for coins (bigger on a run of days) ----------
+const DAILY = {
+  day(off) { const d = new Date(); d.setDate(d.getDate() - (off || 0)); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); },
+  check() {
+    if (QS.has('bot') || QS.has('nodaily')) return 0;
+    const t = this.day(), last = STORE.get('plowtown_day'), n = +(STORE.get('plowtown_dayn') || 0);
+    if (last === t) return 0;
+    const run = last === this.day(1) ? Math.min(n + 1, 7) : 1;
+    STORE.set('plowtown_day', t); STORE.set('plowtown_dayn', String(run));
+    return last ? run : 0;      // the very first visit only remembers the day
+  },
+  give(run) {
+    const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run));
+    GAME.earn(v); UI.pending += v;
+    for (let i = 0; i < 18; i++) setTimeout(() => UI.flyCoin(null, v / 18), 300 + i * 45);
+    UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins' + (run > 1 ? ' \u00b7 day ' + run + ' in a row' : ''), 'star', 3.0);
+    AUD.bigWin && AUD.bigWin(); GAME.save();
+  },
+};
 // ---------- snowstorms (endless loop after the street is saved) ----------
 const STORM = {
   phase: 'idle', t: 0, next: 45, mult: 1, multT: 0, acc: 0,
@@ -4232,7 +4258,7 @@ const CHUI = {
     const el = this._show('chIntro', `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
       <div class="chcard"><div class="chico">${CH_ICONS[C.key] || ''}</div><p>${C.intro}</p>${C.twist ? `<div class="chtwist">${C.twist}</div>` : ''}</div>
       <button class="chgo" id="chGo">LET'S GO!</button></div>`);
-    $('chGo').onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.close('chIntro'); CAM.intro = Math.min(CAM.intro, 0.35); if (CH.firstHint) setTimeout(() => UI.hint(CH.firstHint, 5), 600); if (CH.onStart) CH.onStart(); };
+    $('chGo').onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.close('chIntro'); CAM.intro = Math.min(CAM.intro, 0.35); if (CH.firstHint) setTimeout(() => UI.hint(CH.firstHint, 5), 600); if (CH.onStart) CH.onStart(); if (CH.dailyGift) { const d = CH.dailyGift; CH.dailyGift = 0; setTimeout(() => DAILY.give(d), 1500); } };
     AUD.init && AUD.chapterIn && AUD.chapterIn();
   },
   // the big "chapter complete" moment
@@ -4242,9 +4268,10 @@ const CHUI = {
     const mm = Math.floor(GAME.time / 60), ss = String(Math.floor(GAME.time % 60)).padStart(2, '0');
     const nextHtml = next ? `<div class="chnext"><div class="chico sm">${CH_ICONS[next.key] || ''}</div><div><b>Next: ${next.name}</b><span>${next.tag}</span></div></div>`
       : `<div class="chnext"><div><b>More chapters are on the way!</b><span>Keep plowing the storms for coins</span></div></div>`;
+    const comeBack = '<div class="chback">Come back tomorrow for a daily gift!</div>';
     const el = this._show('chRes', `<div class="rays"></div><div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">COMPLETE!</div>
       <div class="stars">${[0, 1, 2].map(i => `<div class="st st${i}" id="st${i}">${STAR_SVG(false)}</div>`).join('')}</div>
-      <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}</div>
+      <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}${comeBack}</div>
       ${next ? '<button class="chgo" id="chNext">NEXT CHAPTER</button>' : ''}<button class="chlink" id="chStay">${next ? 'Stay here and plow the storms' : 'Keep playing'}</button></div>`);
     // stars pop in one by one, then the bonus coins shower into your counter
     for (let i = 0; i < 3; i++) setTimeout(() => {
@@ -5150,13 +5177,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4.3'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.4'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.3'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.4'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -5215,6 +5242,8 @@ async function boot() {
   for (const ev of ['touchend', 'click']) addEventListener(ev, () => AUD.init(), { passive: true });
   if (!resumed) CH.firstHint = IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag';
   else UI.hint('Welcome back!', 2.5);
+  // a new day: the daily gift (after the chapter card when there is one)
+  { const run = DAILY.check(); if (run) { if (resumed || QS.has('nointro')) setTimeout(() => DAILY.give(run), 1800); else CH.dailyGift = run; } }
   console.log('boot ms', Math.round(performance.now() - t0));
   window.__ready = true;
   window.__render = () => { SNOW.flush(); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };

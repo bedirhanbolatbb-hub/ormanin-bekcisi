@@ -282,6 +282,25 @@ const STREAK = {
     }
   }
 };
+// ---------- daily gift: come back tomorrow for coins (bigger on a run of days) ----------
+const DAILY = {
+  day(off) { const d = new Date(); d.setDate(d.getDate() - (off || 0)); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); },
+  check() {
+    if (QS.has('bot') || QS.has('nodaily')) return 0;
+    const t = this.day(), last = STORE.get('plowtown_day'), n = +(STORE.get('plowtown_dayn') || 0);
+    if (last === t) return 0;
+    const run = last === this.day(1) ? Math.min(n + 1, 7) : 1;
+    STORE.set('plowtown_day', t); STORE.set('plowtown_dayn', String(run));
+    return last ? run : 0;      // the very first visit only remembers the day
+  },
+  give(run) {
+    const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run));
+    GAME.earn(v); UI.pending += v;
+    for (let i = 0; i < 18; i++) setTimeout(() => UI.flyCoin(null, v / 18), 300 + i * 45);
+    UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins' + (run > 1 ? ' \u00b7 day ' + run + ' in a row' : ''), 'star', 3.0);
+    AUD.bigWin && AUD.bigWin(); GAME.save();
+  },
+};
 // ---------- snowstorms (endless loop after the street is saved) ----------
 const STORM = {
   phase: 'idle', t: 0, next: 45, mult: 1, multT: 0, acc: 0,

@@ -49,6 +49,8 @@ const fs = require('fs');
       UI.update(dt);
       renderer.render(scene, CAM.cam);
     }, each || '');
+    // let the compositor finish a whole fresh frame first (otherwise a stale HUD tile can sneak into the shot)
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     await page.screenshot({ path: `${dir}/f${String(i).padStart(4, '0')}.png` });
   }
   if (errs.length) console.log(errs.slice(0, 5).join('\n'));

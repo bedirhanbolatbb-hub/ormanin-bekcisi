@@ -24,7 +24,7 @@ const CHUI = {
     const el = this._show('chIntro', `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
       <div class="chcard"><div class="chico">${CH_ICONS[C.key] || ''}</div><p>${C.intro}</p>${C.twist ? `<div class="chtwist">${C.twist}</div>` : ''}</div>
       <button class="chgo" id="chGo">LET'S GO!</button></div>`);
-    $('chGo').onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.close('chIntro'); CAM.intro = Math.min(CAM.intro, 0.35); if (CH.firstHint) setTimeout(() => UI.hint(CH.firstHint, 5), 600); if (CH.onStart) CH.onStart(); };
+    $('chGo').onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.close('chIntro'); CAM.intro = Math.min(CAM.intro, 0.35); if (CH.firstHint) setTimeout(() => UI.hint(CH.firstHint, 5), 600); if (CH.onStart) CH.onStart(); if (CH.dailyGift) { const d = CH.dailyGift; CH.dailyGift = 0; setTimeout(() => DAILY.give(d), 1500); } };
     AUD.init && AUD.chapterIn && AUD.chapterIn();
   },
   // the big "chapter complete" moment
@@ -34,9 +34,10 @@ const CHUI = {
     const mm = Math.floor(GAME.time / 60), ss = String(Math.floor(GAME.time % 60)).padStart(2, '0');
     const nextHtml = next ? `<div class="chnext"><div class="chico sm">${CH_ICONS[next.key] || ''}</div><div><b>Next: ${next.name}</b><span>${next.tag}</span></div></div>`
       : `<div class="chnext"><div><b>More chapters are on the way!</b><span>Keep plowing the storms for coins</span></div></div>`;
+    const comeBack = '<div class="chback">Come back tomorrow for a daily gift!</div>';
     const el = this._show('chRes', `<div class="rays"></div><div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">COMPLETE!</div>
       <div class="stars">${[0, 1, 2].map(i => `<div class="st st${i}" id="st${i}">${STAR_SVG(false)}</div>`).join('')}</div>
-      <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}</div>
+      <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}${comeBack}</div>
       ${next ? '<button class="chgo" id="chNext">NEXT CHAPTER</button>' : ''}<button class="chlink" id="chStay">${next ? 'Stay here and plow the storms' : 'Keep playing'}</button></div>`);
     // stars pop in one by one, then the bonus coins shower into your counter
     for (let i = 0; i < 3; i++) setTimeout(() => {
