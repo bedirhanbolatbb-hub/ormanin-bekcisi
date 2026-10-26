@@ -217,6 +217,7 @@ const PL = {
   get geo() { return TGEO[TIER[this.tool].geo || 'pickup']; },
   stats() { return GAME.stats(this.tool); },
   applyTool() {
+    this._bwF = null; this._path = null;
     const t = this.tool, k = this.kind, st = this.stats();
     const walking = k !== 'truck';
     this.kid.root.visible = walking; this.sled.visible = walking; this.rope.visible = walking;
@@ -295,7 +296,7 @@ const PL = {
   // otherwise the number of wheel/body points that are off the paved ground (hanging over a snowy lawn)
   poseBad(x, z, h) {
     const G = this.geo, fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx, hw = G.halfW, T = SNOW.T;
-    const bw = Math.max(hw, this.stats().w * 0.5 - 0.4), bz = G.carve - 0.12, P = this._pts || (this._pts = []);
+    const bw = this._bwF != null ? this._bwF : (this._bwF = Math.max(hw, this.stats().w * 0.5 - 0.4)), bz = G.carve - 0.12, P = this._pts || (this._pts = []);
     P.length = 0;
     P.push(hw - 0.03, -G.rear, -hw + 0.03, -G.rear, hw, 0, -hw, 0, hw, -G.rear * 0.5, -hw, -G.rear * 0.5, hw, G.nose, -hw, G.nose, 0, G.carve);
     let off = 0;
@@ -307,10 +308,13 @@ const PL = {
     for (const a of B) if (SNOW.solid(x + rx * a + fx * bz, z + rz * a + fz * bz)) return Infinity;
     return off;
   },
-  truckFree(x, z, h) { return this.poseBad(x, z, h) === 0; },
+  // a truck may hang one corner over the snowy lawn (like a real plow cutting a corner); never into anything solid.
+  // _tol is raised only while backing out of a spot that has no other way out
+  truckFree(x, z, h) { return this.poseBad(x, z, h) <= (this._tol != null ? this._tol : 1); },
   // after an upgrade (wider blade) or a tool change the machine may overlap something: move it to the nearest free spot
   ensureFree() {
     if (this.kind !== 'truck' || this.truckFree(this.x, this.z, this.h)) return;
+    if (this._path && this.poseBad(this.x, this.z, this.h) <= (this._path.loose ? 4 : 2)) return;
     for (let r = 0.15; r <= 3.2; r += 0.15) for (const dh of [0, 0.25, -0.25, 0.5, -0.5]) for (let k = 0; k < 16; k++) {
       const ang = k / 16 * TAU, x = this.x + Math.sin(ang) * r, z = this.z + Math.cos(ang) * r;
       if (this.truckFree(x, z, this.h + dh)) { this.x = x; this.z = z; this.h += dh; return; }
@@ -319,6 +323,7 @@ const PL = {
   },
   // ---- main update ----
   update(dt, inp) {
+    this._bwF = null;
     const st = this.stats(); const t = this.kind;
     if (this.h > Math.PI * 4 || this.h < -Math.PI * 4) this.h = Math.atan2(Math.sin(this.h), Math.cos(this.h));
     this.full = false;
@@ -344,12 +349,24 @@ const PL = {
     if (mag > 0) this.h = dampAng(this.h, Math.atan2(mx, mz), isB ? 7.5 : 14, dt);
     else if (v > 0.25) this.h = dampAng(this.h, Math.atan2(this.vx, this.vz), isB ? 7 : 13, dt);
     // move with sliding
-    const nx = this.x + this.vx * dt, nz = this.z + this.vz * dt;
     const ok = (x, z) => this.kidFree(x, z);
+    // never stand wedged in a lawn corner (it happens right on cell edges): step to the nearest free spot
+    if (!ok(this.x, this.z)) {
+      outer: for (let r = 0.06; r <= 0.66; r += 0.06) for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, x = this.x + Math.sin(a) * r, z = this.z + Math.cos(a) * r; if (ok(x, z)) { this.x = x; this.z = z; break outer; } }
+    }
+    const nx = this.x + this.vx * dt, nz = this.z + this.vz * dt;
     if (ok(nx, nz)) { this.x = nx; this.z = nz; }
     else if (ok(nx, this.z)) { this.x = nx; this.vz *= 0.5; }
     else if (ok(this.x, nz)) { this.z = nz; this.vx *= 0.5; }
-    else { this.vx *= 0.3; this.vz *= 0.3; }
+    else {
+      // round the corner: try the move turned a little left / right, like sliding along a wall
+      let moved = false;
+      if (v > 0.05) for (const da of [0.45, -0.45, 0.9, -0.9, 1.35, -1.35]) {
+        const c = Math.cos(da), sn = Math.sin(da), wx = (this.vx * c - this.vz * sn) * dt * 0.85, wz = (this.vx * sn + this.vz * c) * dt * 0.85;
+        if (ok(this.x + wx, this.z + wz)) { this.x += wx; this.z += wz; moved = true; break; }
+      }
+      if (!moved) { this.vx *= 0.3; this.vz *= 0.3; }
+    }
     this.moveAmt = clamp(v / st.spd, 0, 1);
     // carve
     let removed = 0;
@@ -412,6 +429,88 @@ const PL = {
     }
     return false;
   },
+  // ---- tight spots: plan a short maneuver (forward / reverse arcs, turning on the spot) two moves ahead ----
+  // this is what turns "stuck in a corner" into a smooth 3-point turn, for every machine size
+  _stepPrim(x, z, h, p, dt, G) {
+    // the blade tips sweep fast when turning: split big steps so no thin fence can be jumped over
+    const R = Math.hypot(G.carve, this._bwF != null ? this._bwF : G.halfW) + 0.5, disp = Math.abs(p.v || 0) * dt + Math.abs(p.w || 0) * dt * R + Math.abs(p.s || 0) * dt;
+    if (disp > 0.16) { const n = Math.ceil(disp / 0.16), d = dt / n; let r = { x, z, h }; for (let i = 0; i < n; i++) { r = this._stepOne(r.x, r.z, r.h, p, d, G); if (!r) return null; } return r; }
+    return this._stepOne(x, z, h, p, dt, G);
+  },
+  _stepOne(x, z, h, p, dt, G) {
+    if (p.s) { const nx = x + Math.cos(h) * p.s * dt, nz = z - Math.sin(h) * p.s * dt; return this.truckFree(nx, nz, h) ? { x: nx, z: nz, h } : null; }
+    const nh = h + p.w * dt;
+    if (p.v === 0) {
+      const L0 = -G.rear, L1 = G.carve, s0 = Math.sin(h), c0 = Math.cos(h), s1 = Math.sin(nh), c1 = Math.cos(nh);
+      const order = p.pf != null ? [p.pf, 0.5, 0.35, 0.65, 0.2, 0.8, 0.05, 0.95] : [0.5, 0.35, 0.65, 0.2, 0.8, 0.05, 0.95];
+      for (const f of order) { const m = L0 + (L1 - L0) * f, rx = x + (s0 - s1) * m, rz = z + (c0 - c1) * m; if (this.truckFree(rx, rz, nh)) { p.pf = f; return { x: rx, z: rz, h: nh }; } }
+      return null;
+    }
+    const hm = h + p.w * dt * 0.5, nx = x + Math.sin(hm) * p.v * dt, nz = z + Math.cos(hm) * p.v * dt;
+    return this.truckFree(nx, nz, nh) ? { x: nx, z: nz, h: nh } : null;
+  },
+  // tight spots: search a short sequence of moves (forward / reverse arcs, turning on the spot), like a driver doing a
+  // 3-point turn or backing up to steer around a post. mode 'turn' = end up facing the stick with room ahead,
+  // mode 'go' = also get a few metres toward it. Cheap (a few ms), done once per spot, then followed.
+  _detour(want, sx, sz, st, G, mode) {
+    const turn = G.turn || 1.8, vf = Math.min(st.spd * 0.6, 4.6), vr = -Math.min(st.spd * 0.5, 3.2), T = 0.36, SUB = 9, dS = T / SUB;
+    // (plus a small sideways shuffle, so a blade wedged next to a post can always wriggle out)
+    const P = [{ v: vf, w: turn }, { v: vf, w: 0 }, { v: vf, w: -turn }, { v: vr, w: turn }, { v: vr, w: 0 }, { v: vr, w: -turn }, { v: 0, w: turn }, { v: 0, w: -turn }, { v: 0, w: 0, s: 1.4 }, { v: 0, w: 0, s: -1.4 }];
+    const go = mode === 'go', x0 = this.x, z0 = this.z, need = go ? 3.2 : 0, tol = go ? 0.7 : 0.35;
+    const key = (x, z, h) => (Math.round(x / 0.6) * 73856093) ^ (Math.round(z / 0.6) * 19349663) ^ ((((Math.round(h / (Math.PI / 10)) % 20) + 20) % 20) * 83492791);
+    const prog = (n) => (n.x - x0) * sx + (n.z - z0) * sz;
+    const heur = (n) => Math.max(0, need - prog(n)) / vf + Math.max(0, Math.abs(angDiff(n.h, want)) - tol * 0.5) / turn;
+    const room = (n) => this.poseBad(n.x, n.z, n.h) <= 1 && this.poseBad(n.x + Math.sin(n.h) * 1.6, n.z + Math.cos(n.h) * 1.6, n.h) <= 1;
+    // best-first search on a little binary heap (keeps the worst case a few ms even when there is no way out)
+    const H = [], push = (o) => { o.f = o.g + heur(o); H.push(o); let i = H.length - 1; while (i > 0) { const j = (i - 1) >> 1; if (H[j].f <= o.f) break; H[i] = H[j]; i = j; } H[i] = o; };
+    const pop = () => { const top = H[0], last = H.pop(); if (H.length) { let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < H.length && H[l].f < (m === i ? last.f : H[m].f)) m = l; if (r < H.length && H[r].f < (m === i ? last.f : H[m].f)) m = r; if (m === i) break; H[i] = H[m]; i = m; } H[i] = last; } return top; };
+    push({ x: x0, z: z0, h: this.h, g: 0, p: null, m: null });
+    const seen = new Set([key(x0, z0, this.h)]), limit = this._tol ? 260 : 450, t0 = performance.now();
+    let n = 0, found = null;
+    while (H.length && n < limit) {
+      // never hold up a frame for long (slow phones just search a little less)
+      if ((n & 15) === 15 && performance.now() - t0 > 7) break;
+      const c = pop(); n++;
+      if (c.m && prog(c) >= need && Math.abs(angDiff(c.h, want)) < tol && room(c)) { found = c; break; }
+      for (const m of P) {
+        let x = c.x, z = c.z, h = c.h, ok = true; const q = { v: m.v, w: m.w, s: m.s };
+        for (let k = 0; k < SUB; k++) { const r = this._stepPrim(x, z, h, q, dS, G); if (!r) { ok = false; break; } x = r.x; z = r.z; h = r.h; }
+        if (!ok) continue;
+        const kk = key(x, z, h); if (seen.has(kk)) continue; seen.add(kk);
+        const sw = c.m && c.m.v * m.v < 0 ? 0.45 : 0;
+        push({ x, z, h, g: c.g + T * (m.s ? 2.2 : m.v < 0 ? 1.5 : m.v === 0 ? 1.15 : 1) + sw, p: c, m: { v: m.v, w: m.w, s: m.s } });
+      }
+    }
+    this._dn = n;
+    if (!found) return null;
+    const chain = []; for (let c = found; c && c.m; c = c.p) chain.unshift(c);
+    const poses = [[x0, z0, this.h, 0]];
+    for (const c of chain) {
+      let x = c.p.x, z = c.p.z, h = c.p.h; const q = { v: c.m.v, w: c.m.w, s: c.m.s };
+      for (let k = 0; k < SUB; k++) { const r = this._stepPrim(x, z, h, q, dS, G); if (!r) break; x = r.x; z = r.z; h = r.h; poses.push([x, z, h, c.m.v]); }
+    }
+    return { poses, dS, t: 0, loose: false };
+  },
+  // truly boxed in? (no small move at all is possible: forward, back, turning, shuffling)
+  _trapped(G) {
+    const t = G.turn || 1.8;
+    for (const p of [{ v: 2, w: 0 }, { v: -2, w: 0 }, { v: 0, w: t }, { v: 0, w: -t }, { v: 2, w: t }, { v: 2, w: -t }, { v: -2, w: t }, { v: -2, w: -t }, { s: 1.2 }, { s: -1.2 }]) if (this._stepPrim(this.x, this.z, this.h, p, 0.12, G)) return false;
+    return true;
+  },
+  _findMoves(want, sx, sz, st, G, mode) {
+    let p = this._detour(want, sx, sz, st, G, mode);
+    if (!p) { this._tol = 3; p = this._detour(want, sx, sz, st, G, mode); this._tol = null; if (p) p.loose = true; }
+    return p;
+  },
+  _followPath(dt, G) {
+    const P = this._path, Q = P.poses; P.t += dt;
+    const f = P.t / P.dS, i = Math.min(Q.length - 1, Math.floor(f)), j = Math.min(Q.length - 1, i + 1), u = clamp(f - i, 0, 1);
+    const A = Q[i], B = Q[j];
+    this.x = lerp(A[0], B[0], u); this.z = lerp(A[1], B[1], u); this.h = A[2] + angDiff(A[2], B[2]) * u;
+    this.spd = damp(this.spd, B[3], 12, dt);
+    if (i >= Q.length - 1) this._path = null;
+    return true;
+  },
   _drive(dt, st, mx, mz, mag) {
     const G = this.geo;
     if (this.glide) {
@@ -425,6 +524,21 @@ const PL = {
     const x0 = this.x, z0 = this.z, h0 = this.h;
     const want = mag > 0 ? Math.atan2(mx, mz) : this.h;
     const a = angDiff(this.h, want), al = Math.abs(a);
+    this._mvx = mx; this._mvz = mz;
+    if (this._path) {
+      if (mag === 0 || Math.abs(angDiff(this._pathWant, want)) > 0.6) this._path = null;
+      else if (this._followPath(dt, G)) return this._afterMove(dt, st, G, x0, z0, h0, mag);
+      else this._planCool = 0;
+    }
+    this._planCool = (this._planCool || 0) - dt;
+    // the stick points well away from where the machine faces: plan the turn (a U-turn in the open, a 3-point turn in a tight street)
+    // (not on ice: there the old free turning is what makes the lovely drift)
+    const onIce = CH.ice && CH.ice(this.x, this.z);
+    if (mag > 0 && !(this.escape > 0) && al > 0.75 && this._planCool <= 0 && !onIce) {
+      const path = this._findMoves(want, mx, mz, st, G, 'turn');
+      if (path) { this._path = path; this._pathWant = want; if (this._followPath(dt, G)) return this._afterMove(dt, st, G, x0, z0, h0, mag); }
+      else this._planCool = 0.3;
+    }
     const esc = this.escape > 0;
     let target = mag === 0 ? 0 : st.spd * mag * (al < 0.35 ? 1 : al < 1.1 ? 1 - (al - 0.35) * 1.05 : 0.15);
     if (esc) { this.escape -= dt; target = -2.6; }
@@ -438,11 +552,13 @@ const PL = {
     let moved = false, turned = false;
     const L0 = -G.rear, L1 = G.carve, P = this._piv || (this._piv = [0.5, 0.2, 0.8, 0.35, 0.65, 0.05, 0.95]);
     const pivotPose = (sh, f) => { const m = L0 + (L1 - L0) * f; return [this.x + (fx0 - fx) * m + fz * sh, this.z + (fz0 - fz) * m - fx * sh]; };
-    // 1) turn while driving (around whichever point fits)
+    // 1) turn while driving (around whichever point fits); fast sweeps also check the half-way pose (no jumping fences)
+    const sweep = Math.abs(yaw * dt) * (Math.hypot(G.carve, this._bwF != null ? this._bwF : G.halfW) + 0.5) + Math.abs(step) > 0.16;
+    const halfOK = (rx, rz) => { if (!sweep) return true; const hh = this.h + yaw * dt * 0.5, m = [this.x * 0.5 + (rx + fx * step) * 0.5, this.z * 0.5 + (rz + fz * step) * 0.5]; return this.truckFree(m[0], m[1], hh); };
     if (Math.abs(yaw) > 0.02) {
       outer: for (const sh of [0, 0.12, -0.12]) for (const f of P) {
         const [rx, rz] = pivotPose(sh, f);
-        if (this.truckFree(rx + fx * step, rz + fz * step, nh)) { this.x = rx + fx * step; this.z = rz + fz * step; this.h = nh; moved = turned = true; break outer; }
+        if (this.truckFree(rx + fx * step, rz + fz * step, nh) && halfOK(rx, rz)) { this.x = rx + fx * step; this.z = rz + fz * step; this.h = nh; moved = turned = true; break outer; }
       }
     } else if (this.truckFree(this.x + fx0 * step, this.z + fz0 * step, this.h)) { this.x += fx0 * step; this.z += fz0 * step; moved = true; }
     // 2) roughly the right way but the turn does not fit: keep driving straight / slide along the edge (keeps speed)
@@ -461,43 +577,57 @@ const PL = {
           if (this.truckFree(nx, nz, this.h)) { this.x = nx; this.z = nz; this.spd = Math.max(this.spd * 0.95, 1.0); moved = true; }
         }
       }
+      // slide along an edge (only when that really goes somewhere: no invisible creeping)
       if (moved) { }
-      else if (this.truckFree(this.x + fx0 * step, this.z, this.h)) { this.x += fx0 * step; this.spd *= 0.9; moved = true; }
-      else if (this.truckFree(this.x, this.z + fz0 * step, this.h)) { this.z += fz0 * step; this.spd *= 0.9; moved = true; }
+      else if (Math.abs(fx0) > 0.3 && this.truckFree(this.x + fx0 * step, this.z, this.h)) { this.x += fx0 * step; this.spd *= 0.9; moved = true; }
+      else if (Math.abs(fz0) > 0.3 && this.truckFree(this.x, this.z + fz0 * step, this.h)) { this.z += fz0 * step; this.spd *= 0.9; moved = true; }
     }
     // 3) facing the wrong way (or blocked): turn on the spot, sliding a little sideways toward open space if needed
     if (!moved && Math.abs(yaw) > 0.02) {
+      const hh = this.h + yaw * dt * 0.5;
       outer2: for (const sh of [0, 0.12, -0.12, 0.25, -0.25, 0.4, -0.4]) for (const f of P) {
         const [rx, rz] = pivotPose(sh, f);
-        if (this.truckFree(rx, rz, nh)) { this.x = rx; this.z = rz; this.h = nh; this.spd *= 0.6; turned = true; break outer2; }
+        if (this.truckFree(rx, rz, nh) && (!sweep || this.truckFree((this.x + rx) * 0.5, (this.z + rz) * 0.5, hh))) { this.x = rx; this.z = rz; this.h = nh; this.spd *= 0.6; turned = true; break outer2; }
       }
     }
     if (!moved && !turned) { if (Math.abs(this.spd) > 2.5) { CAM.shake = 0.2; AUD.thump(); } this.spd = 0; }
     const blocked = mag > 0 && !turned && (al >= 0.9 || !moved);
     // never stuck: when pushing but blocked, wiggle free; if that fails, back up a little so the turn fits
-    if (mag > 0 && !esc && (blocked || (Math.abs(this.spd) < 0.25 && al < 0.6))) {
+    // stuck = pushing the stick but not getting anywhere along it (measured, so slow creeping counts too)
+    const crawl = mag > 0.5 && al < 0.9 && (this._progRate == null ? 1 : this._progRate) < 0.35 && !(CH.ice && CH.ice(this.x, this.z));
+    if (mag > 0 && !esc && (blocked || crawl || (Math.abs(this.spd) < 0.25 && al < 0.6))) {
       this.stuckT = (this.stuckT || 0) + dt;
-      if (this.stuckT > 0.3) {
-        let okw = false;
-        const piv = this.h + clamp(a, -1, 1) * turn * dt * 2;
-        for (let k = 0; k < 16 && !okw; k++) {
-          const ang = k / 16 * TAU, d = 0.12 + (k % 4) * 0.08, ox = this.x + Math.sin(ang) * d, oz = this.z + Math.cos(ang) * d;
-          if (this.truckFree(ox, oz, piv)) { this.x = ox; this.z = oz; this.h = piv; okw = true; }
-        }
-        if (okw) this.stuckT = 0.2;
-        else if (this.stuckT > 0.5) { this.escape = 0.7; this.stuckT = 0; }
+      const D = this._dtry;
+      // one search per spot / stick direction (it is cheap, but no need to repeat it every frame)
+      if (this.stuckT > 0.2 && (!D || Math.abs(angDiff(D.w, want)) > 0.5 || Math.hypot(D.x - this.x, D.z - this.z) > 1.2)) {
+        this._dtry = { w: want, x: this.x, z: this.z };
+        const path = this._findMoves(want, mx, mz, st, G, 'go');
+        if (path) { this._path = path; this._pathWant = want; this.stuckT = 0; }
       }
+      // backing up only helps when a turn is needed (pushing straight into a wall just stops)
+      if (this.stuckT > 0.7) { if (al > 0.5) this.escape = 0.6; this.stuckT = 0; }
     } else if (!esc) this.stuckT = 0;
+    return this._afterMove(dt, st, G, x0, z0, h0, mag);
+  },
+  _afterMove(dt, st, G, x0, z0, h0, mag) {
     // ice: the machine keeps sliding the way it was going; grip pulls it back in line (the ice machine grips best)
     const dt1 = Math.max(dt, 1e-3);
-    if (CH.ice && CH.ice(x0, z0) && !this.escape) {
+    if (CH.ice && CH.ice(x0, z0) && !this.escape && !this._path) {
       const gk = 1 - Math.exp(-(G.grip || 2.0) * dt), wx = this.x - x0, wz = this.z - z0;
       const vx = lerp((this.svx || 0) * dt, wx, gk), vz = lerp((this.svz || 0) * dt, wz, gk);
       if (this.truckFree(x0 + vx, z0 + vz, this.h)) { this.x = x0 + vx; this.z = z0 + vz; }
     }
     this.svx = (this.x - x0) / dt1; this.svz = (this.z - z0) / dt1;
+    // how fast are we really getting where the stick points (for the stuck check)
+    if (mag > 0) { const mv = this._mvx != null ? this.svx * this._mvx + this.svz * this._mvz : 1; this._progRate = damp(this._progRate == null ? 1 : this._progRate, mv, 3, dt); } else this._progRate = null;
+    // going nowhere for a while (pushing, but less than a metre of travel in 2 s): last resort, glide to the nearest roomy spot
+    if (mag > 0.4 && !this.glide && !this._path) {
+      const A = this._anc || (this._anc = { x: this.x, z: this.z, t: 0 });
+      if (Math.hypot(this.x - A.x, this.z - A.z) > 1.0) { A.x = this.x; A.z = this.z; A.t = 0; }
+      else if ((A.t += dt) > 3.2 && this._dtry && Math.hypot(this._dtry.x - this.x, this._dtry.z - this.z) < 1.2) { A.t = 0; this._dtry = null; if (this._trapped(G)) this.unstick(); }
+    } else if (this._anc) this._anc.t = 0;
     // pinned? (pushing the stick but nothing moves for a while)
-    if (mag > 0 && Math.abs(this.x - x0) + Math.abs(this.z - z0) < 0.002 && Math.abs(angDiff(h0, this.h)) < 0.002) { this.pinT = (this.pinT || 0) + dt; if (this.pinT > 0.9) { this.pinT = 0; this.unstick(); } }
+    if (mag > 0 && Math.abs(this.x - x0) + Math.abs(this.z - z0) < 0.002 && Math.abs(angDiff(h0, this.h)) < 0.002) { this.pinT = (this.pinT || 0) + dt; if (this.pinT > 0.9) { this.pinT = 0; if (this._trapped(G)) this.unstick(); } }
     else this.pinT = 0;
     this.slideLat = this.svx * Math.cos(this.h) - this.svz * Math.sin(this.h);
     this.rev = this.spd < -0.2;

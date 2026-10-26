@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Plow Town</title>
+<title>Plow Crew</title>
 <style>
 /*FONTS*/
 :root{--ink:#2b3a55;--ink2:#53627d;--gold:#ffc23d;--org:#ff8a1e;--grn:#2fb36a;--red:#e5483c;--card:#ffffff;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;height:100%;overflow:hidden;background:#cfe0f1;touch-action:none;-webkit-user-select:none;user-select:none;font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
+html,body{margin:0;height:100%;overflow:hidden;background:#cfe0f1;touch-action:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;}
 canvas#fx2d{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20;}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10;}
@@ -88,15 +88,16 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #loadTag.paid{animation:paid .35s ease-out;}
 @keyframes paid{0%{transform-origin:center}40%{filter:brightness(1.3)}100%{filter:none}}
 #loadTag b{font-family:'Baloo 2',sans-serif;font-size:14px;line-height:16px;}
-#streak{position:absolute;left:0;top:0;display:none;align-items:center;gap:2px;padding:3px 10px 3px 4px;border-radius:999px;background:linear-gradient(180deg,#ffbe45,#ff8a1e);color:#fff;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px;line-height:1;text-shadow:0 2px 0 rgba(160,60,0,.35);box-shadow:0 3px 0 #d0600a,0 6px 14px rgba(255,122,26,.45);}
-#streak.on{display:flex;}
+#streak{position:absolute;left:0;top:0;display:none;}
+#streak.on{display:block;}
+#streak .in{position:relative;display:flex;align-items:center;gap:2px;padding:3px 10px 3px 4px;border-radius:999px;background:linear-gradient(180deg,#ffbe45,#ff8a1e);color:#fff;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px;line-height:1;text-shadow:0 2px 0 rgba(160,60,0,.35);box-shadow:0 3px 0 #d0600a,0 6px 14px rgba(255,122,26,.45);}
 #streak .fl{width:22px;height:22px;display:block;}#streak .fl svg{width:100%;height:100%;display:block;}
 #streak b{padding-top:2px;}
 #streak .hb{position:absolute;left:12px;right:12px;bottom:-7px;height:4px;border-radius:2px;background:rgba(43,58,85,.25);overflow:hidden;}
 #streak .hb i{display:block;height:100%;background:#fff;border-radius:2px;}
-#streak.l2{background:linear-gradient(180deg,#ff8a64,#ea3a2a);box-shadow:0 3px 0 #a8221a,0 6px 16px rgba(234,58,42,.5);}
-#streak.l3{background:linear-gradient(180deg,#e88aff,#9a3ae8);box-shadow:0 3px 0 #62209e,0 6px 18px rgba(170,70,240,.55);}
-#streak.pop{animation:spop .45s ease-out;}
+#streak.l2 .in{background:linear-gradient(180deg,#ff8a64,#ea3a2a);box-shadow:0 3px 0 #a8221a,0 6px 16px rgba(234,58,42,.5);}
+#streak.l3 .in{background:linear-gradient(180deg,#e88aff,#9a3ae8);box-shadow:0 3px 0 #62209e,0 6px 18px rgba(170,70,240,.55);}
+#streak.pop .in{animation:spop .45s ease-out;}
 @keyframes spop{0%{scale:.4}45%{scale:1.4}100%{scale:1}}
 #streak.cold .fl{animation:sblink .32s infinite;}
 #streak.cold .hb i{background:#ffe1dc;}
@@ -239,7 +240,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   <div id="tools"></div>
   <div id="ups"></div>
   <div id="loadTag"><span class="ci"></span><div class="lb"><i></i></div><b></b></div>
-  <div id="streak"><span class="fl"></span><b>x2</b><div class="hb"><i></i></div></div>
+  <div id="streak"><div class="in"><span class="fl"></span><b>x2</b><div class="hb"><i></i></div></div></div>
   <div id="hint"></div>
   <div id="toast"></div>
   <div id="banner"></div>
@@ -249,8 +250,9 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   <button id="btnMap" aria-label="chapters"></button>
 </div>
 <div id="chIntro" class="chov"></div><div id="chRes" class="chov"></div><div id="chMap" class="chov"></div><div id="chFade"></div>
-<div id="loading"><div class="flakes" id="flakes"></div><div class="logo">PLOW TOWN<small>SNOW CREW</small></div><div class="lbar"><i id="loadbar"></i></div><div id="loadmsg">Loading the town…</div></div>
+<div id="loading"><div class="flakes" id="flakes"></div><div class="logo">PLOW CREW<small>SNOW DAY RUSH</small></div><div class="lbar"><i id="loadbar"></i></div><div id="loadmsg">Loading the town…</div></div>
 <script>(function(){var f=document.getElementById('flakes');for(var i=0;i<40;i++){var e=document.createElement('i');var s=3+Math.random()*7;e.style.left=Math.random()*100+'%';e.style.width=e.style.height=s+'px';e.style.animationDuration=(4+Math.random()*6)+'s';e.style.animationDelay=(-Math.random()*8)+'s';f.appendChild(e);}})();</script>
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="vendor/artlib.js"></script>
 <script>

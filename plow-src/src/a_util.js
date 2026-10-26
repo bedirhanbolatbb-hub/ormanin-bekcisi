@@ -49,9 +49,10 @@ function fmt(n) {
 
 // ---- storage (safe) ----
 const STORE = {
-  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
-  del(k) { try { localStorage.removeItem(k); } catch (e) { } }
+  // the CrazyGames account copy wins when there is one; this browser keeps a copy too
+  get(k) { const c = CG.get(k); if (c != null) return c; try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { CG.set(k, v); try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k) { CG.call(s => s.data.removeItem(k)); try { localStorage.removeItem(k); } catch (e) { } }
 };
 
 // ---- geometry merge (static decor) ----
@@ -102,15 +103,20 @@ function bakeGeom(geo, mat4) {
 const XRAY = { uP: { value: new THREE.Vector2() }, uD: { value: 0 }, uA: { value: 1 }, uR: { value: 0.16 }, uRes: { value: new THREE.Vector2(1, 1) } };
 function xray(mat) {
   if (!mat || mat.userData.xr || !mat.isMeshStandardMaterial) return;
-  mat.userData.xr = 1;
+  mat.userData.xr = 1; const tall = !!mat.userData.xtall;
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uXP = XRAY.uP; sh.uniforms.uXD = XRAY.uD; sh.uniforms.uXA = XRAY.uA; sh.uniforms.uXR = XRAY.uR; sh.uniforms.uXRes = XRAY.uRes;
     sh.fragmentShader = sh.fragmentShader.replace('void main() {', `uniform vec2 uXP; uniform float uXD; uniform float uXA; uniform float uXR; uniform vec2 uXRes;
 void main() {
   { vec2 q = gl_FragCoord.xy / uXRes * 2.0 - 1.0; vec2 dq = (q - uXP) * vec2(uXA, 1.0); float rr = length(dq);
+    float b = (mod(floor(gl_FragCoord.x), 2.0) * 2.0 + mod(floor(gl_FragCoord.y), 2.0) + mod(floor(gl_FragCoord.x*0.5)+floor(gl_FragCoord.y*0.5),2.0)*0.5) / 3.5 + 0.08;
+    // anything right in front of the lens (a lift tower, a roof corner) fades away too, wherever it is on screen
+    float nf = 1.0 - smoothstep(uXD * 0.32, uXD * 0.52, vViewPosition.z);
+    if (b < nf * 0.92) discard;
     if (rr < uXR && vViewPosition.z < uXD - 0.8) { float f = 1.0 - smoothstep(uXR * 0.5, uXR, rr);
-      float b = (mod(floor(gl_FragCoord.x), 2.0) * 2.0 + mod(floor(gl_FragCoord.y), 2.0) + mod(floor(gl_FragCoord.x*0.5)+floor(gl_FragCoord.y*0.5),2.0)*0.5) / 3.5 + 0.08;
-      if (b < f * 0.92) discard; } }`);
+      if (b < f * 0.92) discard; }${tall ? `
+    // huge set pieces (a giant arch, lift towers): see-through whenever they stand between the camera and you
+    if (vViewPosition.z < uXD - 1.0 && b < 0.7) discard;` : ''} }`);
   };
-  mat.customProgramCacheKey = () => 'xray1';
+  mat.customProgramCacheKey = () => tall ? 'xray2t' : 'xray2';
 }

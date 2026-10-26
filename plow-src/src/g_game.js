@@ -71,7 +71,7 @@ const GAME = {
     const sub = had ? 'Your machine is back!' : T.gift ? 'A gift from the town!' : 'x' + T.pay + ' coins!';
     UI.banner(T.name.toUpperCase() + '!', sub, t, T.gift ? 3.2 : 2.2);
     if (T.kind === 'truck') AUD.horn();
-    if (!had && !QS.has('bot')) CAM.heroShot(2.2);
+    if (!had && (!QS.has('bot') || QS.has('vid'))) CAM.heroShot(2.2);
     UI.unhint('New tool ready'); UI.refreshTools(); this.save();
     return true;
   },
@@ -141,13 +141,13 @@ const GAME = {
   },
   // ---- chapter flow ----
   finishChapter() {
-    this.ended = true; STREAK.reset(); AUD.hype = 0;
+    this.ended = true; STREAK.reset(); AUD.hype = 0; CG.happy();
     const st = this.time <= CH.par[0] ? 3 : this.time <= CH.par[1] ? 2 : 1;
     const rec = this.chapters[CH.id] || (this.chapters[CH.id] = { stars: 0, best: 0 });
     this.lastStars = st; this.lastNew = st > rec.stars;
     rec.stars = Math.max(rec.stars, st); rec.best = rec.best ? Math.min(rec.best, this.time) : this.time; rec.done = 1;
     if (CH.finale) CH.finale();
-    if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
+    if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam') || QS.has('vid'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
     this.finishT = CH.finaleDelay || 5.5;
     this.save();
   },
@@ -200,7 +200,8 @@ const GAME = {
       this.time = o.time || 0; this.done = o.done || {}; this.ended = !!o.ended;
       if (o.snow) { SNOW.deserialize(o.snow); SNOW.finalizeAreas(); SNOW.markAll(); }
       if (o.tr) TREASURE.list.forEach((t, i) => { if (o.tr[i] === '1') { t.found = t.gone = true; t.mesh.visible = false; } });
-      for (const a of SNOW.areas) if (a && this.done[a.key]) this.completeArea(a, true);
+      // (one chapter hook failing must not throw the whole saved game away)
+      for (const a of SNOW.areas) if (a && this.done[a.key]) { try { this.completeArea(a, true); } catch (e) { console.warn('restore', a.key, e); } }
       if (CH.load && o.extra) CH.load(o.extra);
       PL.load = o.load || 0;
       PL.x = o.x; PL.z = o.z; PL.h = o.h || Math.PI;

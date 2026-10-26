@@ -99,7 +99,7 @@ const CH_RESORT = {
     for (const [k, x, z] of [['car_blue', 18.5, 47], ['car_white', 18.6, 52], ['camper', -18.8, 56]]) { const c = place(k, x, z, Math.PI / 2, 1, yardY(x, z) - 0.25); scene.add(c); }
     // ---- finish area: arch, bleachers, scoreboard, gates on the course (under the snow until groomed) ----
     // a giant finish arch spanning the whole course (its posts stand just outside it)
-    decor('finisharch', 0, 4.4, 0, 3.0, 0);
+    decorTall('finisharch', 0, 4.4, 0, 3.0, 0);
     for (const sx of [-1, 1]) SNOW.paint(sx * 12.35, 3.7, sx * 13.6, 5.1, (k) => { if (T[k] === 1) { T[k] = 2; H[k] = 0; } else if (T[k] === 0) T[k] = 2; });
     for (const [x, z] of [[-21.6, 10], [21.6, 10]]) decor('bleacher', x, z, x < 0 ? Math.PI / 2 : -Math.PI / 2, 1.7, yardY(x, z));
     decor('scoreboard', -21.5, 1.5, Math.PI / 2, 1.3, yardY(-21.5, 1.5));

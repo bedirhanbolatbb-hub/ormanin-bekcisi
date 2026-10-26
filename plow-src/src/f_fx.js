@@ -12,7 +12,8 @@ const FX = {
     this.coinMesh.castShadow = false; scene.add(this.coinMesh);
     // clumps
     this.clumpGeo = new THREE.IcosahedronGeometry(1, 0);
-    this.clumpMat = new THREE.MeshStandardMaterial({ color: 0xf8fbff, roughness: 0.8, flatShading: true });
+    // (a little self-glow keeps the thrown clumps snow-white in shade and at dusk, never like grey rocks)
+    this.clumpMat = new THREE.MeshStandardMaterial({ color: 0xf8fbff, roughness: 0.8, flatShading: true, emissive: 0x8a93a8, emissiveIntensity: 0.55 });
     this.clumpPool = [];
     // weather
     this._weather(scene);

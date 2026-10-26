@@ -196,6 +196,7 @@ const CH_SCHOOL = {
   onDone(a, silent) {
     const g = GOALS.find(g => g.a === a.key);
     if (g && g.leg) {
+      if (!this.released) this.released = {};  // (a resumed game restores the chapter before begin() ran)
       if (!silent && this.curLeg === g.leg && this.legT > 0 && !this.released[g.leg]) {
         // beat the bus: bonus for the seconds left on the clock
         const bonus = niceNum(Math.max(30, this.legT * GAME.price() * 7));

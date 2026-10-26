@@ -150,6 +150,16 @@ function decor(key, x, z, rotY, s, y, opts) {
   o.traverse(c => { if (c.isMesh) DECOR.items.push({ geo: c.geometry, mat: c.material, m: c.matrixWorld.clone(), cast: !(opts && opts.noShadow) }); });
   return o;
 }
+// a huge set piece that turns see-through when it stands between the camera and the player
+function decorTall(key, x, z, rotY, s, y, opts) {
+  const o = place(key, x, z, rotY, s, y);
+  o.traverse(c => { if (c.isMesh) { const m = c.material.clone(); m.userData = { xtall: 1 }; xray(m); c.material = m; } });
+  o.updateMatrixWorld(true);
+  { const bb = new THREE.Box3().setFromObject(o); if (bb.max.y > 1.4 && bb.max.x - bb.min.x < 70 && bb.max.z - bb.min.z < 70) WORLD.occ.push(bb); }
+  if (opts && opts.solid !== undefined) solidUnder(o, opts.solid, opts.paved);
+  o.traverse(c => { if (c.isMesh) DECOR.items.push({ geo: c.geometry, mat: c.material, m: c.matrixWorld.clone(), cast: !(opts && opts.noShadow) }); });
+  return o;
+}
 function flushDecor(scene) {
   const groups = new Map();
   for (const it of DECOR.items) { const k = it.mat.uuid + (it.cast ? 'c' : 'n'); if (!groups.has(k)) groups.set(k, { mat: it.mat, list: [], cast: it.cast }); groups.get(k).list.push(bakeGeom(it.geo, it.m)); }

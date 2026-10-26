@@ -372,6 +372,7 @@ async function loadArt(name) {
 async function boot() {
   const lb = $('loadbar');
   const t0 = performance.now();
+  await CG.init(); CG.loadingStart();
   renderer = new THREE.WebGLRenderer({ canvas: $('c'), antialias: !IS_MOBILE, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, IS_MOBILE ? 1.6 : 2));
   renderer.setSize(innerWidth, innerHeight);
@@ -411,7 +412,7 @@ async function boot() {
   UI.init();
   CHUI.init();
   INPUT.init($('c'));
-  if (QS.has('bot')) { BOT.init(); window.__hold = true; }
+  if (QS.has('bot')) { BOT.init(); window.__hold = !QS.has('vid'); }
   lb.style.width = '100%';
   CAM.update(0, true);
   if (!resumed && !QS.has('bot') && !QS.has('nointro')) { CAM.intro = 1; setTimeout(() => CHUI.intro(), 700); }
@@ -419,15 +420,23 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) GAME.save(); if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
   // warm up shaders
   renderer.compile(scene, CAM.cam);
-  setTimeout(() => { $('loading').classList.add('off'); }, 150);
+  setTimeout(() => { $('loading').classList.add('off'); CG.loadingStop(); }, 150);
+  // iOS wants a touchend / click to wake the sound up again
+  for (const ev of ['touchend', 'click']) addEventListener(ev, () => AUD.init(), { passive: true });
   if (!resumed) CH.firstHint = IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag';
   else UI.hint('Welcome back!', 2.5);
   console.log('boot ms', Math.round(performance.now() - t0));
   window.__ready = true;
-  window.__render = () => { SNOW.flush(); CAM.update(0, true); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
+  window.__render = () => { SNOW.flush(); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
   window.__step = (n, dt) => { for (let i = 0; i < n; i++) step(dt || 1 / 30); };
   last = performance.now();
   requestAnimationFrame(frame);
+}
+// x-ray uniforms (player screen pos & depth)
+function updXray() {
+  const v = XRAY._v || (XRAY._v = new V3()); v.set(PL.x, PL.kind === 'truck' ? 1.2 : 0.6, PL.z).project(CAM.cam); XRAY.uP.value.set(v.x, v.y);
+  const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse); XRAY.uD.value = -w.z;
+  XRAY.uA.value = innerWidth / innerHeight; XRAY.uR.value = PL.kind === 'truck' ? 0.2 + PL.geo.halfW * 0.05 : 0.15; renderer.getDrawingBufferSize(XRAY.uRes.value);
 }
 function placeSun() { const s = WORLD.sun, so = WORLD.env.sunOff; s.position.set(CAM.x + so[0], so[1], CAM.z + so[2]); s.target.position.set(CAM.x, 0, CAM.z - 4); s.target.updateMatrixWorld(); }
 function onResize() {
@@ -437,7 +446,7 @@ function onResize() {
 let last = 0, frameN = 0;
 const FAST = QS.has('fast') ? Math.max(1, +QS.get('fast')) : 1;
 function step(dt) {
-  const inp = QS.has('bot') ? BOT.get(dt) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : INPUT.get());
+  const inp = QS.has('bot') ? (CAM.hero > 0.35 ? { x: 0, y: 0 } : BOT.get(dt)) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : INPUT.get());
   if (CAM.intro > 0 && (Math.abs(inp.x) + Math.abs(inp.y) > 0 || INPUT.joy.active)) CAM.intro = Math.min(CAM.intro, 0.05);
   PL.update(dt, inp);
   GAME.update(dt);
@@ -451,6 +460,7 @@ function step(dt) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
+  CG.play(!CHUI.open && !document.hidden && CAM.intro <= 0.05 && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (dt <= 0) return;
@@ -460,10 +470,7 @@ function frame(now) {
   CAM.update(dt);
   if (scene.fog) { const k = Math.max(0, CAM.intro), E = WORLD.env; scene.fog.near = E.fogNear + k * 80; scene.fog.far = E.fogFar + k * 160; }
   GUIDE.update(dt);
-  // x-ray uniforms (player screen pos & depth)
-  { const v = XRAY._v || (XRAY._v = new V3()); v.set(PL.x, PL.kind === 'truck' ? 1.2 : 0.6, PL.z).project(CAM.cam); XRAY.uP.value.set(v.x, v.y);
-    const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse); XRAY.uD.value = -w.z;
-    XRAY.uA.value = innerWidth / innerHeight; XRAY.uR.value = PL.kind === 'truck' ? 0.2 + PL.geo.halfW * 0.05 : 0.15; renderer.getDrawingBufferSize(XRAY.uRes.value); }
+  updXray();
   placeSun();
   FX.center.set(CAM.x, 0, CAM.z);
   AUD.update(dt, { scrape: clamp(PL.carveRate / (PL.kind === 'truck' ? 9 : PL.kind === 'blower' ? 3 : 1.6), 0, 1), tool: PL.kind, move: PL.moveAmt, blowing: PL.blowing });

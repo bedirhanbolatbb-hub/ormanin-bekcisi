@@ -1,6 +1,8 @@
 // ---------- procedural audio (no files) ----------
 const AUD = {
-  ctx: null, ok: false, muted: false, musicOn: true,
+  ctx: null, ok: false, _um: false, musicOn: true,
+  // your own mute button, or the CrazyGames site setting
+  get muted() { return this._um || (typeof CG !== 'undefined' && CG.mute); }, set muted(v) { this._um = !!v; },
   init() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     try {
@@ -44,7 +46,7 @@ const AUD = {
     s.connect(fl); fl.connect(g); g.connect(this.sfx); s.start(0, Math.random());
     return { s, f: fl, g };
   },
-  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.05); },
+  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : 0.9, this.ctx.currentTime, 0.05); },
   // ------- continuous: called every frame -------
   _grainAcc: 0,
   update(dt, st) {
