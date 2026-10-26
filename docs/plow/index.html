@@ -116,6 +116,8 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #toast.on{opacity:1;}
 #banner{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%) scale(.5);text-align:center;opacity:0;pointer-events:none;}
 #banner.on{animation:bnr 2.3s forwards;}
+/* with the bus clock on screen the banner sits a little lower, clear of it */
+#hud:has(#timer.on) #banner{top:33%;}
 @keyframes bnr{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}20%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
 .bn-ico{width:64px;height:64px;margin:0 auto -4px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.25));}
 .bn-ico svg{width:100%;height:100%;}
@@ -248,6 +250,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   #goal{padding:5px 12px 5px 7px;}
   #goalIco{width:32px;height:32px;}
   .bn-t{font-size:34px;}
+  #hud:has(#timer.on) #banner{top:39%;}
   /* the chapter card needs the whole height there */
   #goal{transition:opacity .35s;} body.chsoft #goal{opacity:0;}
 }
@@ -5236,13 +5239,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4.6'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.7'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.6'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.7'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
