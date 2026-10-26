@@ -374,6 +374,8 @@ async function loadArt(name) {
 async function boot() {
   const lb = $('loadbar');
   const t0 = performance.now();
+  // the town art downloads while the CrazyGames SDK starts up
+  const townP = loadArt(); townP.catch(() => { });
   await CG.init(); CG.loadingStart();
   renderer = new THREE.WebGLRenderer({ canvas: $('c'), antialias: !IS_MOBILE, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, IS_MOBILE ? 1.6 : 2));
@@ -389,7 +391,7 @@ async function boot() {
   // scenes are keyed by their name in the file (three.js renames scenes that clash with node names)
   const addArt = g => g.scenes.forEach((s, i) => { WORLD.art[(g.parser.json.scenes[i] || {}).name || s.name] = s; });
   WORLD.art = {};
-  const packs = await Promise.all([loadArt(), CH.pack ? loadArt(CH.pack) : null]);
+  const packs = await Promise.all([townP, CH.pack ? loadArt(CH.pack) : null]);
   for (const g of packs) if (g) addArt(g);
   lb.style.width = '70%';
   buildWorld(scene);
@@ -470,7 +472,8 @@ function step(dt) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
-  CG.play(!CHUI.busy() && !document.hidden && CAM.intro <= 0.05 && $('loading').classList.contains('off'));
+  // you can play the moment the town shows (the chapter card and the fly-in never block): that is gameplay for CrazyGames
+  CG.play(!CHUI.open && !document.hidden && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (dt <= 0) return;

@@ -5236,18 +5236,20 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4.5'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.6'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.5'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.6'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
   const lb = $('loadbar');
   const t0 = performance.now();
+  // the town art downloads while the CrazyGames SDK starts up
+  const townP = loadArt(); townP.catch(() => { });
   await CG.init(); CG.loadingStart();
   renderer = new THREE.WebGLRenderer({ canvas: $('c'), antialias: !IS_MOBILE, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, IS_MOBILE ? 1.6 : 2));
@@ -5263,7 +5265,7 @@ async function boot() {
   // scenes are keyed by their name in the file (three.js renames scenes that clash with node names)
   const addArt = g => g.scenes.forEach((s, i) => { WORLD.art[(g.parser.json.scenes[i] || {}).name || s.name] = s; });
   WORLD.art = {};
-  const packs = await Promise.all([loadArt(), CH.pack ? loadArt(CH.pack) : null]);
+  const packs = await Promise.all([townP, CH.pack ? loadArt(CH.pack) : null]);
   for (const g of packs) if (g) addArt(g);
   lb.style.width = '70%';
   buildWorld(scene);
@@ -5344,7 +5346,8 @@ function step(dt) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
-  CG.play(!CHUI.busy() && !document.hidden && CAM.intro <= 0.05 && $('loading').classList.contains('off'));
+  // you can play the moment the town shows (the chapter card and the fly-in never block): that is gameplay for CrazyGames
+  CG.play(!CHUI.open && !document.hidden && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (dt <= 0) return;
