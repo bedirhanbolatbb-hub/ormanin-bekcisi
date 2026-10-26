@@ -2,16 +2,18 @@
 const INPUT = {
   keys: {}, joy: { active: false, id: null, ox: 0, oy: 0, dx: 0, dy: 0, show: false },
   init(el) {
-    addEventListener('keydown', e => { this.keys[e.code] = 1; AUD.init(); GAME.started = true; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); });
+    addEventListener('keydown', e => { this.keys[e.code] = 1; AUD.init(); GAME.started = true; if (CHUI.introUp) CHUI.introGo(true); if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); });
     addEventListener('keyup', e => { this.keys[e.code] = 0; });
     addEventListener('blur', () => { this.keys = {}; this.joy.active = false; });
     const J = this.joy, R = 52;
-    el.addEventListener('pointerdown', e => {
-      AUD.init(); GAME.started = true;
+    // a touch starts the stick (also when it lands on the chapter card's button: then you can drive straight away)
+    this.start = (e) => {
+      AUD.init(); GAME.started = true; if (CHUI.introUp) CHUI.introGo(true);
       if (J.active) return;
       J.active = true; J.id = e.pointerId; J.ox = e.clientX; J.oy = e.clientY; J.dx = 0; J.dy = 0; J.show = e.pointerType !== 'mouse' || true;
       try { el.setPointerCapture(e.pointerId); } catch (_) { }
-    });
+    };
+    el.addEventListener('pointerdown', this.start);
     el.addEventListener('pointermove', e => {
       if (!J.active || e.pointerId !== J.id) return;
       let dx = (e.clientX - J.ox) / R, dy = (e.clientY - J.oy) / R; const l = Math.hypot(dx, dy);
@@ -437,7 +439,9 @@ async function boot() {
 // x-ray uniforms (player screen pos & depth)
 function updXray() {
   const v = XRAY._v || (XRAY._v = new V3()); v.set(PL.x, PL.kind === 'truck' ? 1.2 : 0.6, PL.z).project(CAM.cam); XRAY.uP.value.set(v.x, v.y);
-  const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse); XRAY.uD.value = -w.z;
+  const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse);
+  // the see-through is for finding your machine; in the finale shot the camera shows the big moment, so it fades out
+  XRAY.uD.value = -w.z * (CAM.show ? 1 - smooth(clamp(CAM.show.k || 0, 0, 1)) : 1);
   XRAY.uA.value = innerWidth / innerHeight; XRAY.uR.value = PL.kind === 'truck' ? 0.2 + PL.geo.halfW * 0.05 : 0.15; renderer.getDrawingBufferSize(XRAY.uRes.value);
 }
 function placeSun() { const s = WORLD.sun, so = WORLD.env.sunOff; s.position.set(CAM.x + so[0], so[1], CAM.z + so[2]); s.target.position.set(CAM.x, 0, CAM.z - 4); s.target.updateMatrixWorld(); }
@@ -448,8 +452,12 @@ function onResize() {
 let last = 0, frameN = 0;
 const FAST = QS.has('fast') ? Math.max(1, +QS.get('fast')) : 1;
 function step(dt) {
-  const inp = QS.has('bot') ? (CAM.hero > 0.35 ? { x: 0, y: 0 } : BOT.get(dt)) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : INPUT.get());
-  if (CAM.intro > 0 && (Math.abs(inp.x) + Math.abs(inp.y) > 0 || INPUT.joy.active)) CAM.intro = Math.min(CAM.intro, 0.05);
+  const bot = QS.has('bot'), raw = bot ? null : INPUT.get();
+  // the first touch / key ends the fly-in and the chapter card: you are playing right away
+  const wants = bot ? false : Math.abs(raw.x) + Math.abs(raw.y) > 0 || INPUT.joy.active;
+  if (wants && CHUI.introUp) CHUI.introGo(true);
+  const inp = bot ? (CAM.hero > 0.35 ? { x: 0, y: 0 } : BOT.get(dt)) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : raw);
+  if (CAM.intro > 0 && (wants || (bot && Math.abs(inp.x) + Math.abs(inp.y) > 0))) CAM.intro = Math.min(CAM.intro, 0.05);
   PL.update(dt, inp);
   GAME.update(dt);
   LIFE.update(dt);
@@ -462,7 +470,7 @@ function step(dt) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
-  CG.play(!CHUI.open && !document.hidden && CAM.intro <= 0.05 && $('loading').classList.contains('off'));
+  CG.play(!CHUI.busy() && !document.hidden && CAM.intro <= 0.05 && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (dt <= 0) return;

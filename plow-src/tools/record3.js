@@ -34,13 +34,15 @@ const sharp = require('sharp');
   });
   await page.goto('http://localhost:8765/?' + q);
   await page.waitForFunction(() => window.__ready, null, { timeout: 180000 });
-  await page.evaluate(([warm, pre]) => {
+  // WARMJS="sec|js": run some js at that moment of the warm-up (to stage a scene)
+  const wj = (process.env.WARMJS || '').split('|');
+  await page.evaluate(([warm, pre, wt, wjs]) => {
     window.__hold = true; const L = document.getElementById('loading'); if (L) L.style.display = 'none';
     window.__vclock.start();
     if (pre) eval(pre);
-    for (let i = 0; i < warm * 30; i++) { window.__vclock.adv(1000 / 30); step(1 / 30); CAM.update(1 / 30); UI.update(1 / 30); window.__vclock.freeze(); }
+    for (let i = 0; i < warm * 30; i++) { if (wjs && i === Math.round(wt * 30)) eval(wjs); window.__vclock.adv(1000 / 30); step(1 / 30); CAM.update(1 / 30); UI.update(1 / 30); window.__vclock.freeze(); }
     CAM.update(0, true);
-  }, [+(warm || 0), pre || '']);
+  }, [+(warm || 0), pre || '', +(wj[0] || 0), wj[1] || '']);
   let retries = 0;
   const SW = 480, SH = Math.round(480 * +H / +W);
   const small = (b) => sharp(b).resize(SW, SH).removeAlpha().raw().toBuffer();

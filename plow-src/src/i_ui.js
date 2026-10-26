@@ -212,6 +212,9 @@ const UI = {
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;
     el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
     clearTimeout(this._bnT); this._bnT = setTimeout(() => el.classList.remove('on'), (dur || 2.2) * 1000); this._bnUntil = performance.now() + (dur || 2.2) * 1000;
+    // where the banner sits at full size (its box is centred on top:%), so floating texts can keep out of its way
+    const w = el.offsetWidth, h = el.offsetHeight, cx = el.offsetLeft, cy = el.offsetTop;
+    this._bnRect = { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
   },
   bubble(text) { const d = document.createElement('div'); d.className = 'bubble'; d.textContent = text; $('bubbles').appendChild(d); return d; },
   placeBubble(d, wp, vis) {
@@ -222,11 +225,13 @@ const UI = {
   },
   // ---- floating texts (+coins, WIDER!, ...) ----
   texts: [],
-  floatText(wp, text, color, size) {
+  floatText(wp, text, color, size, key) {
+    // a keyed text replaces its fresh twin (tapping upgrades fast pops one word, not a tower of them)
+    if (key) for (let i = this.texts.length - 1; i >= 0; i--) if (this.texts[i].key === key && this.texts[i].t < 0.9) this.texts.splice(i, 1);
     // keep the WORLD position and project it every frame, so the text stays glued to the spot while the camera moves
     let stack = 0;
     for (const T of this.texts) if (T.t < 0.45 && Math.hypot(T.wx - wp.x, T.wz - wp.z) < 2.5) stack++;
-    this.texts.push({ wx: wp.x, wy: wp.y, wz: wp.z, oy: stack * 34, t: 0, d: 1.15, text, color: color || '#ffd34d', size: size || 28 });
+    this.texts.push({ wx: wp.x, wy: wp.y, wz: wp.z, oy: stack * 34, t: 0, d: 1.15, text, color: color || '#ffd34d', size: size || 28, key });
     if (this.texts.length > 24) this.texts.shift();
   },
   // ---- 2D coins flying to the counter ----
@@ -249,16 +254,32 @@ const UI = {
       g.globalAlpha = 0.9; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(J.ox + J.dx * 52, J.oy + J.dy * 52, 22, 0, TAU); g.fill();
       g.globalAlpha = 1;
     }
-    // floating texts
+    // floating texts: place them first...
+    const L = this._tl || (this._tl = []); L.length = 0;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
     for (let i = this.texts.length - 1; i >= 0; i--) {
       const T = this.texts[i]; const k = T.t / T.d; if (k >= 1) continue;
       const p = this._v.set(T.wx, T.wy, T.wz).project(CAM.cam); if (p.z > 1) continue;
       const sx = (p.x + 1) / 2 * innerWidth, sy = (1 - p.y) / 2 * innerHeight;
-      const sc = k < 0.15 ? easeOutBack(k / 0.15) : 1, a = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
-      g.font = `800 ${T.size}px "Baloo 2", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `800 ${T.size}px "Baloo 2", sans-serif`;
       // keep texts fully on screen (near the edges they slide inward)
       const hw = (T.w || (T.w = g.measureText(T.text).width + T.size * 0.4)) / 2, cx = innerWidth > hw * 2 + 16 ? clamp(sx, hw + 8, innerWidth - hw - 8) : innerWidth / 2;
-      g.save(); g.globalAlpha = a; g.translate(cx, Math.max(T.size * 0.7, sy - T.oy - 60 * easeOutCubic(k))); g.scale(sc, sc);
+      L.push({ T, k, cx, hw, y: Math.max(T.size * 0.7, sy - T.oy - 60 * easeOutCubic(k)), push: 0 });
+    }
+    // ...the ones that would rise into the big banner line up just below it instead (no pile-up behind the title)
+    const B = this._bnRect;
+    if (B && performance.now() < (this._bnUntil || 0) && L.length) {
+      const C = L.filter(o => o.cx + o.hw > B.x0 && o.cx - o.hw < B.x1 && o.y - o.T.size * 0.5 < B.y1).sort((a, b) => a.y - b.y);
+      let next = B.y1 + 4;
+      for (const o of C) { const y = next + o.T.size * 0.55; o.push = y - o.y; next = y + o.T.size * 0.55; }
+    }
+    // ...then draw (the push eases in and out, so nothing jumps)
+    for (const o of L) {
+      const T = o.T, k = o.k;
+      T.py = T.py == null || T.t < 0.05 ? o.push : damp(T.py, o.push, 12, dt || 0.016);
+      const sc = k < 0.15 ? easeOutBack(k / 0.15) : 1, a = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
+      g.font = `800 ${T.size}px "Baloo 2", sans-serif`;
+      g.save(); g.globalAlpha = a; g.translate(o.cx, o.y + T.py); g.scale(sc, sc);
       g.lineWidth = Math.max(4, T.size * 0.2); g.strokeStyle = '#2b3a55'; g.lineJoin = 'round'; g.strokeText(T.text, 0, 0);
       g.fillStyle = T.color; g.fillText(T.text, 0, 0); g.restore();
     }

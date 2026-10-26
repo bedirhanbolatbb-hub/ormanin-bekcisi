@@ -11,21 +11,47 @@ const STAR_SVG = (on) => `<svg viewBox="0 0 40 40"><path d="M20 3.5l5.1 10.4 11.
 const CHUI = {
   open: null,
   init() {
+    addEventListener('resize', () => this.refit());
     const b = $('btnMap'); if (b) { b.innerHTML = '<svg viewBox="0 0 40 40"><path d="M6 10l9-4 10 4 9-4v24l-9 4-10-4-9 4z" fill="#fff" stroke="#2b3a55" stroke-width="2.6" stroke-linejoin="round"/><path d="M15 6v24M25 10v24" stroke="#2b3a55" stroke-width="2.2"/><circle cx="20" cy="17" r="3" fill="#e5483c"/></svg>'; b.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.map(); }; }
   },
+  // the big cards always fit the screen (phones on their side, small game frames): shrink the whole card when needed
+  fit(el, room) {
+    const w = el && el.querySelector('.chwrap'); if (!w) return;
+    w.style.maxHeight = 'none'; w.style.transform = '';
+    const k = Math.min(1, innerHeight * (room || 0.96) / Math.max(1, w.offsetHeight));
+    if (k < 1) w.style.transform = `scale(${k.toFixed(3)})`;
+  },
+  refit() { if (this.introUp) this.fit($('chIntro'), 0.9); if (this.open === 'chRes') this.fit($('chRes')); },
   _show(id, html) {
     const el = $(id); el.innerHTML = html; el.classList.add('on'); this.open = id; INPUT.block = true;
     return el;
   },
   close(id) { const el = $(id); if (el) el.classList.remove('on'); if (this.open === id) this.open = null; INPUT.block = !!this.open; if (id === 'chRes' && CAM.show) CAM.show.out = true; },
-  // chapter start card (shown over the fly-in)
+  // a screen is up that should hold the clocks (a full overlay, or the chapter card at the start)
+  busy() { return !!this.open || this.introUp; },
+  introUp: false,
+  // chapter start card over the fly-in. It never stops you: start driving (or wait a moment) and it slides away.
   intro() {
-    const C = CH;
-    const el = this._show('chIntro', `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
+    const C = CH, el = $('chIntro');
+    el.innerHTML = `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
       <div class="chcard"><div class="chico">${CH_ICONS[C.key] || ''}</div><p>${C.intro}</p>${C.twist ? `<div class="chtwist">${C.twist}</div>` : ''}</div>
-      <button class="chgo" id="chGo">LET'S GO!</button></div>`);
-    $('chGo').onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.close('chIntro'); CAM.intro = Math.min(CAM.intro, 0.35); if (CH.firstHint) setTimeout(() => UI.hint(CH.firstHint, 5), 600); if (CH.onStart) CH.onStart(); if (CH.dailyGift) { const d = CH.dailyGift; CH.dailyGift = 0; setTimeout(() => DAILY.give(d), 1500); } };
+      <button class="chgo" id="chGo">LET'S GO!</button></div>`;
+    el.classList.remove('out'); el.classList.add('on', 'soft'); this.introUp = true; document.body.classList.add('chsoft'); this.fit(el, 0.9);
+    // the button starts it, but so does any touch, click or key (see INPUT); a drag from the button drives right away
+    $('chGo').onpointerdown = (e) => { e.stopPropagation(); INPUT.start(e); AUD.click(); };
+    clearTimeout(this._introT); this._introT = setTimeout(() => this.introGo(false), 4700);
     AUD.init && AUD.chapterIn && AUD.chapterIn();
+  },
+  introGo(moved) {
+    if (!this.introUp) return;
+    this.introUp = false; clearTimeout(this._introT); document.body.classList.remove('chsoft');
+    const el = $('chIntro'); el.classList.add('out'); setTimeout(() => { if (!this.introUp) el.classList.remove('on', 'soft', 'out'); }, 420);
+    CAM.intro = Math.min(CAM.intro, 0.35);
+    // only tell them how to move if they have not found out by themselves
+    const x0 = PL.x, z0 = PL.z;
+    if (CH.firstHint) setTimeout(() => { if (Math.hypot(PL.x - x0, PL.z - z0) < 0.3) UI.hint(CH.firstHint, 5); }, moved ? 1500 : 600);
+    if (CH.onStart) CH.onStart();
+    if (CH.dailyGift) { const d = CH.dailyGift; CH.dailyGift = 0; setTimeout(() => DAILY.give(d), 1500); }
   },
   // the big "chapter complete" moment
   results() {
@@ -39,6 +65,7 @@ const CHUI = {
       <div class="stars">${[0, 1, 2].map(i => `<div class="st st${i}" id="st${i}">${STAR_SVG(false)}</div>`).join('')}</div>
       <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}${comeBack}</div>
       ${next ? '<button class="chgo" id="chNext">NEXT CHAPTER</button>' : ''}<button class="chlink" id="chStay">${next ? 'Stay here and plow the storms' : 'Keep playing'}</button></div>`);
+    this.fit(el);
     // stars pop in one by one, then the bonus coins shower into your counter
     for (let i = 0; i < 3; i++) setTimeout(() => {
       const s = $('st' + i); if (!s) return;

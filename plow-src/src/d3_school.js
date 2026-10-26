@@ -216,7 +216,7 @@ const CH_SCHOOL = {
     // countdown for the stretch you are on
     // the clock waits while the chapter card is up
     if (g.leg && this.curLeg !== g.leg) { this.curLeg = g.leg; this.legT = this.legTime[g.leg]; this.warned = false; }
-    if (g.leg && !GAME.ended && this.bus.state !== 'parked' && !CHUI.open && CAM.intro <= 0.05) {
+    if (g.leg && !GAME.ended && this.bus.state !== 'parked' && !CHUI.busy() && CAM.intro <= 0.05) {
       if (!this.released[g.leg]) {
         this.legT -= dt;
         if (this.legT <= 0) { this.released[g.leg] = 1; UI.banner('HURRY!', 'The bus is coming!', 'bus', 1.8); AUD.busHorn(); this.shiver(g.leg); }
@@ -224,7 +224,7 @@ const CH_SCHOOL = {
     }
     const kids = this.bus.kidsIn + '/' + this.kidsTotal() + ' kids';
     if (this.flashT > 0) { this.flashT -= dt; UI.timer(this.flashTxt, 'bus', kids, 'good'); }
-    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.open) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'LATE' : this.legT, 'bus', kids, this.released[g.leg] ? 'late' : '');
+    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.busy()) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'LATE' : this.legT, 'bus', kids, this.released[g.leg] ? 'late' : '');
     else UI.timer(null);
     // kids at the stops cheer you on as you plow past
     this.chatT = (this.chatT || 0) - dt;

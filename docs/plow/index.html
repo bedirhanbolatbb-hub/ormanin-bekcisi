@@ -182,6 +182,13 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .chtwist{margin-top:10px;display:inline-block;background:#fff4dc;color:#c26a00;font-weight:800;font-size:14px;padding:5px 12px;border-radius:12px;}
 .chgo{margin-top:18px;background:var(--grn);color:#fff;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:26px;padding:10px 40px;border-radius:18px;box-shadow:0 6px 0 #23935a,0 12px 28px rgba(47,179,106,.45);animation:gopulse 1.1s infinite;}
 @keyframes gopulse{50%{transform:scale(1.06)}}
+/* the chapter card at the start never blocks: the town shows through, drags go to the game, it starts by itself */
+#chIntro.soft{background:radial-gradient(ellipse at 50% 46%,rgba(14,22,42,.55),rgba(14,22,42,.18) 60%,rgba(14,22,42,0) 85%);pointer-events:none;transition:opacity .4s;}
+#chIntro.soft .chgo{pointer-events:auto;position:relative;overflow:hidden;touch-action:none;}
+#chIntro.soft .chgo::after{content:'';position:absolute;left:14px;right:14px;bottom:6px;height:4px;border-radius:2px;background:rgba(255,255,255,.6);transform-origin:0 50%;animation:chauto 4.7s linear forwards;}
+@keyframes chauto{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+#chIntro.out{opacity:0;}
+#ups{transition:opacity .35s;} body.chsoft #ups{opacity:0;} body.chsoft #ups,body.chsoft #ups *{pointer-events:none !important;}
 .chlink{margin-top:12px;background:none;color:#e8f0fb;font-weight:800;font-size:15px;text-decoration:underline;opacity:.9;}
 .rays{position:absolute;left:50%;top:30%;width:180vmax;height:180vmax;margin:-90vmax 0 0 -90vmax;background:repeating-conic-gradient(rgba(255,214,90,.16) 0 9deg,rgba(255,214,90,0) 9deg 22deg);animation:spin 14s linear infinite;pointer-events:none;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -241,6 +248,8 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   #goal{padding:5px 12px 5px 7px;}
   #goalIco{width:32px;height:32px;}
   .bn-t{font-size:34px;}
+  /* the chapter card needs the whole height there */
+  #goal{transition:opacity .35s;} body.chsoft #goal{opacity:0;}
 }
 </style>
 </head>
@@ -1473,7 +1482,7 @@ const CH_SCHOOL = {
     // countdown for the stretch you are on
     // the clock waits while the chapter card is up
     if (g.leg && this.curLeg !== g.leg) { this.curLeg = g.leg; this.legT = this.legTime[g.leg]; this.warned = false; }
-    if (g.leg && !GAME.ended && this.bus.state !== 'parked' && !CHUI.open && CAM.intro <= 0.05) {
+    if (g.leg && !GAME.ended && this.bus.state !== 'parked' && !CHUI.busy() && CAM.intro <= 0.05) {
       if (!this.released[g.leg]) {
         this.legT -= dt;
         if (this.legT <= 0) { this.released[g.leg] = 1; UI.banner('HURRY!', 'The bus is coming!', 'bus', 1.8); AUD.busHorn(); this.shiver(g.leg); }
@@ -1481,7 +1490,7 @@ const CH_SCHOOL = {
     }
     const kids = this.bus.kidsIn + '/' + this.kidsTotal() + ' kids';
     if (this.flashT > 0) { this.flashT -= dt; UI.timer(this.flashTxt, 'bus', kids, 'good'); }
-    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.open) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'LATE' : this.legT, 'bus', kids, this.released[g.leg] ? 'late' : '');
+    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.busy()) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'LATE' : this.legT, 'bus', kids, this.released[g.leg] ? 'late' : '');
     else UI.timer(null);
     // kids at the stops cheer you on as you plow past
     this.chatT = (this.chatT || 0) - dt;
@@ -3682,7 +3691,7 @@ const GAME = {
     UI.onUpgrade(i);
     const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.sparkle(p.x, 0.6, p.z, 18, 0.8); FX.puff(p.x, 0.3, p.z, 6, 1);
-    UI.floatText(this._v.set(p.x, PL.kind === 'truck' ? 3.8 : 2.2, p.z), UPSAY[i], i === 2 ? '#ffd34d' : '#7dffb0', 30);
+    UI.floatText(this._v.set(p.x, PL.kind === 'truck' ? 3.8 : 2.2, p.z), UPSAY[i], i === 2 ? '#ffd34d' : '#7dffb0', 30, 'up');
     this.save();
     return true;
   },
@@ -3717,7 +3726,7 @@ const GAME = {
   update(dt) {
     // a new machine's hero shot is a little cinematic pause: the clock and the chapter wait for it
     if (CAM.hero > 0.3) return;
-    if (!this.ended && !CHUI.open) this.time += dt;
+    if (!this.ended && !CHUI.busy()) this.time += dt;
     this.totalTime += dt;
     this.checkT -= dt;
     if (this.checkT <= 0) {
@@ -4245,21 +4254,47 @@ const STAR_SVG = (on) => `<svg viewBox="0 0 40 40"><path d="M20 3.5l5.1 10.4 11.
 const CHUI = {
   open: null,
   init() {
+    addEventListener('resize', () => this.refit());
     const b = $('btnMap'); if (b) { b.innerHTML = '<svg viewBox="0 0 40 40"><path d="M6 10l9-4 10 4 9-4v24l-9 4-10-4-9 4z" fill="#fff" stroke="#2b3a55" stroke-width="2.6" stroke-linejoin="round"/><path d="M15 6v24M25 10v24" stroke="#2b3a55" stroke-width="2.2"/><circle cx="20" cy="17" r="3" fill="#e5483c"/></svg>'; b.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.map(); }; }
   },
+  // the big cards always fit the screen (phones on their side, small game frames): shrink the whole card when needed
+  fit(el, room) {
+    const w = el && el.querySelector('.chwrap'); if (!w) return;
+    w.style.maxHeight = 'none'; w.style.transform = '';
+    const k = Math.min(1, innerHeight * (room || 0.96) / Math.max(1, w.offsetHeight));
+    if (k < 1) w.style.transform = `scale(${k.toFixed(3)})`;
+  },
+  refit() { if (this.introUp) this.fit($('chIntro'), 0.9); if (this.open === 'chRes') this.fit($('chRes')); },
   _show(id, html) {
     const el = $(id); el.innerHTML = html; el.classList.add('on'); this.open = id; INPUT.block = true;
     return el;
   },
   close(id) { const el = $(id); if (el) el.classList.remove('on'); if (this.open === id) this.open = null; INPUT.block = !!this.open; if (id === 'chRes' && CAM.show) CAM.show.out = true; },
-  // chapter start card (shown over the fly-in)
+  // a screen is up that should hold the clocks (a full overlay, or the chapter card at the start)
+  busy() { return !!this.open || this.introUp; },
+  introUp: false,
+  // chapter start card over the fly-in. It never stops you: start driving (or wait a moment) and it slides away.
   intro() {
-    const C = CH;
-    const el = this._show('chIntro', `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
+    const C = CH, el = $('chIntro');
+    el.innerHTML = `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
       <div class="chcard"><div class="chico">${CH_ICONS[C.key] || ''}</div><p>${C.intro}</p>${C.twist ? `<div class="chtwist">${C.twist}</div>` : ''}</div>
-      <button class="chgo" id="chGo">LET'S GO!</button></div>`);
-    $('chGo').onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.close('chIntro'); CAM.intro = Math.min(CAM.intro, 0.35); if (CH.firstHint) setTimeout(() => UI.hint(CH.firstHint, 5), 600); if (CH.onStart) CH.onStart(); if (CH.dailyGift) { const d = CH.dailyGift; CH.dailyGift = 0; setTimeout(() => DAILY.give(d), 1500); } };
+      <button class="chgo" id="chGo">LET'S GO!</button></div>`;
+    el.classList.remove('out'); el.classList.add('on', 'soft'); this.introUp = true; document.body.classList.add('chsoft'); this.fit(el, 0.9);
+    // the button starts it, but so does any touch, click or key (see INPUT); a drag from the button drives right away
+    $('chGo').onpointerdown = (e) => { e.stopPropagation(); INPUT.start(e); AUD.click(); };
+    clearTimeout(this._introT); this._introT = setTimeout(() => this.introGo(false), 4700);
     AUD.init && AUD.chapterIn && AUD.chapterIn();
+  },
+  introGo(moved) {
+    if (!this.introUp) return;
+    this.introUp = false; clearTimeout(this._introT); document.body.classList.remove('chsoft');
+    const el = $('chIntro'); el.classList.add('out'); setTimeout(() => { if (!this.introUp) el.classList.remove('on', 'soft', 'out'); }, 420);
+    CAM.intro = Math.min(CAM.intro, 0.35);
+    // only tell them how to move if they have not found out by themselves
+    const x0 = PL.x, z0 = PL.z;
+    if (CH.firstHint) setTimeout(() => { if (Math.hypot(PL.x - x0, PL.z - z0) < 0.3) UI.hint(CH.firstHint, 5); }, moved ? 1500 : 600);
+    if (CH.onStart) CH.onStart();
+    if (CH.dailyGift) { const d = CH.dailyGift; CH.dailyGift = 0; setTimeout(() => DAILY.give(d), 1500); }
   },
   // the big "chapter complete" moment
   results() {
@@ -4273,6 +4308,7 @@ const CHUI = {
       <div class="stars">${[0, 1, 2].map(i => `<div class="st st${i}" id="st${i}">${STAR_SVG(false)}</div>`).join('')}</div>
       <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}${comeBack}</div>
       ${next ? '<button class="chgo" id="chNext">NEXT CHAPTER</button>' : ''}<button class="chlink" id="chStay">${next ? 'Stay here and plow the storms' : 'Keep playing'}</button></div>`);
+    this.fit(el);
     // stars pop in one by one, then the bonus coins shower into your counter
     for (let i = 0; i < 3; i++) setTimeout(() => {
       const s = $('st' + i); if (!s) return;
@@ -4740,6 +4776,9 @@ const UI = {
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;
     el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
     clearTimeout(this._bnT); this._bnT = setTimeout(() => el.classList.remove('on'), (dur || 2.2) * 1000); this._bnUntil = performance.now() + (dur || 2.2) * 1000;
+    // where the banner sits at full size (its box is centred on top:%), so floating texts can keep out of its way
+    const w = el.offsetWidth, h = el.offsetHeight, cx = el.offsetLeft, cy = el.offsetTop;
+    this._bnRect = { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
   },
   bubble(text) { const d = document.createElement('div'); d.className = 'bubble'; d.textContent = text; $('bubbles').appendChild(d); return d; },
   placeBubble(d, wp, vis) {
@@ -4750,11 +4789,13 @@ const UI = {
   },
   // ---- floating texts (+coins, WIDER!, ...) ----
   texts: [],
-  floatText(wp, text, color, size) {
+  floatText(wp, text, color, size, key) {
+    // a keyed text replaces its fresh twin (tapping upgrades fast pops one word, not a tower of them)
+    if (key) for (let i = this.texts.length - 1; i >= 0; i--) if (this.texts[i].key === key && this.texts[i].t < 0.9) this.texts.splice(i, 1);
     // keep the WORLD position and project it every frame, so the text stays glued to the spot while the camera moves
     let stack = 0;
     for (const T of this.texts) if (T.t < 0.45 && Math.hypot(T.wx - wp.x, T.wz - wp.z) < 2.5) stack++;
-    this.texts.push({ wx: wp.x, wy: wp.y, wz: wp.z, oy: stack * 34, t: 0, d: 1.15, text, color: color || '#ffd34d', size: size || 28 });
+    this.texts.push({ wx: wp.x, wy: wp.y, wz: wp.z, oy: stack * 34, t: 0, d: 1.15, text, color: color || '#ffd34d', size: size || 28, key });
     if (this.texts.length > 24) this.texts.shift();
   },
   // ---- 2D coins flying to the counter ----
@@ -4777,16 +4818,32 @@ const UI = {
       g.globalAlpha = 0.9; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(J.ox + J.dx * 52, J.oy + J.dy * 52, 22, 0, TAU); g.fill();
       g.globalAlpha = 1;
     }
-    // floating texts
+    // floating texts: place them first...
+    const L = this._tl || (this._tl = []); L.length = 0;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
     for (let i = this.texts.length - 1; i >= 0; i--) {
       const T = this.texts[i]; const k = T.t / T.d; if (k >= 1) continue;
       const p = this._v.set(T.wx, T.wy, T.wz).project(CAM.cam); if (p.z > 1) continue;
       const sx = (p.x + 1) / 2 * innerWidth, sy = (1 - p.y) / 2 * innerHeight;
-      const sc = k < 0.15 ? easeOutBack(k / 0.15) : 1, a = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
-      g.font = `800 ${T.size}px "Baloo 2", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `800 ${T.size}px "Baloo 2", sans-serif`;
       // keep texts fully on screen (near the edges they slide inward)
       const hw = (T.w || (T.w = g.measureText(T.text).width + T.size * 0.4)) / 2, cx = innerWidth > hw * 2 + 16 ? clamp(sx, hw + 8, innerWidth - hw - 8) : innerWidth / 2;
-      g.save(); g.globalAlpha = a; g.translate(cx, Math.max(T.size * 0.7, sy - T.oy - 60 * easeOutCubic(k))); g.scale(sc, sc);
+      L.push({ T, k, cx, hw, y: Math.max(T.size * 0.7, sy - T.oy - 60 * easeOutCubic(k)), push: 0 });
+    }
+    // ...the ones that would rise into the big banner line up just below it instead (no pile-up behind the title)
+    const B = this._bnRect;
+    if (B && performance.now() < (this._bnUntil || 0) && L.length) {
+      const C = L.filter(o => o.cx + o.hw > B.x0 && o.cx - o.hw < B.x1 && o.y - o.T.size * 0.5 < B.y1).sort((a, b) => a.y - b.y);
+      let next = B.y1 + 4;
+      for (const o of C) { const y = next + o.T.size * 0.55; o.push = y - o.y; next = y + o.T.size * 0.55; }
+    }
+    // ...then draw (the push eases in and out, so nothing jumps)
+    for (const o of L) {
+      const T = o.T, k = o.k;
+      T.py = T.py == null || T.t < 0.05 ? o.push : damp(T.py, o.push, 12, dt || 0.016);
+      const sc = k < 0.15 ? easeOutBack(k / 0.15) : 1, a = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
+      g.font = `800 ${T.size}px "Baloo 2", sans-serif`;
+      g.save(); g.globalAlpha = a; g.translate(o.cx, o.y + T.py); g.scale(sc, sc);
       g.lineWidth = Math.max(4, T.size * 0.2); g.strokeStyle = '#2b3a55'; g.lineJoin = 'round'; g.strokeText(T.text, 0, 0);
       g.fillStyle = T.color; g.fillText(T.text, 0, 0); g.restore();
     }
@@ -4819,16 +4876,18 @@ const UI = {
 const INPUT = {
   keys: {}, joy: { active: false, id: null, ox: 0, oy: 0, dx: 0, dy: 0, show: false },
   init(el) {
-    addEventListener('keydown', e => { this.keys[e.code] = 1; AUD.init(); GAME.started = true; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); });
+    addEventListener('keydown', e => { this.keys[e.code] = 1; AUD.init(); GAME.started = true; if (CHUI.introUp) CHUI.introGo(true); if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); });
     addEventListener('keyup', e => { this.keys[e.code] = 0; });
     addEventListener('blur', () => { this.keys = {}; this.joy.active = false; });
     const J = this.joy, R = 52;
-    el.addEventListener('pointerdown', e => {
-      AUD.init(); GAME.started = true;
+    // a touch starts the stick (also when it lands on the chapter card's button: then you can drive straight away)
+    this.start = (e) => {
+      AUD.init(); GAME.started = true; if (CHUI.introUp) CHUI.introGo(true);
       if (J.active) return;
       J.active = true; J.id = e.pointerId; J.ox = e.clientX; J.oy = e.clientY; J.dx = 0; J.dy = 0; J.show = e.pointerType !== 'mouse' || true;
       try { el.setPointerCapture(e.pointerId); } catch (_) { }
-    });
+    };
+    el.addEventListener('pointerdown', this.start);
     el.addEventListener('pointermove', e => {
       if (!J.active || e.pointerId !== J.id) return;
       let dx = (e.clientX - J.ox) / R, dy = (e.clientY - J.oy) / R; const l = Math.hypot(dx, dy);
@@ -5177,13 +5236,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4.4'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.5'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.4'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.5'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -5254,7 +5313,9 @@ async function boot() {
 // x-ray uniforms (player screen pos & depth)
 function updXray() {
   const v = XRAY._v || (XRAY._v = new V3()); v.set(PL.x, PL.kind === 'truck' ? 1.2 : 0.6, PL.z).project(CAM.cam); XRAY.uP.value.set(v.x, v.y);
-  const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse); XRAY.uD.value = -w.z;
+  const w = XRAY._w || (XRAY._w = new V3()); w.set(PL.x, 0.6, PL.z).applyMatrix4(CAM.cam.matrixWorldInverse);
+  // the see-through is for finding your machine; in the finale shot the camera shows the big moment, so it fades out
+  XRAY.uD.value = -w.z * (CAM.show ? 1 - smooth(clamp(CAM.show.k || 0, 0, 1)) : 1);
   XRAY.uA.value = innerWidth / innerHeight; XRAY.uR.value = PL.kind === 'truck' ? 0.2 + PL.geo.halfW * 0.05 : 0.15; renderer.getDrawingBufferSize(XRAY.uRes.value);
 }
 function placeSun() { const s = WORLD.sun, so = WORLD.env.sunOff; s.position.set(CAM.x + so[0], so[1], CAM.z + so[2]); s.target.position.set(CAM.x, 0, CAM.z - 4); s.target.updateMatrixWorld(); }
@@ -5265,8 +5326,12 @@ function onResize() {
 let last = 0, frameN = 0;
 const FAST = QS.has('fast') ? Math.max(1, +QS.get('fast')) : 1;
 function step(dt) {
-  const inp = QS.has('bot') ? (CAM.hero > 0.35 ? { x: 0, y: 0 } : BOT.get(dt)) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : INPUT.get());
-  if (CAM.intro > 0 && (Math.abs(inp.x) + Math.abs(inp.y) > 0 || INPUT.joy.active)) CAM.intro = Math.min(CAM.intro, 0.05);
+  const bot = QS.has('bot'), raw = bot ? null : INPUT.get();
+  // the first touch / key ends the fly-in and the chapter card: you are playing right away
+  const wants = bot ? false : Math.abs(raw.x) + Math.abs(raw.y) > 0 || INPUT.joy.active;
+  if (wants && CHUI.introUp) CHUI.introGo(true);
+  const inp = bot ? (CAM.hero > 0.35 ? { x: 0, y: 0 } : BOT.get(dt)) : (CAM.intro > 0.05 || CAM.hero > 0.35 ? { x: 0, y: 0 } : raw);
+  if (CAM.intro > 0 && (wants || (bot && Math.abs(inp.x) + Math.abs(inp.y) > 0))) CAM.intro = Math.min(CAM.intro, 0.05);
   PL.update(dt, inp);
   GAME.update(dt);
   LIFE.update(dt);
@@ -5279,7 +5344,7 @@ function step(dt) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
-  CG.play(!CHUI.open && !document.hidden && CAM.intro <= 0.05 && $('loading').classList.contains('off'));
+  CG.play(!CHUI.busy() && !document.hidden && CAM.intro <= 0.05 && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (dt <= 0) return;

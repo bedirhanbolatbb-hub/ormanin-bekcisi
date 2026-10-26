@@ -54,7 +54,7 @@ const GAME = {
     UI.onUpgrade(i);
     const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position;
     FX.sparkle(p.x, 0.6, p.z, 18, 0.8); FX.puff(p.x, 0.3, p.z, 6, 1);
-    UI.floatText(this._v.set(p.x, PL.kind === 'truck' ? 3.8 : 2.2, p.z), UPSAY[i], i === 2 ? '#ffd34d' : '#7dffb0', 30);
+    UI.floatText(this._v.set(p.x, PL.kind === 'truck' ? 3.8 : 2.2, p.z), UPSAY[i], i === 2 ? '#ffd34d' : '#7dffb0', 30, 'up');
     this.save();
     return true;
   },
@@ -89,7 +89,7 @@ const GAME = {
   update(dt) {
     // a new machine's hero shot is a little cinematic pause: the clock and the chapter wait for it
     if (CAM.hero > 0.3) return;
-    if (!this.ended && !CHUI.open) this.time += dt;
+    if (!this.ended && !CHUI.busy()) this.time += dt;
     this.totalTime += dt;
     this.checkT -= dt;
     if (this.checkT <= 0) {
