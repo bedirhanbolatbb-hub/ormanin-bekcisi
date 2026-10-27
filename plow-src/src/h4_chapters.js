@@ -103,6 +103,7 @@ const CHUI = {
     f.innerHTML = `<div class="chname sm">Chapter ${id}</div><div class="chname">${C ? C.name : ''}</div>`;
     f.classList.add('on');
     GAME.goChapter(id);
-    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 700);
+    // a little longer on the snowy wipe, so the account copy is usually sent before the reload too
+    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 1400);
   }
 };

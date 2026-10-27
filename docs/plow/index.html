@@ -286,21 +286,27 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 // ==== a1_cg.js ====
 // ---------- CrazyGames bridge: only active on CrazyGames (everywhere else it quietly does nothing) ----------
 const CG = {
-  sdk: null, env: 'none', playing: false, mute: false,
+  sdk: null, env: 'none', playing: false, mute: false, hold: false, onLate: null,
   async init() {
     const s = window.CrazyGames && window.CrazyGames.SDK;
     if (!s || /[?&](bot|nosdk)\b/.test(location.search)) return;
+    // the SDK fetches the player's saved game before it is ready, which can take a while on a slow line:
+    // wait up to 6 s, and if it is ready later, take it then (meanwhile the game runs and saves on this device)
+    let late = false;
+    const ready = Promise.resolve().then(() => s.init()).then(() => this.attach(s, late), () => { });
+    await Promise.race([ready, new Promise(r => setTimeout(r, 6000))]);
+    late = true;
+  },
+  attach(s, late) {
+    this.env = s.environment;
+    // local tests and other sites: no SDK calls at all (?useLocalSdk=true&cgtest tries the SDK's local mode)
+    if (this.env !== 'crazygames' && !(this.env === 'local' && /[?&]cgtest\b/.test(location.search))) return;
+    this.sdk = s;
     try {
-      await Promise.race([Promise.resolve().then(() => s.init()), new Promise((_, no) => setTimeout(() => no(new Error('sdk timeout')), 2500))]);
-      this.env = s.environment;
-      // local tests and other sites: no SDK calls at all (?useLocalSdk=true&cgtest tries the SDK's local mode)
-      if (this.env !== 'crazygames' && !(this.env === 'local' && /[?&]cgtest\b/.test(location.search))) return;
-      this.sdk = s;
-      try {
-        this.mute = !!(s.game.settings && s.game.settings.muteAudio);
-        s.game.addSettingsChangeListener(st => { this.mute = !!(st && st.muteAudio); try { AUD.setMuted(AUD._um); } catch (e) { } });
-      } catch (e) { }
-    } catch (e) { this.sdk = null; }
+      this.mute = !!(s.game.settings && s.game.settings.muteAudio);
+      s.game.addSettingsChangeListener(st => { this.mute = !!(st && st.muteAudio); try { AUD.setMuted(AUD._um); } catch (e) { } });
+    } catch (e) { }
+    if (late) { if (this.playing) this.call(x => x.game.gameplayStart()); try { if (this.onLate) this.onLate(); } catch (e) { } }
   },
   call(fn) { try { if (this.sdk) return fn(this.sdk); } catch (e) { } },
   loadingStart() { this.call(s => s.game.loadingStart()); },
@@ -310,7 +316,9 @@ const CG = {
   happy() { this.call(s => s.game.happytime()); },
   // progress save goes to the player's CrazyGames account when there is one
   get(k) { let v = null; this.call(s => { v = s.data.getItem(k); }); return v; },
-  set(k, v) { this.call(s => s.data.setItem(k, v)); },
+  set(k, v) { if (!this.hold) this.call(s => s.data.setItem(k, v)); },
+  // is what gets saved right now going up to the account? (0 yes, 1 no SDK here, 2 held back on purpose)
+  syncState() { return this.sdk ? (this.hold ? 2 : 0) : 1; },
 };
 
 // ==== a_util.js ====
@@ -3793,19 +3801,42 @@ const GAME = {
   },
   goChapter(id) {
     this.chapter = id; this._cs = null; this.done = {}; this.time = 0; this.ended = false;
-    this.save(true);
+    this.handoff(this.save(true));
   },
   // ---- save ----
   save(fresh) {
     if (QS.has('nosave') || (QS.has('bot') && !QS.has('botsave'))) return;
     const cs = fresh ? null : { id: CH.id, time: this.time, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), ended: this.ended, extra: CH.save ? CH.save() : null };
-    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now() };
-    STORE.set('plowtown_v4', JSON.stringify(o));
+    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now(), nc: CG.syncState() };
+    const j = JSON.stringify(o);
+    STORE.set('plowtown_v4', j);
+    return j;
+  },
+  // moving on to another chapter reloads the page a moment after saving. On CrazyGames the account copy is sent
+  // a second or more later, so the new start could still read the old copy and send the player back to the chapter
+  // they just finished. The fresh save rides along in this tab and wins if it is newer.
+  handoff(j) { try { if (j) sessionStorage.setItem('plowtown_handoff', j); } catch (e) { } },
+  takeHandoff(o) {
+    let h = null;
+    try { h = JSON.parse(sessionStorage.getItem('plowtown_handoff') || 'null'); sessionStorage.removeItem('plowtown_handoff'); } catch (e) { h = null; }
+    if (!h || h.v !== this.ver || !(Date.now() - (h.t || 0) < 10 * 60 * 1000)) return o;
+    if (o && (o.t || 0) >= (h.t || 0)) return o;
+    STORE.set('plowtown_v4', JSON.stringify(h));   // and put it back where it belongs
+    return h;
   },
   // before the world is built: coins, machines, crew and which chapter to play
   loadMeta() {
     let o = null;
-    if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) { try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; } }
+    if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) {
+      try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; }
+      // progress made while the CrazyGames SDK was not there never reached the account: this device's newer copy wins
+      if (CG.sdk) {
+        let l = null; try { l = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { l = null; }
+        if (l && l.nc === 1 && l.v === this.ver && (!o || (l.t || 0) > (o.t || 0))) { o = l; o.nc = 0; STORE.set('plowtown_v4', JSON.stringify(o)); }
+      }
+      o = this.takeHandoff(o);
+    }
+    this.loadedT = o ? (o.t || 0) : 0;
     // coming from the old single-street version: keep everything; if Maple Lane was already saved, go straight on to chapter 2
     if (!o && !QS.has('fresh') && !QS.has('bot')) {
       try {
@@ -4349,7 +4380,8 @@ const CHUI = {
     f.innerHTML = `<div class="chname sm">Chapter ${id}</div><div class="chname">${C ? C.name : ''}</div>`;
     f.classList.add('on');
     GAME.goChapter(id);
-    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 700);
+    // a little longer on the snowy wipe, so the account copy is usually sent before the reload too
+    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 1400);
   }
 };
 
@@ -5239,13 +5271,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4.7'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.8'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.7'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.8'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -5281,6 +5313,12 @@ async function boot() {
   CREW.init(scene);
   if (STORE.get('plowtown_mute') === '1') AUD.muted = true;
   const resumed = GAME.loadChapter();
+  // the CrazyGames SDK turned up late: send our progress up, unless the account already holds a newer game
+  // (played on another device) - then this session leaves the account alone and the next start picks that one up
+  CG.onLate = () => {
+    let c = null; try { c = JSON.parse(CG.get('plowtown_v4') || 'null'); } catch (e) { c = null; }
+    if (c && (c.t || 0) > (GAME.loadedT || 0) + 2000) CG.hold = true; else GAME.save();
+  };
   for (let i = 0; i < Math.min(GAME.crew || 0, CREW_DEFS.length); i++) CREW.join(i, true);
   // test shortcut: ?skip=truck|dumpplow|groomer jumps to that stage (driveways done, tools owned)
   if (QS.has('skip') && CH.id === 1) {

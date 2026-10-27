@@ -153,19 +153,42 @@ const GAME = {
   },
   goChapter(id) {
     this.chapter = id; this._cs = null; this.done = {}; this.time = 0; this.ended = false;
-    this.save(true);
+    this.handoff(this.save(true));
   },
   // ---- save ----
   save(fresh) {
     if (QS.has('nosave') || (QS.has('bot') && !QS.has('botsave'))) return;
     const cs = fresh ? null : { id: CH.id, time: this.time, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), ended: this.ended, extra: CH.save ? CH.save() : null };
-    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now() };
-    STORE.set('plowtown_v4', JSON.stringify(o));
+    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now(), nc: CG.syncState() };
+    const j = JSON.stringify(o);
+    STORE.set('plowtown_v4', j);
+    return j;
+  },
+  // moving on to another chapter reloads the page a moment after saving. On CrazyGames the account copy is sent
+  // a second or more later, so the new start could still read the old copy and send the player back to the chapter
+  // they just finished. The fresh save rides along in this tab and wins if it is newer.
+  handoff(j) { try { if (j) sessionStorage.setItem('plowtown_handoff', j); } catch (e) { } },
+  takeHandoff(o) {
+    let h = null;
+    try { h = JSON.parse(sessionStorage.getItem('plowtown_handoff') || 'null'); sessionStorage.removeItem('plowtown_handoff'); } catch (e) { h = null; }
+    if (!h || h.v !== this.ver || !(Date.now() - (h.t || 0) < 10 * 60 * 1000)) return o;
+    if (o && (o.t || 0) >= (h.t || 0)) return o;
+    STORE.set('plowtown_v4', JSON.stringify(h));   // and put it back where it belongs
+    return h;
   },
   // before the world is built: coins, machines, crew and which chapter to play
   loadMeta() {
     let o = null;
-    if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) { try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; } }
+    if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) {
+      try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; }
+      // progress made while the CrazyGames SDK was not there never reached the account: this device's newer copy wins
+      if (CG.sdk) {
+        let l = null; try { l = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { l = null; }
+        if (l && l.nc === 1 && l.v === this.ver && (!o || (l.t || 0) > (o.t || 0))) { o = l; o.nc = 0; STORE.set('plowtown_v4', JSON.stringify(o)); }
+      }
+      o = this.takeHandoff(o);
+    }
+    this.loadedT = o ? (o.t || 0) : 0;
     // coming from the old single-street version: keep everything; if Maple Lane was already saved, go straight on to chapter 2
     if (!o && !QS.has('fresh') && !QS.has('bot')) {
       try {

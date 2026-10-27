@@ -404,6 +404,12 @@ async function boot() {
   CREW.init(scene);
   if (STORE.get('plowtown_mute') === '1') AUD.muted = true;
   const resumed = GAME.loadChapter();
+  // the CrazyGames SDK turned up late: send our progress up, unless the account already holds a newer game
+  // (played on another device) - then this session leaves the account alone and the next start picks that one up
+  CG.onLate = () => {
+    let c = null; try { c = JSON.parse(CG.get('plowtown_v4') || 'null'); } catch (e) { c = null; }
+    if (c && (c.t || 0) > (GAME.loadedT || 0) + 2000) CG.hold = true; else GAME.save();
+  };
   for (let i = 0; i < Math.min(GAME.crew || 0, CREW_DEFS.length); i++) CREW.join(i, true);
   // test shortcut: ?skip=truck|dumpplow|groomer jumps to that stage (driveways done, tools owned)
   if (QS.has('skip') && CH.id === 1) {
