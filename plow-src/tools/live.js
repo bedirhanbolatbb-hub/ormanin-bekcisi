@@ -2,7 +2,7 @@
 const { chromium, devices } = require('playwright');
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  for (const [ch, carry] of [[1, 0], [2, 15000], [3, 120000], [4, 380000], [5, 420000]]) {
+  for (const [ch, carry] of [[1, 0], [2, 15000], [3, 120000], [4, 380000], [5, 420000], [6, 2500000], [7, 5000000], [8, 8000000], [9, 5000000]]) {
     const ctx = await browser.newContext({ viewport: { width: 360, height: 640 }, isMobile: true, hasTouch: true });
     const page = await ctx.newPage(); const errs = [];
     page.on('pageerror', e => errs.push('PAGEERROR ' + e.message + ' ' + (e.stack || '').split('\n')[1]));

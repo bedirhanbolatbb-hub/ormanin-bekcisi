@@ -116,7 +116,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #toast.on{opacity:1;}
 /* with a countdown on screen, the toast sits under it */
 #hud:has(#timer.on) #toast{top:140px;}
-#banner{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%) scale(.5);text-align:center;opacity:0;pointer-events:none;}
+#banner{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%) scale(.5);text-align:center;opacity:0;pointer-events:none;width:max-content;max-width:calc(100vw - 24px);}
 #banner.on{animation:bnr 2.3s forwards;}
 /* with the bus clock on screen the banner sits a little lower, clear of it */
 #hud:has(#timer.on) #banner{top:33%;}
@@ -264,7 +264,9 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   #goal{padding:5px 12px 5px 7px;}
   #goalIco{width:32px;height:32px;}
   .bn-t{font-size:34px;}
-  #hud:has(#timer.on) #banner{top:39%;}
+  /* (with a clock on top the banner goes under it, without its picture, so it does not cover the clock) */
+  #hud:has(#timer.on) #banner{top:168px;}
+  #hud:has(#timer.on) .bn-ico{display:none;}
   /* the chapter card needs the whole height there */
   #goal{transition:opacity .35s;} body.chsoft #goal{opacity:0;}
 }

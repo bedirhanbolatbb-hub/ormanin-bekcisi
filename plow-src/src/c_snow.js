@@ -31,7 +31,7 @@ const SNOW = {
 
   init() {
     const n = this.NX * this.NZ;
-    this.H = new Float32Array(n); this.T = new Uint8Array(n); this.A = new Uint8Array(n);
+    this.H = new Float32Array(n); this.T = new Uint8Array(n); this.A = new Uint8Array(n); this.D = new Uint8Array(n);
     // which mesh chunks need rebuilding, and where inside them (grid cells): each carver only costs its own chunks
     this._ncx = Math.ceil((this.NX - 1) / this.CH); this._ncz = Math.ceil((this.NZ - 1) / this.CH);
     const nc = this._ncx * this._ncz;
@@ -68,9 +68,9 @@ const SNOW = {
   finalizeAreas() {
     const first = this.areas.some(a => a && a.units0 === undefined);
     for (const a of this.areas) if (a) { a.total = 0; a.cleared = 0; if (first) a._u = 0; }
-    const H = this.H, T = this.T, A = this.A, f = this.C * this.C / this.UNIT;
+    const H = this.H, T = this.T, A = this.A, D = this.D, f = this.C * this.C / this.UNIT;
     for (let k = 0; k < H.length; k++) {
-      if (A[k] && T[k] === 1) { const a = this.areas[A[k]]; a.total++; if (H[k] < this.THR) a.cleared++; if (first) a._u += H[k] * f; }
+      if (A[k] && (T[k] === 1 || D[k])) { const a = this.areas[A[k]]; a.total++; if (H[k] < this.THR) a.cleared++; if (first) a._u += H[k] * f; }
     }
     if (first) for (const a of this.areas) if (a && a.units0 === undefined) a.units0 = a._u;
   },
@@ -303,13 +303,18 @@ const SNOW = {
     L.splice(0, n);
   },
 
+  // a vehicle stopping on the ground (a parked plane, the crawler) makes its cells solid for a while.
+  // Paved cells under it stay paved for the save: the snow is saved for the paved cells in order, so a plane
+  // parked somewhere else after a reload must not shift it. (cells: [k, old type, ...], given back by unblock)
+  block(cells, k) { const T = this.T; if (k >= 0 && (T[k] === 1 || T[k] === 3)) { cells.push(k, T[k]); if (T[k] === 1) this.D[k] = 1; T[k] = 2; } },
+  unblock(cells) { const T = this.T; for (let i = 0; i < cells.length; i += 2) { const k = cells[i]; if (T[k] === 2) T[k] = cells[i + 1]; this.D[k] = 0; } },
   // ---- save / load (quantized RLE) ----
   serialize() {
-    const H = this.H, T = this.T, out = [];
+    const H = this.H, T = this.T, D = this.D, out = [];
     let last = -1, run = 0;
     const push = () => { if (run > 0) { out.push(last, run); } };
     for (let k = 0; k < H.length; k++) {
-      if (T[k] !== 1) continue;
+      if (T[k] !== 1 && !D[k]) continue;
       const q = Math.min(255, Math.round(H[k] * 200));
       if (q === last && run < 65535) run++; else { push(); last = q; run = 1; }
     }
@@ -323,15 +328,15 @@ const SNOW = {
   deserialize(str) {
     try {
       const s = atob(str), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
-      const H = this.H, T = this.T; let k = 0;
+      const H = this.H, T = this.T, D = this.D; let k = 0;
       // the snow is stored for the paved cells in order: it only fits the same ground (else it would come back shifted)
       let total = 0, n1 = 0;
       for (let o = 0; o + 2 < b.length; o += 3) total += b[o + 1] | (b[o + 2] << 8);
-      for (let q = 0; q < T.length; q++) if (T[q] === 1) n1++;
+      for (let q = 0; q < T.length; q++) if (T[q] === 1 || D[q]) n1++;
       if (total !== n1) return false;
       for (let o = 0; o + 2 < b.length; o += 3) {
         const v = b[o] / 200; let run = b[o + 1] | (b[o + 2] << 8);
-        while (run > 0 && k < H.length) { if (T[k] === 1) { H[k] = v; run--; } k++; }
+        while (run > 0 && k < H.length) { if (T[k] === 1 || D[k]) { H[k] = v; run--; } k++; }
       }
       return true;
     } catch (e) { return false; }

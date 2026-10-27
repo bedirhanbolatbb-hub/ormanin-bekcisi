@@ -5,6 +5,10 @@ const CH_ICONS = {
   market: '<svg viewBox="0 0 40 40"><path d="M5 16l4-8h22l4 8z" fill="#e5483c"/><path d="M5 16h30v3q-3.75 3-7.5 0-3.75 3-7.5 0-3.75 3-7.5 0-3.75 3-7.5 0z" fill="#fff"/><rect x="8" y="19" width="24" height="14" fill="#b07a46"/><rect x="12" y="22" width="16" height="7" fill="#ffd34d"/><circle cx="20" cy="6" r="2.4" fill="#ffc23d"/></svg>',
   lake: '<svg viewBox="0 0 40 40"><ellipse cx="20" cy="26" rx="16" ry="8" fill="#9fd8ff" stroke="#5aa9f5" stroke-width="1.6"/><path d="M13 12h8v7h4l2 3H11v-3h2z" fill="#e5483c"/><path d="M10 24h18" stroke="#8a95a3" stroke-width="2" stroke-linecap="round"/><path d="M14 30q6 2 12 0" stroke="#fff" stroke-width="1.6" fill="none"/></svg>',
   resort: '<svg viewBox="0 0 40 40"><path d="M3 34L16 10l7 12 4-6 10 18z" fill="#eaf4ff" stroke="#9fb8d6" stroke-width="1.5" stroke-linejoin="round"/><path d="M16 10l-4 8 4-2 3 3z" fill="#fff"/><path d="M8 34l8-14" stroke="#e5483c" stroke-width="1.6" stroke-dasharray="2 2"/><circle cx="29" cy="9" r="3.2" fill="#ffc23d"/></svg>',
+  airport: '<svg viewBox="0 0 40 40"><path d="M4 36L14 24h12l10 12z" fill="#4a5059"/><path d="M20 26v3M20 31v4" stroke="#fff" stroke-width="1.6"/><path d="M8 13l9 2 6-7q2-2 3.5-.5t-.5 3.5l-6 6 2 9-2 1.5-4.5-7-5 4v3l-1.5 1-1.5-4-4-1.5 1-1.5h3l4-5-7-4.5z" fill="#fff" stroke="#2b3a55" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  stadium: '<svg viewBox="0 0 40 40"><ellipse cx="20" cy="24" rx="17" ry="10" fill="#9aa3ad"/><ellipse cx="20" cy="24" rx="12" ry="6.5" fill="#3fae5c"/><path d="M20 17.5v13M8 24h24" stroke="#fff" stroke-width="1.2"/><circle cx="20" cy="24" r="2.4" fill="none" stroke="#fff" stroke-width="1.2"/><path d="M5 10v8M35 10v8" stroke="#2b3a55" stroke-width="1.8"/><rect x="2.5" y="7" width="5" height="3" rx="1" fill="#ffe27a"/><rect x="32.5" y="7" width="5" height="3" rx="1" fill="#ffe27a"/></svg>',
+  rocket: '<svg viewBox="0 0 40 40"><path d="M20 3q6 6 6 17v10h-12V20Q14 9 20 3z" fill="#f2f2ee" stroke="#2b3a55" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 22l-5 6v4l5-2zM26 22l5 6v4l-5-2z" fill="#e5483c" stroke="#2b3a55" stroke-width="1.5" stroke-linejoin="round"/><circle cx="20" cy="15" r="2.6" fill="#5aa9f5"/><path d="M17 30l3 8 3-8z" fill="#ffb020"/><path d="M4 38h32" stroke="#9aa3ad" stroke-width="3" stroke-linecap="round"/></svg>',
+  pole: '<svg viewBox="0 0 40 40"><path d="M18 8h4v28h-4z" fill="#fff"/><path d="M18 11l4-3M18 17l4-3M18 23l4-3M18 29l4-3M18 35l4-3" stroke="#e5483c" stroke-width="2.4"/><circle cx="20" cy="6" r="3.4" fill="#ffd34d"/><path d="M23 13h12l-3 3 3 3H23z" fill="#2fa06a"/><rect x="4" y="27" width="11" height="9" rx="1" fill="#e5483c"/><path d="M9.5 27v9M4 31h11" stroke="#ffd34d" stroke-width="1.8"/></svg>',
 };
 function ICONS_LATE(k) { return '<svg viewBox="0 0 40 40"><path d="M6 19L20 7l14 12" fill="#fff" stroke="#c8323c" stroke-width="3" stroke-linejoin="round"/><rect x="10" y="18" width="20" height="15" fill="#e7b27a"/><rect x="17" y="24" width="6" height="9" fill="#c8323c"/><rect x="12" y="21" width="4" height="4" fill="#ffd34d"/></svg>'; }
 const STAR_SVG = (on) => `<svg viewBox="0 0 40 40"><path d="M20 3.5l5.1 10.4 11.4 1.6-8.3 8 2 11.3L20 29.4l-10.2 5.4 2-11.3-8.3-8 11.4-1.6z" fill="${on ? '#ffc23d' : '#d5dde8'}" stroke="${on ? '#e08a00' : '#b5c0cf'}" stroke-width="2.4" stroke-linejoin="round"/>${on ? '<path d="M14 14l3-1" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>' : ''}</svg>`;
@@ -61,7 +65,7 @@ const CHUI = {
     const bonus = GAME.lastBonus || niceNum((C.reward || 2000) * st);
     const mm = Math.floor(GAME.time / 60), ss = String(Math.floor(GAME.time % 60)).padStart(2, '0');
     const nextHtml = next ? `<div class="chnext"><div class="chico sm">${CH_ICONS[next.key] || ''}</div><div><b>Next: ${next.name}</b><span>${next.tag}</span></div></div>`
-      : `<div class="chnext"><div><b>More chapters are on the way!</b><span>Keep plowing the storms for coins</span></div></div>`;
+      : `<div class="chnext"><div><b>You plowed every town!</b><span>More chapters are on the way. Keep plowing the storms for coins</span></div></div>`;
     const comeBack = '<div class="chback">Come back tomorrow for a daily gift!</div>';
     const el = this._show('chRes', `<div class="rays"></div><div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">COMPLETE!</div>
       <div class="stars">${[0, 1, 2].map(i => `<div class="st st${i}" id="st${i}">${STAR_SVG(false)}</div>`).join('')}</div>
@@ -91,6 +95,8 @@ const CHUI = {
         <div class="chbtn">${!open ? '🔒' : C.id === CH.id ? 'HERE' : 'PLAY'}</div></div>`;
     }).join('') + '<div class="chrow soon"><div class="chinfo"><b>More chapters soon</b><span>New places, new machines</span></div></div>';
     const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><button class="chlink" id="chMapX">Close</button></div>`);
+    // (a long list: start with the chapter you are in shown in the middle)
+    { const L = el.querySelector('.chlist'), cur = el.querySelector('.chrow.cur'); if (L && cur) L.scrollTop = Math.max(0, cur.offsetTop - L.offsetTop - (L.clientHeight - cur.offsetHeight) / 2); }
     // a tap (not a touch that starts scrolling the list) picks a chapter
     el.querySelectorAll('.chrow[data-id]').forEach(r => r.onclick = (e) => {
       e.stopPropagation(); AUD.init(); const id = +r.dataset.id; if (r.classList.contains('locked')) { AUD.deny(); return; }

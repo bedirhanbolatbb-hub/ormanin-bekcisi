@@ -1,12 +1,40 @@
 // ---------- chapters: every chapter is a new place with its own twist; machines, crew and coins carry over ----------
 let CH = null, GOALS = [], HAND_AREAS = [];
-const CHAPTERS = [CH_MAPLE, CH_SCHOOL, CH_MARKET, CH_LAKE, CH_RESORT];
+const CHAPTERS = [CH_MAPLE, CH_SCHOOL, CH_MARKET, CH_LAKE, CH_RESORT, CH_AIRPORT, CH_STADIUM, CH_ROCKET, CH_POLE];
 function pickChapter(id) {
   CH = CHAPTERS.find(c => c.id === id) || CHAPTERS[0];
   GOALS = CH.goals; HAND_AREAS = CH.hand || [];
   return CH;
 }
 function chapterById(id) { return CHAPTERS.find(c => c.id === id) || null; }
+// bot routing for towns with several open zones: the next point to drive to, toward the zone of the target
+// (adj: { zone: { neighbour: () => [x, z] } }, a breadth-first hop through the zone graph)
+function zoneHop(adj, zp, zt, px, pz, tz) {
+  if (zp === zt) return null;
+  const prev = { [zp]: null }, q = [zp];
+  while (q.length) { const z = q.shift(); if (z === zt) break; for (const n in adj[z] || {}) if (!(n in prev)) { prev[n] = z; q.push(n); } }
+  if (!(zt in prev)) return null;
+  let n = zt; while (prev[n] !== zp) n = prev[n];
+  return adj[zp][n](px, pz, tz);
+}
+// a vehicle parked for good inside a job (a service truck, a rig on its pad): the snow hugging it does not count
+// toward the job, like the parked cars on Maple Lane (nobody has to scrape round its wheels)
+function parkedVehicle(o) { o.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(o); WORLD.cars.push({ obj: o, state: 'decor', fx0: bb.min.x, fz0: bb.min.z, fx1: bb.max.x, fz1: bb.max.z, x: (bb.min.x + bb.max.x) / 2, z: (bb.min.z + bb.max.z) / 2 }); }
+// a group of many little meshes that always move together (a building made of boxes, the rocket on its crawler):
+// bake them into one mesh per material, so it costs a few draw calls instead of dozens (untextured parts only)
+function mergeGroup(grp) {
+  grp.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(grp.matrixWorld).invert(), by = new Map(), kill = [];
+  grp.traverse(o => {
+    if (!o.isMesh || !o.geometry.attributes.normal || (o.material && o.material.map)) return;
+    // (parts of different models that look the same share one mesh)
+    const M = o.material, m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld), k = [M.type, M.color && M.color.getHex(), M.emissive && M.emissive.getHex(), (M.emissiveIntensity || 0).toFixed(2), (M.roughness || 0).toFixed(2), (M.metalness || 0).toFixed(2), M.opacity, M.transparent, M.flatShading, M.vertexColors, M.side].join('|');
+    if (!by.has(k)) by.set(k, { mat: o.material, list: [] }); by.get(k).list.push(bakeGeom(o.geometry, m)); kill.push(o);
+  });
+  for (const o of kill) o.parent.remove(o);
+  for (const { mat, list } of by.values()) { const me = new THREE.Mesh(mergeGeoms(list), mat); me.castShadow = true; me.receiveShadow = true; grp.add(me); }
+  return grp;
+}
 // generic helpers shared by chapter builders
 function litMats(obj) {
   // swap glowing window materials for dark ones that light up when the job is done

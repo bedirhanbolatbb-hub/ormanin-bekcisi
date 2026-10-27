@@ -299,6 +299,8 @@ const BOT = {
       this.rt -= dt;
       this.stuckT = (this.stuckT || 0) + dt;
       if (PL.carveRate > 0.05 || Math.hypot(PL.x - (this.px || 0), PL.z - (this.pz || 0)) > 0.8) { this.stuckT = 0; this.px = PL.x; this.pz = PL.z; }
+      // (driving back and forth on one spot without clearing anything counts as stuck too)
+      { const A = this._anc || (this._anc = { x: PL.x, z: PL.z, t: 0 }); if (PL.carveRate > 0.05 || Math.hypot(PL.x - A.x, PL.z - A.z) > 3) { A.x = PL.x; A.z = PL.z; A.t = 0; } else if ((A.t += dt) > 6) { A.t = 0; this.stuckT = 3; } }
       if (this.stuckT > 2.5) { this.stuckT = 0; this.jit = truck ? 2.0 : 1.2; this.tgt = null; this.rt = 0; if (truck) this.li++; }
       if (this.jit > 0) {
         this.jit -= dt;
@@ -328,7 +330,8 @@ const BOT = {
         let a = SNOW.areas[SNOW.hlArea] || null;
         let p = a && !a.done ? SNOW.nearestSnow(PL.x + Math.sin(PL.h) * (truck ? 4 : 1), PL.z + Math.cos(PL.h) * (truck ? 4 : 1), a.id, 0.04, 150) : null;
         if (p && truck && !this.okCell(...this.cell(p.x, p.z), true) && CH.botTarget) p = CH.botTarget(p);
-        if (this.human && a && p) p = this.humanPick(a, p);
+        // (snow that does not come off for a while, e.g. a spot the machine cannot reach: look elsewhere in the job for a bit)
+        if (a && p) p = this.humanPick(a, p);
         if (!p) p = SNOW.nearestSnow(PL.x, PL.z, 0, 0.05, 150);
         this.tgt = p;
       }

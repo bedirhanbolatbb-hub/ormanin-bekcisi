@@ -72,13 +72,13 @@ const { chromium } = require('playwright');
   s = await st();
   check('reload after the account copy caught up -> still chapter 2', s.ch === 2 && s.cloudCh === 2, s);
   // the last chapter has no next one: no button there
-  await page.goto(`http://localhost:${port}/?nointro&nodaily&ch=5&fresh&carry=900000`); await ready();
+  await page.goto(`http://localhost:${port}/?nointro&nodaily&ch=9&fresh&carry=5000000`); await ready();
   await page.evaluate(() => { window.__hold = true; for (const a of SNOW.areas.filter(Boolean)) if (!a.done) GAME.completeArea(a, true); });
-  await tick(9);
+  await tick(13);
   await page.evaluate(() => { const b = document.getElementById('chStay'); b && b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
   await tick(0.3);
   s = await st();
-  check('last chapter finished: no NEXT button', s.ch === 5 && s.ended && !s.next, s);
+  check('last chapter finished: no NEXT button', s.ch === 9 && s.ended && !s.next, s);
   // a new day on the way back: the gift banner first, then the hint
   await page.goto(`http://localhost:${port}/?nointro&nodaily&ch=1&fresh`); await ready();
   await page.evaluate(() => { window.__hold = true; for (const a of SNOW.areas.filter(Boolean)) if (!a.done) GAME.completeArea(a, true); });

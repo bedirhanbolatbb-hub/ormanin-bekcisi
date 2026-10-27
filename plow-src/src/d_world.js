@@ -106,6 +106,15 @@ function makeTextures() {
     for (let x = 0; x < w; x += 8) { g.fillStyle = 'rgba(96,126,176,0.5)'; g.fillRect(x, 0, 3, h); g.fillStyle = 'rgba(244,248,255,0.85)'; g.fillRect(x + 4, 0, 3, h); }
     speckle(g, w, h, 900, ['#ffffff', '#b8cae2'], 0.2, 0.5, 1, 2);
   });
+  // stadium: mown grass (two shades in stripes) and a red running track
+  TEX.turf = canvasTex(256, 256, (g, w, h) => {
+    for (let y = 0; y < h; y += 64) { g.fillStyle = (y / 64) % 2 ? '#3f9e4c' : '#4aae57'; g.fillRect(0, y, w, 64); }
+    speckle(g, w, h, 2600, ['#3a9446', '#56b862', '#348a40'], 0.3, 0.7, 1, 2);
+  });
+  TEX.track = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#b8483a'; g.fillRect(0, 0, w, h);
+    speckle(g, w, h, 4200, ['#a63f33', '#c45446', '#9a382d'], 0.4, 0.8, 1, 2);
+  });
   TEX.school = canvasTex(256, 256, (g, w, h) => {
     g.fillStyle = '#3a3f47'; g.fillRect(0, 0, w, h);
     speckle(g, w, h, 4000, ['#30353c', '#454b54', '#2a2e35'], 0.4, 0.9, 1, 2.5);
@@ -228,9 +237,9 @@ function buildWorld(scene) {
   const pav = key => PAVED.find(p => p.key === key).r;
   CH.areas(mk, pav);
   // 4) ground meshes
-  const tile = { asphalt: 4, walk: 1.8, pavers: 2.2, flags: 1.4, cobble: 1.6, apron: 3, ice: 6, piste: 2.6, school: 4 };
-  const rough = { asphalt: 0.62, walk: 0.85, pavers: 0.8, flags: 0.8, cobble: 0.75, apron: 0.85, ice: 0.12, piste: 0.95, school: 0.62 };
-  const gy = { asphalt: 0, walk: 0.003, apron: 0.003, pavers: 0.006, flags: 0.007, cobble: 0.005, ice: 0.002, piste: 0.004, school: 0.001 };
+  const tile = { asphalt: 4, walk: 1.8, pavers: 2.2, flags: 1.4, cobble: 1.6, apron: 3, ice: 6, piste: 2.6, school: 4, turf: 8, track: 3 };
+  const rough = { asphalt: 0.62, walk: 0.85, pavers: 0.8, flags: 0.8, cobble: 0.75, apron: 0.85, ice: 0.12, piste: 0.95, school: 0.62, turf: 0.95, track: 0.8 };
+  const gy = { asphalt: 0, walk: 0.003, apron: 0.003, pavers: 0.006, flags: 0.007, cobble: 0.005, ice: 0.002, piste: 0.004, school: 0.001, turf: 0.002, track: 0.003 };
   for (const p of PAVED) if (!p.noMesh) scene.add(groundPlane(p.r, TEX[p.kind], tile[p.kind], gy[p.kind], rough[p.kind], p.kind === 'ice'));
   // safety base under everything
   const base = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: 0xe9eef5, roughness: 1 }));

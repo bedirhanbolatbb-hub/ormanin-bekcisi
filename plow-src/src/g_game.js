@@ -11,6 +11,11 @@ const TIERS = [
   { key: 'sleigh', name: 'Magic Sleigh', kind: 'truck', cost: 150000, up: 150000, pay: 24, base: [4.5, 520, 8.8], geo: 'sleigh', max: [3, 5, 5], labels: ['Wider blade', 'More magic', 'More coins'] },
   { key: 'zamboni', name: 'Ice Machine', kind: 'truck', cost: 450000, up: 250000, pay: 30, base: [4.3, 600, 8.0], geo: 'zamboni', max: [3, 5, 5], labels: ['Wider brush', 'More power', 'More coins'] },
   { key: 'groomer', name: 'Snow Groomer', kind: 'truck', cost: 700000, up: 400000, pay: 38, base: [5.0, 800, 7.8], geo: 'groomer', max: [3, 5, 5], labels: ['Wider tiller', 'More power', 'More coins'] },
+  // chapters 6-9: each town brings one bigger machine
+  { key: 'sweeper', name: 'Runway Sweeper', kind: 'truck', cost: 1500000, up: 700000, pay: 46, base: [5.4, 950, 8.2], geo: 'sweeper', max: [3, 5, 5], labels: ['Wider broom', 'More power', 'More coins'] },
+  { key: 'melter', name: 'Snow Melter', kind: 'truck', cost: 4000000, up: 1600000, pay: 56, base: [5.8, 1100, 8.3], geo: 'melter', max: [3, 5, 5], labels: ['Wider intake', 'More heat', 'More coins'] },
+  { key: 'jet', name: 'Jet Blower', kind: 'truck', cost: 7000000, up: 2600000, pay: 68, base: [6.2, 1300, 8.6], geo: 'jet', max: [3, 5, 5], labels: ['Wider blast', 'More thrust', 'More coins'] },
+  { key: 'reindeer', name: 'Reindeer Express', kind: 'truck', cost: 8000000, up: 3000000, pay: 82, base: [6.6, 1500, 9.0], geo: 'reindeer', max: [3, 5, 5], labels: ['Wider blade', 'More magic', 'More coins'] },
 ];
 const TIER = {}; TIERS.forEach((t, i) => { t.i = i; TIER[t.key] = t; });
 // upgrades: 0 wider, 1 faster, 2 more coins
@@ -20,7 +25,7 @@ const upMax = (key, i) => (TIER[key].max || [3, 3, 3])[i];
 const UPLABELS = { shovel: ['Wider shovel', 'Faster', 'More coins'], blower: ['Wider intake', 'Faster', 'More coins'], truck: ['Wider blade', 'More power', 'More coins'] };
 const UPSAY = ['WIDER!', 'FASTER!', 'MORE COINS!'];
 const DONE_AT = 0.85;   // an area finishes itself at 85% (80% for the big truck jobs) -> nobody hunts for the last bits
-const doneAt = a => a.lot ? DONE_AT : 0.8;
+const doneAt = a => a.doneAt || (a.lot ? DONE_AT : 0.8);   // (a very big job may finish a little sooner)
 // tips per area
 const TIPMIN = { rose: 25, miller: 40, apron: 10 };
 const GAME = {

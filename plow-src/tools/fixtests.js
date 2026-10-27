@@ -62,7 +62,7 @@ const { chromium } = require('playwright');
   }
 
   if (!only || only === 'crew') {
-    for (const [ch, carry] of [[1, 0], [2, 20000], [3, 200000], [4, 500000]]) {
+    for (const [ch, carry] of (process.env.CREWCH ? JSON.parse(process.env.CREWCH) : [[1, 0], [2, 20000], [3, 200000], [4, 500000]])) {
       const p = await newPage();
       await open(p, `&bot&norender&fresh&ch=${ch}` + (carry ? '&carry=' + carry : ''));
       const r = await p.evaluate(() => {

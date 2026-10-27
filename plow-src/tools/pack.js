@@ -16,6 +16,25 @@ const PACKS = {
   ch4: { 22404: 'rowboat', 19552: 'boathouse', 33698: 'hockeygoal', 33552: 'bleacher', 33549: 'floodlight', 33696: 'board', 33699: 'boardcorner', 33704: 'scoreboard', 21029: 'snowarch', 19694: 'snowbank', 19711: 'festoon' },
   ch5: { 25946: 'lifttower', 25954: 'chair', 25956: 'liftbottom', 25958: 'lifttop', 25964: 'windfence', 25977: 'gatered', 25978: 'gateblue', 25981: 'pistepole', 25987: 'finisharch', 25988: 'lodge', 25989: 'snowgun', 25990: 'lodgewing', 25991: 'rental', 25992: 'ticket', 25993: 'restaurant', 25995: 'patrol', 26005: 'snowmobile', 26007: 'shuttle', 26013: 'skis', 26017: 'skirack', 26027: 'slopebench', 26029: 'deckchair', 33552: 'bleacher', 33704: 'scoreboard', 33549: 'floodlight', 26001: 'canopy' },
 };
+// chapters 6-9: their own set, plus the bigger machines (a machine's model rides in its chapter and every later one)
+const M6 = { 26063: 'tug' }, M7 = Object.assign({ 22391: 'tvtruck' }, M6), M8 = Object.assign({ 38210: 'firetruck' }, M7), M9 = Object.assign({ 18775: 'rsleigh', '18777s': 'reindeer' }, M8);
+PACKS.ch6 = Object.assign({
+  '32591f': 'plane_a', '32588f': 'plane_b', '32589f': 'bizjet', 26087: 'tower', 26088: 'hangar', 26073: 'jetbridge', 26062: 'bagtug', 26059: 'bagcart', 26069: 'bowser', 26066: 'catering',
+  26074: 'apronbus', 26075: 'deicer', 26082: 'apronlight', 26081: 'blastfence', 26079: 'twysign', 26085: 'cones', 32827: 'windsock', 26090: 'crewbldg', 26089: 'gse', 32832: 'abeacon', 19694: 'snowbank',
+}, M6);
+PACKS.ch7 = Object.assign({
+  19104: 'standbay', 19107: 'standroof', 22365: 'stairtower', 22348: 'pressbox', 22359: 'videocube', 19133: 'scoreboard2', 19134: 'stadlight', 22354: 'gateway2', 19137: 'turnstile',
+  19135: 'ticketbooth', 19136: 'kiosk2', 19087: 'goal', 19077: 'cornerflag', 19091: 'ball', 19694: 'snowbank',
+}, M7);
+PACKS.ch8 = Object.assign({
+  38181: 'stage1', 38182: 'interstage', 38183: 'stage2', 38184: 'fairing', 38185: 'engines', 38189: 'crawler', 38170: 'gantrybase', 38171: 'gantry', 38172: 'gantrytop', 38175: 'crewarm',
+  38169: 'watertower', 38177: 'lmast', 38192: 'sphere', 38193: 'cyltank', 38194: 'vent', 38201: 'camtower', 38202: 'padlight', 38208: 'office', 38209: 'crewvan', 38212: 'warnsign',
+  38166: 'blastpanel', 33552: 'bleacher', 19694: 'snowbank',
+}, M8);
+PACKS.ch9 = Object.assign({
+  '18691s': 'workshop', 18693: 'postoffice', '18692s': 'bakery2', '18705s': 'bigfir', 18774: 'santa', '25420s': 'candycane', 25417: 'giftstack', 25426: 'polesign', 25429: 'nutcracker',
+  25425: 'giftstall', '18719s': 'lightarch', '18731s': 'xlamp', 18764: 'gbhouse', 18779: 'giftsack', '18695s': 'elfhouse', 18773: 'letterbox', 19694: 'snowbank',
+}, M9);
 const only = process.argv[2] ? process.argv[2].split(',') : Object.keys(PACKS);
 (async () => {
   const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);

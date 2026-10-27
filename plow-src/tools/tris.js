@@ -2,7 +2,7 @@
 const { chromium, devices } = require('playwright');
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  for (const ch of [1, 2, 3, 4, 5]) {
+  for (const ch of (process.env.CHS || "1,2,3,4,5").split(",").map(Number)) {
     const ctx = await browser.newContext({ ...devices['iPhone 13'], deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     await page.goto(`http://localhost:8765/?nointro&fresh&nosave&ch=${ch}&carry=9000000`);

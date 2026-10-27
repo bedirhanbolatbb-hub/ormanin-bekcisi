@@ -125,6 +125,16 @@ const TGEO = {
   sleigh: { model: 'sleigh', scale: 2.25, turn: 2.35, off: 0, rear: 2.55, nose: 2.5, halfW: 1.3, bladeZ: 2.95, bladeS: [1.7, 1.5], gold: true, carve: 3.4, pileZ: 3.55, beacon: null, cam: 1.15, rider: [0, 1.22, -0.85, 1.2], hover: 1 },
   // ice resurfacer with a spinning sweeper brush in front
   zamboni: { model: 'resurfacer', scale: 1.3, grip: 6.0, turn: 2.0, off: 0.15, rear: 3.25, nose: 2.95, halfW: 1.36, bladeZ: null, head: 'brush', headZ: 3.4, carve: 3.8, pileZ: 3.95, beacon: [0, 3.35, -0.1], cam: 1.18, rider: [0.38, 1.42, 1.05, 1.2] },
+  // (chapters 6-9: their models come in that chapter's art pack, so a machine is only built where its model is)
+  // runway sweeper: an airport tug pushing a giant spinning broom
+  sweeper: { model: 'tug', scale: 1.55, turn: 1.9, off: -0.2, rear: 4.3, nose: 3.9, halfW: 2.15, bladeZ: null, head: 'brush', headZ: 4.45, headS: 1.4, carve: 5.05, pileZ: 5.4, beacon: [0, 3.95, -2.6], cam: 1.34 },
+  // snow melter: a big box truck that swallows the snow up front and puffs it out of its stack as steam
+  melter: { model: 'tvtruck', scale: 1.75, turn: 1.7, off: -0.3, rear: 5.5, nose: 4.9, halfW: 2.05, bladeZ: null, head: 'melt', headZ: 5.45, carve: 6.05, pileZ: null, beacon: [0, 6.15, 1.2], cam: 1.42, stack: [0.75, 6.6, -3.0] },
+  // jet blower: a fire truck with a jet engine on its nose that blasts the snow far off the road
+  jet: { model: 'firetruck', scale: 1.15, rotY: Math.PI / 2, turn: 1.6, off: -0.4, rear: 5.0, nose: 4.4, halfW: 2.25, bladeZ: null, head: 'jet', headZ: 4.6, carve: 6.2, pileZ: null, beacon: [0, 5.6, 0.4], cam: 1.46 },
+  // reindeer express: Santa's big sleigh with its golden blade, pulled by two flying reindeer
+  reindeer: { model: 'rsleigh', scale: 2.6, turn: 2.25, off: -1.4, rear: 4.3, nose: 5.4, halfW: 1.95, bladeZ: 1.75, bladeS: [2.1, 1.7], gold: true, carve: 2.25, pileZ: 2.45, beacon: null, cam: 1.42, hover: 1,
+    team: [[-0.78, 1.05, 4.3], [0.78, 1.05, 4.3]], teamS: 1.75 },
 };
 // ---------- machine attachments (procedural) ----------
 function makeRotary() {
@@ -147,6 +157,7 @@ function makeRotary() {
   const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.55, 14, 1, true, 0, Math.PI), paint); cap.rotation.z = Math.PI / 2; cap.rotation.y = Math.PI / 2; cap.position.set(-0.18, 1.3, 0); chute.add(cap);
   chute.rotation.z = 0.35;
   const tip = new THREE.Object3D(); tip.position.set(-0.45, 1.35, 0); chute.add(tip);
+  mergeGroup(drum);   // (36 little flights: one mesh per material)
   return { g, housing, drum, chute, tip, sideL, sideR };
 }
 function makeBrush() {
@@ -160,7 +171,47 @@ function makeBrush() {
   for (let i = 0; i < 10; i++) { const a = i / 10 * TAU, m = new THREE.Mesh(bg, i % 2 ? bris : mcol(0xffb020, 0.85)); m.position.set(0, Math.cos(a) * 0.3, Math.sin(a) * 0.3); m.rotation.x = -a; m.castShadow = true; drum.add(m); }
   const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.95), steel); sideL.position.set(0.5, 0.5, -0.05); g.add(sideL);
   const sideR = sideL.clone(); sideR.position.x = -0.5; g.add(sideR);
+  mergeGroup(drum);
   return { g, housing, drum, sideL, sideR };
+}
+// snow melter intake: a wide mouth with a turning auger that feeds the snow into the hot tank
+function makeMelt() {
+  const g = new THREE.Group(), paint = mcol(0xff7a1a, 0.45, 0.25), dark = mcol(0x2c3138, 0.55, 0.3), steel = mcol(0xb4bcc6, 0.3, 0.7), glow = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
+  const housing = new THREE.Group(); g.add(housing);
+  const hb = (w, h, d, m, x, y, z) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = true; housing.add(me); return me; };
+  hb(1, 1.35, 0.14, paint, 0, 0.72, -0.5); hb(1, 0.14, 1.05, paint, 0, 1.38, -0.02); hb(1.02, 0.08, 0.22, steel, 0, 0.05, 0.42);
+  hb(1, 0.1, 0.12, glow, 0, 1.2, -0.42);
+  const drum = new THREE.Group(); drum.position.set(0, 0.55, 0.02); housing.add(drum);
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 1, 12), dark); core.rotation.z = Math.PI / 2; drum.add(core);
+  const fl = new THREE.BoxGeometry(0.05, 0.44, 0.1);
+  for (let i = 0; i < 18; i++) { const t = i / 17, a = t * Math.PI * 4; for (const sd of [-1, 1]) { const m = new THREE.Mesh(fl, steel); m.position.set(sd * (0.06 + t * 0.42), Math.cos(a * sd) * 0.25, Math.sin(a * sd) * 0.25); m.rotation.x = a * sd; m.castShadow = true; drum.add(m); } }
+  const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.4, 1.05), paint); sideL.position.set(0.5, 0.72, -0.02); sideL.castShadow = true; g.add(sideL);
+  const sideR = sideL.clone(); sideR.position.x = -0.5; g.add(sideR);
+  mergeGroup(drum);
+  return { g, housing, drum, sideL, sideR };
+}
+// jet blower: a jet engine on a short boom, its fan turning; the hot blast clears the road ahead
+function makeJet() {
+  const g = new THREE.Group(), shell = mcol(0xd9dee5, 0.3, 0.75), dark = mcol(0x23282f, 0.5, 0.5), red = mcol(0xd8342c, 0.45, 0.2);
+  const housing = new THREE.Group(); g.add(housing);
+  const boom = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1.4), red); boom.position.set(0, 2.05, -0.75); boom.castShadow = true; housing.add(boom);
+  const pod = new THREE.Group(); pod.position.set(0, 1.85, 0.25); pod.rotation.x = 0.32; housing.add(pod);
+  const nac = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.66, 2.3, 22, 1, true), shell); nac.rotation.x = Math.PI / 2; nac.castShadow = true; pod.add(nac);
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.62, 2.28, 22, 1, true), dark); inner.material.side = THREE.BackSide; inner.rotation.x = Math.PI / 2; pod.add(inner);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.07, 8, 24), red); lip.position.z = -1.15; pod.add(lip);
+  const fan = new THREE.Group(); fan.position.z = -0.8; pod.add(fan);
+  const hub = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 14), shell); hub.rotation.x = -Math.PI / 2; hub.position.z = -0.2; fan.add(hub);
+  const bl = new THREE.BoxGeometry(0.16, 0.66, 0.04);
+  for (let i = 0; i < 12; i++) { const m = new THREE.Mesh(bl, dark); const a = i / 12 * TAU; m.position.set(Math.sin(a) * 0.36, Math.cos(a) * 0.36, 0); m.rotation.z = -a; m.rotation.y = 0.5; fan.add(m); }
+  mergeGroup(fan);
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.7, 14), dark); cone.rotation.x = Math.PI / 2; cone.position.z = 1.3; pod.add(cone);
+  const glowM = new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.6, 16, 1, true), glowM); flame.rotation.x = Math.PI / 2; flame.position.z = 2.0; pod.add(flame);
+  const nozzle = new THREE.Object3D(); nozzle.position.z = 1.4; pod.add(nozzle);
+  // (side plates follow the blast width so the upgrade "wider blast" shows)
+  const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.8), red); sideL.position.set(0.5, 0.3, 1.2); g.add(sideL);
+  const sideR = sideL.clone(); sideR.position.x = -0.5; g.add(sideR);
+  return { g, housing, drum: fan, sideL, sideR, pod, flame, nozzle };
 }
 // ---------- player ----------
 const PL = {
@@ -192,15 +243,23 @@ const PL = {
     this.truck = new THREE.Group(); scene.add(this.truck); this.truck.visible = false;
     this.truckMs = {};
     for (const k in TGEO) {
-      const G = TGEO[k], m = ownMats(artScene(G.model).clone(true));
+      const G = TGEO[k];
+      // the bigger machines of the later chapters only exist where their art pack is loaded
+      if (!WORLD.art[G.model]) continue;
+      const wrap = new THREE.Group(), m = ownMats(artScene(G.model).clone(true));
       m.traverse(c => { if (c.isMesh) { c.castShadow = true; if (G.tint && c.material.name === 'paint') c.material.color.setHex(G.tint); } });
       if (G.scale) m.scale.setScalar(G.scale);
       if (G.rotY) m.rotation.y = G.rotY;
-      m.position.z = G.off; m.visible = false; this.truck.add(m); this.truckMs[k] = m;
+      wrap.add(m); m.position.z = G.off;
+      // a team that pulls it (the reindeer), part of the machine
+      if (G.team && WORLD.art.reindeer) { G._team = []; for (const [x, y, z] of G.team) { const d = ownMats(artScene('reindeer').clone(true)); d.traverse(c => { if (c.isMesh) c.castShadow = true; }); d.scale.setScalar(G.teamS || 1.6); d.position.set(x, y, z); wrap.add(d); G._team.push(d); } }
+      wrap.visible = false; this.truck.add(wrap); this.truckMs[k] = wrap;
     }
-    // attachments: rotary blower head, sweeper brush, a driver for open machines
+    // attachments: rotary blower head, sweeper brush, melter intake, jet engine, a driver for open machines
     this.rotary = makeRotary(); this.truck.add(this.rotary.g); this.rotary.g.visible = false;
     this.brush = makeBrush(); this.truck.add(this.brush.g); this.brush.g.visible = false;
+    this.melt = makeMelt(); this.truck.add(this.melt.g); this.melt.g.visible = false;
+    this.jet = makeJet(); this.truck.add(this.jet.g); this.jet.g.visible = false;
     this.rider = makePerson({}); this.truck.add(this.rider.root); this.rider.root.visible = false;
     this.truckM = this.truckMs.pickup;
     this.bladeG = new THREE.Group(); this.truck.add(this.bladeG);
@@ -214,6 +273,7 @@ const PL = {
     this.applyTool();
   },
   get kind() { return TIER[this.tool].kind; },
+  headOf(G) { return { rotary: this.rotary, brush: this.brush, melt: this.melt, jet: this.jet }[G.head] || null; },
   get geo() { return TGEO[TIER[this.tool].geo || 'pickup']; },
   stats() { return GAME.stats(this.tool); },
   applyTool() {
@@ -233,6 +293,8 @@ const PL = {
       const G = this.geo;
       for (const key in this.truckMs) this.truckMs[key].visible = TGEO[key] === G;
       this.truckM = this.truckMs[Object.keys(TGEO).find(key => TGEO[key] === G)];
+      // (never without a body: a machine whose art is not loaded here shows as the pickup)
+      if (!this.truckM) { this.truckM = this.truckMs.pickup; this.truckM.visible = true; }
       this.bladeG.visible = G.bladeZ !== null;
       if (G.bladeZ !== null) { this.bladeG.position.z = G.bladeZ; this.bladeM.scale.set(st.w / 1.06, G.bladeS[0], G.bladeS[1]); }
       for (const b of this.bladeMats) {
@@ -240,8 +302,14 @@ const PL = {
         else { b.m.color.copy(b.c); b.m.metalness = b.mt; b.m.roughness = b.r; if (b.m.emissive) b.m.emissive.setHex(0); }
       }
       this.rotary.g.visible = G.head === 'rotary'; this.brush.g.visible = G.head === 'brush';
-      const Hd = G.head === 'rotary' ? this.rotary : G.head === 'brush' ? this.brush : null;
-      if (Hd) { Hd.g.position.set(0, 0, G.headZ); Hd.housing.scale.x = st.w; Hd.sideL.position.x = st.w / 2; Hd.sideR.position.x = -st.w / 2; }
+      this.melt.g.visible = G.head === 'melt'; this.jet.g.visible = G.head === 'jet';
+      const Hd = this.headOf(G);
+      if (Hd) {
+        const hs = G.headS || 1; Hd.g.position.set(0, 0, G.headZ); Hd.sideL.position.x = st.w / 2; Hd.sideR.position.x = -st.w / 2;
+        // (the jet engine keeps its shape: only its blast plates spread with the width)
+        if (G.head === 'jet') Hd.housing.scale.set(1, 1, 1); else Hd.housing.scale.set(st.w, hs, hs);
+        for (const sd of [Hd.sideL, Hd.sideR]) { if (sd._p0 === undefined) sd._p0 = [sd.position.y, sd.position.z]; sd.scale.set(1, hs, hs); sd.position.y = sd._p0[0] * hs; sd.position.z = sd._p0[1] * hs; }
+      }
       this.rider.root.visible = !!G.rider;
       if (G.rider) { this.rider.root.position.set(G.rider[0], G.rider[1], G.rider[2]); this.rider.root.scale.setScalar(G.rider[3] || 1); }
       this.beacon.visible = !!G.beacon;
@@ -467,11 +535,12 @@ const PL = {
     const H = [], push = (o) => { o.f = o.g + heur(o); H.push(o); let i = H.length - 1; while (i > 0) { const j = (i - 1) >> 1; if (H[j].f <= o.f) break; H[i] = H[j]; i = j; } H[i] = o; };
     const pop = () => { const top = H[0], last = H.pop(); if (H.length) { let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < H.length && H[l].f < (m === i ? last.f : H[m].f)) m = l; if (r < H.length && H[r].f < (m === i ? last.f : H[m].f)) m = r; if (m === i) break; H[i] = H[m]; i = m; } H[i] = last; } return top; };
     push({ x: x0, z: z0, h: this.h, g: 0, p: null, m: null });
-    const seen = new Set([key(x0, z0, this.h)]), limit = this._tol ? 260 : 450, t0 = performance.now();
+    // (_deep: a rare harder search when the machine has been getting nowhere for a few seconds)
+    const seen = new Set([key(x0, z0, this.h)]), limit = this._deep ? 2400 : this._tol ? 260 : 450, budget = this._deep ? 30 : 7, t0 = performance.now();
     let n = 0, found = null;
     while (H.length && n < limit) {
       // never hold up a frame for long (slow phones just search a little less)
-      if ((n & 15) === 15 && performance.now() - t0 > 7) break;
+      if ((n & 15) === 15 && performance.now() - t0 > budget) break;
       const c = pop(); n++;
       if (c.m && prog(c) >= need && Math.abs(angDiff(c.h, want)) < tol && room(c)) { found = c; break; }
       for (const m of P) {
@@ -627,7 +696,16 @@ const PL = {
     if (mag > 0.4 && !this.glide && !this._path) {
       const A = this._anc || (this._anc = { x: this.x, z: this.z, t: 0 });
       if (Math.hypot(this.x - A.x, this.z - A.z) > 1.0) { A.x = this.x; A.z = this.z; A.t = 0; }
-      else if ((A.t += dt) > 3.2 && this._dtry && Math.hypot(this._dtry.x - this.x, this._dtry.z - this.z) < 1.2) { A.t = 0; this._dtry = null; if (this._trapped(G)) this.unstick(); }
+      else if ((A.t += dt) > 3.2 && this._dtry && Math.hypot(this._dtry.x - this.x, this._dtry.z - this.z) < 1.2) {
+        A.t = 0; this._dtry = null;
+        if (this._trapped(G)) this.unstick();
+        else {
+          // not boxed in, but the quick search found no way out (a long machine deep in a corner): search harder, once
+          const want = Math.atan2(this._mvx, this._mvz); this._deep = true;
+          const path = this._findMoves(want, this._mvx, this._mvz, st, G, 'go'); this._deep = false;
+          if (path) { this._path = path; this._pathWant = want; }
+        }
+      }
     } else if (this._anc) this._anc.t = 0;
     // pinned? (pushing the stick but nothing moves for a while)
     if (mag > 0 && Math.abs(this.x - x0) + Math.abs(this.z - z0) < 0.002 && Math.abs(angDiff(h0, this.h)) < 0.002) { this.pinT = (this.pinT || 0) + dt; if (this.pinT > 0.9) { this.pinT = 0; if (this._trapped(G)) this.unstick(); } }
@@ -654,6 +732,8 @@ const PL = {
     if (removed > 0) {
       const rx = hz, rz = -hx;
       if (G.head === 'rotary') this._throwFX(removed, hx, hz, rx, rz);
+      else if (G.head === 'melt') this._meltFX(removed, cx, cz, hx, hz, rx, rz, st);
+      else if (G.head === 'jet') this._jetFX(removed, cx, cz, hx, hz, rx, rz, st);
       else if (G.head === 'brush') {
         // the sweeper flings snow forward and up
         for (let i = 0; i < 3; i++) FX.spray(cx + rx * rnd(-0.5, 0.5) * st.w, 0.5, cz + rz * rnd(-0.5, 0.5) * st.w, hx * 1.2 + rx * rnd(-0.4, 0.4), hz * 1.2 + rz * rnd(-0.4, 0.4), 2, 4.2, 0.2);
@@ -665,6 +745,21 @@ const PL = {
       if (G.gold && Math.random() < 0.5) { const sd = Math.random() < 0.5 ? 1 : -1; FX.sparkle(cx + rx * sd * st.w * 0.5, 0.5, cz + rz * sd * st.w * 0.5, 2, 0.3); }
     }
     return removed;
+  },
+  // snow melter: the snow is sucked into the mouth and leaves the stack as a big cloud of steam
+  _meltFX(removed, cx, cz, hx, hz, rx, rz, st) {
+    for (let i = 0; i < 2; i++) FX.spray(cx + rx * rnd(-0.5, 0.5) * st.w, 0.4, cz + rz * rnd(-0.5, 0.5) * st.w, -hx * 0.9, -hz * 0.9, 1, 2.2, 0.14);
+    this._steamAcc = (this._steamAcc || 0) + removed;
+    if (this._steamAcc > 0.06) { this._steamAcc = 0; const p = this.truck.localToWorld(this._v1.set(...this.geo.stack)); FX.steam(p.x, p.y, p.z, 2, true); }
+  },
+  // jet blower: the blast throws the snow far ahead and out to both sides in a wide fan
+  _jetFX(removed, cx, cz, hx, hz, rx, rz, st) {
+    const n = Math.min(10, 2 + Math.round(removed * 30)), v = Math.max(0, this.spd);
+    for (let i = 0; i < n; i++) {
+      const sd = Math.random() < 0.5 ? 1 : -1, a = rnd(0.25, 1.0), sp = rnd(7, 11);
+      FX.emit(FX.norm, { x: cx + rx * rnd(-0.5, 0.5) * st.w, y: rnd(0.2, 0.6), z: cz + rz * rnd(-0.5, 0.5) * st.w, vx: (hx * (1 - a) + rx * sd * a) * sp + hx * v * 0.6, vy: rnd(2.5, 4.5), vz: (hz * (1 - a) + rz * sd * a) * sp + hz * v * 0.6, gr: 9, life: rnd(0.7, 1.1), s0: rnd(0.2, 0.35), s1: rnd(0.5, 0.9), a0: 0.95, a1: 0.25, dr: 0.35, c: [0.96, 0.975, 1] });
+    }
+    if (Math.random() < 0.05 * n) { const sd = Math.random() < 0.5 ? 1 : -1, d = rnd(8, 12); FX.clump(cx, 0.6, cz, cx + rx * sd * d + hx * 3, 0.3, cz + rz * sd * d + hz * 3, rnd(0.2, 0.32), rnd(0.8, 1.0), (x, y, z) => FX.puff(x, 0.3, z, 4, 1.2)); }
   },
   // rotary blower: a high, wide arc of snow out of the chute, landing well off to the side
   _throwFX(removed, hx, hz, rx, rz) {
@@ -743,7 +838,20 @@ const PL = {
       this.beacon.material.color.setHSL(0.08, 1, 0.45 + 0.25 * Math.max(0, Math.sin(now / 120)));
       // little bounce (the magic sleigh floats)
       this.truckM.position.y = G.hover ? 0.16 + Math.sin(now / 300) * 0.07 : Math.abs(Math.sin(now / 70)) * 0.015 * this.moveAmt;
-      if (G.head) { const Hd = G.head === 'rotary' ? this.rotary : this.brush; Hd.drum.rotation.x -= dt * (5 + this.moveAmt * 16) * (G.head === 'brush' ? 1.5 : 1); if (G.head === 'rotary') this.rotary.chute.rotation.y = Math.sin(now / 900) * 0.12; }
+      if (G.head) {
+        const Hd = this.headOf(G);
+        if (G.head === 'jet') {
+          // the fan always turns; the flame grows with the throttle and flickers
+          Hd.drum.rotation.z += dt * (14 + this.moveAmt * 30);
+          const f = 0.55 + this.moveAmt * 0.6 + Math.random() * 0.15; Hd.flame.scale.set(0.8 + f * 0.3, f, 0.8 + f * 0.3); Hd.flame.material.opacity = 0.45 + this.moveAmt * 0.45;
+          if (Math.random() < dt * (6 + this.moveAmt * 20)) { const p = Hd.nozzle.getWorldPosition(this._v1); FX.glow(p.x + rnd(-0.2, 0.2), p.y, p.z + rnd(-0.2, 0.2), 0.9 + this.moveAmt, [1, 0.6, 0.25], 0.2); }
+        } else Hd.drum.rotation.x -= dt * (5 + this.moveAmt * 16) * (G.head === 'brush' ? 1.5 : 1);
+        if (G.head === 'rotary') this.rotary.chute.rotation.y = Math.sin(now / 900) * 0.12;
+      }
+      // the melter's stack steams a little all the time (it is hot inside)
+      if (G.stack && Math.random() < dt * 1.5) { const p = this.truck.localToWorld(this._v1.set(...G.stack)); FX.steam(p.x, p.y, p.z, 1, false); }
+      // the reindeer gallop through the air in front of the sleigh
+      if (G._team) for (let i = 0; i < G._team.length; i++) { const d = G._team[i], ph = now / 1000 * (6 + this.moveAmt * 5) + i * 1.7; d.position.y = G.team[i][1] + Math.sin(ph) * (0.08 + 0.14 * this.moveAmt); d.rotation.x = Math.sin(ph + 0.6) * (0.05 + 0.12 * this.moveAmt); }
       if (G.rider) {
         this.rider.root.position.y = G.rider[1] + (G.hover ? this.truckM.position.y : 0);
         animPerson(this.rider, dt, { walk: 0, pose: this.celebrate > 0 ? 'cheer' : 'push', t: now / 1000 });
