@@ -13,6 +13,8 @@ const CHUI = {
   init() {
     addEventListener('resize', () => this.refit());
     const b = $('btnMap'); if (b) { b.innerHTML = '<svg viewBox="0 0 40 40"><path d="M6 10l9-4 10 4 9-4v24l-9 4-10-4-9 4z" fill="#fff" stroke="#2b3a55" stroke-width="2.6" stroke-linejoin="round"/><path d="M15 6v24M25 10v24" stroke="#2b3a55" stroke-width="2.2"/><circle cx="20" cy="17" r="3" fill="#e5483c"/></svg>'; b.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.map(); }; }
+    // the NEXT CHAPTER button in the goal bar (shows once the chapter is done)
+    const n = $('goalNext'); if (n) n.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); const nx = chapterById(CH.id + 1); if (!nx || !GAME.ended || this.open) return; AUD.click(); this.go(nx.id); };
   },
   // the big cards always fit the screen (phones on their side, small game frames): shrink the whole card when needed
   fit(el, room) {
@@ -78,7 +80,7 @@ const CHUI = {
       AUD.bigWin && AUD.bigWin(); GAME.save();
     }, 500 + 3 * 420 + 200);
     if (next) $('chNext').onpointerdown = (e) => { e.stopPropagation(); AUD.click(); this.go(next.id); };
-    $('chStay').onpointerdown = (e) => { e.stopPropagation(); AUD.click(); this.close('chRes'); UI.toast(next ? 'Tap the map any time to start the next chapter' : 'Snowstorms keep coming: plow them for coins!'); };
+    $('chStay').onpointerdown = (e) => { e.stopPropagation(); AUD.click(); this.close('chRes'); UI.toast(next ? 'Tap NEXT CHAPTER any time to go on' :'Snowstorms keep coming: plow them for coins!'); };
   },
   // chapter list
   map() {
@@ -99,6 +101,7 @@ const CHUI = {
   },
   // snowy wipe to another chapter
   go(id) {
+    if (this._going) return; this._going = true;
     const f = $('chFade'), C = chapterById(id);
     f.innerHTML = `<div class="chname sm">Chapter ${id}</div><div class="chname">${C ? C.name : ''}</div>`;
     f.classList.add('on');

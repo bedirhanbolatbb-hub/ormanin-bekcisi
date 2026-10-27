@@ -107,7 +107,8 @@ const GAME = {
       if (!this.ended && GOALS[this.goalIdx()].end) this.finishChapter();
     }
     for (let i = LATER.length - 1; i >= 0; i--) { const L = LATER[i]; L.t -= dt; if (L.t <= 0) { LATER.splice(i, 1); try { L.fn(); } catch (e) { console.warn(e); } } }
-    if (CH.update) CH.update(dt);
+    // a chapter's own extras must never hold up the chapter itself (the results, the next chapter)
+    if (CH.update) { try { CH.update(dt); } catch (e) { if (!this._chErr) { this._chErr = 1; console.warn('chapter', e); } } }
     if (this.finishT > 0) { this.finishT -= dt; if (this.finishT <= 0) CHUI.results(); }
     if (this.giftT > 0) { this.giftT -= dt; const nt = this.nextTool(); if (this.giftT <= 0 && nt && TIER[nt].gift) { this.giftT = 0; this.buyTool(nt, true); } }
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
@@ -146,7 +147,7 @@ const GAME = {
     const rec = this.chapters[CH.id] || (this.chapters[CH.id] = { stars: 0, best: 0 });
     this.lastStars = st; this.lastNew = st > rec.stars;
     rec.stars = Math.max(rec.stars, st); rec.best = rec.best ? Math.min(rec.best, this.time) : this.time; rec.done = 1;
-    if (CH.finale) CH.finale();
+    if (CH.finale) { try { CH.finale(); } catch (e) { console.warn('finale', e); } }
     if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam') || QS.has('vid'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
     this.finishT = CH.finaleDelay || 5.5;
     this.save();

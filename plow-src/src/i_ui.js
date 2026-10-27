@@ -122,7 +122,7 @@ const UI = {
       if (f >= 1 && !this._toolHinted) { this._toolHinted = 1; this.hint('New tool ready! Tap ' + TIER[nt].name, 4); }
       if (f < 1) this._toolHinted = 0;
     }
-    if (!GAME.firstUp && this.upBtns.some(b => b.classList.contains('can')) && !this._upHint) { this._upHint = 1; this.hint('Tap an upgrade below!', 4); $('ups').classList.add('nudge'); }
+    if (!GAME.firstUp && !GAME.ended && this.upBtns.some(b => b.classList.contains('can')) && !this._upHint) { this._upHint = 1; this.hint('Tap an upgrade below!', 4); $('ups').classList.add('nudge'); }
     if (GAME.firstUp) $('ups').classList.remove('nudge');
   },
   _updGoal(shown) {
@@ -140,6 +140,9 @@ const UI = {
     else { lab = '★'; }
     $('goalBar').firstChild.style.width = (f * 100).toFixed(1) + '%';
     $('goalPct').textContent = lab;
+    // chapter done and another one waits: the goal bar carries the button to it
+    const nx = GAME.ended && !CHUI.open && !!chapterById(CH.id + 1);
+    if (nx !== this._nextOn) { this._nextOn = nx; $('goal').classList.toggle('next', nx); }
   },
   _v: new V3(),
   _updLoadTag() {

@@ -173,7 +173,7 @@ const CH_RESORT = {
     const look = NPC.look(kind || (Math.random() < 0.4 ? 'kid' : 'adult'));
     const n = NPC.spawn({ x: rnd(-6, 6), z: -61, h: 0, kind: kind || 'adult', look, skate: true, pose: 'skate', tag: 'ski' });
     n.P.root.traverse(m => { if (m.isMesh) m.castShadow = false; });
-    const sk = new THREE.Mesh(geo('skis', () => { const g = new THREE.BoxGeometry(0.34, 0.04, 1.5); g.translate(0, 0.02, 0.15); return g; }), mcol(0xe5483c, 0.5)); n.P.root.add(sk);
+    const sk = new THREE.Mesh(geo('skis', SKIS), mcol(0xe5483c, 0.5)); n.P.root.add(sk);
     this.skiers.push({ n, ph: rnd(0, TAU), amp: rnd(3, 6), spd: rnd(5.5, 8), wob: rnd(0.12, 0.2), x0: n.x });
   },
   skiSchool() {
@@ -263,7 +263,7 @@ const CH_RESORT = {
     for (let i = 0; i < 4; i++) {
       const look = Object.assign(NPC.look('adult'), { jacket: cols[i], hat: cols[i], brim: 0xffffff, scale: 1.2 });
       const n = NPC.spawn({ x: -4.5 + i * 3, z: -60, h: 0, kind: 'adult', look, skate: true, pose: 'skate', tag: 'race' });
-      const sk = new THREE.Mesh(geo('skis'), mcol(0x2b3a55, 0.5)); n.P.root.add(sk);
+      const sk = new THREE.Mesh(geo('skis', SKIS), mcol(0x2b3a55, 0.5)); n.P.root.add(sk);
       list.push({ n, gi: 0, spd: rnd(12, 14.5), lane: -4.5 + i * 3 });
     }
     this.race = { list, t: 0, place: 0 };
@@ -273,3 +273,5 @@ const CH_RESORT = {
   save() { return {}; },
   load(o) { },
 };
+// ski geometry: made by whoever needs it first (a skier, or the racers at the finale when no skier came down yet)
+function SKIS() { const g = new THREE.BoxGeometry(0.34, 0.04, 1.5); g.translate(0, 0.02, 0.15); return g; }

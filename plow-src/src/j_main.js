@@ -433,10 +433,16 @@ async function boot() {
   setTimeout(() => { $('loading').classList.add('off'); CG.loadingStop(); }, 150);
   // iOS wants a touchend / click to wake the sound up again
   for (const ev of ['touchend', 'click']) addEventListener(ev, () => AUD.init(), { passive: true });
-  if (!resumed) CH.firstHint = IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag';
-  else UI.hint('Welcome back!', 2.5);
   // a new day: the daily gift (after the chapter card when there is one)
-  { const run = DAILY.check(); if (run) { if (resumed || QS.has('nointro')) setTimeout(() => DAILY.give(run), 1800); else CH.dailyGift = run; } }
+  const run = DAILY.check();
+  if (!resumed) CH.firstHint = IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag';
+  else if (GAME.ended && chapterById(CH.id + 1)) {
+    // back in a chapter you already finished: point at the way on (after the daily gift banner, if there is one)
+    const say = () => { if (GAME.ended && !CHUI.open) UI.hint('Chapter done! Tap NEXT CHAPTER to go on', 5); };
+    setTimeout(say, run ? 5000 : 1200);
+  }
+  else UI.hint('Welcome back!', 2.5);
+  if (run) { if (resumed || QS.has('nointro')) setTimeout(() => DAILY.give(run), 1800); else CH.dailyGift = run; }
   console.log('boot ms', Math.round(performance.now() - t0));
   window.__ready = true;
   window.__render = () => { SNOW.flush(); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
