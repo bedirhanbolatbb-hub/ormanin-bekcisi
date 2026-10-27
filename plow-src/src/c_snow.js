@@ -32,7 +32,12 @@ const SNOW = {
   init() {
     const n = this.NX * this.NZ;
     this.H = new Float32Array(n); this.T = new Uint8Array(n); this.A = new Uint8Array(n);
-    this.dirty = { x0: 1e9, z0: 1e9, x1: -1, z1: -1 };
+    // which mesh chunks need rebuilding, and where inside them (grid cells): each carver only costs its own chunks
+    this._ncx = Math.ceil((this.NX - 1) / this.CH); this._ncz = Math.ceil((this.NZ - 1) / this.CH);
+    const nc = this._ncx * this._ncz;
+    this._dx0 = new Int32Array(nc).fill(1e9); this._dx1 = new Int32Array(nc).fill(-1);
+    this._dz0 = new Int32Array(nc).fill(1e9); this._dz1 = new Int32Array(nc).fill(-1);
+    this._dl = [];
   },
   ix(x) { return Math.round((x - this.X0) / this.C); },
   iz(z) { return Math.round((z - this.Z0) / this.C); },
@@ -142,7 +147,7 @@ const SNOW = {
       const h = H[k], nh = Math.min(1.2, h + amt * (0.85 + 0.3 * ((k * 2654435761 >>> 0) % 1000) / 1000));
       H[k] = nh; if (A[k] && h < THR && nh >= THR) this.areas[A[k]].cleared--;
     }
-    this.dirty = { x0: 0, z0: 0, x1: this.NX - 1, z1: this.NZ - 1 };
+    this.markAll();
   },
   // clear every remaining sample of area (auto-finish). returns list of positions (subsampled) for fx
   clearArea(a) {
@@ -176,10 +181,25 @@ const SNOW = {
     return { x: this.X0 + (best % N) * C, z: this.Z0 + ((best / N) | 0) * C };
   },
   _mark(i, j) {
-    const d = this.dirty;
-    if (i < d.x0) d.x0 = i; if (i > d.x1) d.x1 = i; if (j < d.z0) d.z0 = j; if (j > d.z1) d.z1 = j;
+    // every chunk whose vertices read this sample (normals and shading look 2 cells around)
+    const CH = this.CH, nx = this._ncx;
+    const a0 = i < 3 ? 0 : ((i - 3) / CH) | 0, a1 = Math.min(nx - 1, ((i + 2) / CH) | 0);
+    const b0 = j < 3 ? 0 : ((j - 3) / CH) | 0, b1 = Math.min(this._ncz - 1, ((j + 2) / CH) | 0);
+    for (let cj = b0; cj <= b1; cj++) for (let ci = a0; ci <= a1; ci++) {
+      const c = cj * nx + ci;
+      if (this._dx1[c] < 0) this._dl.push(c);
+      if (i < this._dx0[c]) this._dx0[c] = i; if (i > this._dx1[c]) this._dx1[c] = i;
+      if (j < this._dz0[c]) this._dz0[c] = j; if (j > this._dz1[c]) this._dz1[c] = j;
+    }
   },
-  markAll() { this.dirty = { x0: 0, z0: 0, x1: this.NX - 1, z1: this.NZ - 1 }; },
+  markAll() {
+    const CH = this.CH, nx = this._ncx;
+    for (let cj = 0; cj < this._ncz; cj++) for (let ci = 0; ci < nx; ci++) {
+      const c = cj * nx + ci;
+      if (this._dx1[c] < 0) this._dl.push(c);
+      this._dx0[c] = ci * CH; this._dx1[c] = Math.min(this.NX - 1, ci * CH + CH); this._dz0[c] = cj * CH; this._dz1[c] = Math.min(this.NZ - 1, cj * CH + CH);
+    }
+  },
   setHighlight(areaId) {
     if (this.hlArea === areaId) return;
     const old = this.hlArea; this.hlArea = areaId;
@@ -251,16 +271,16 @@ const SNOW = {
   },
   _y: null,
   flush(all) {
-    const d = this.dirty; if (d.x1 < 0) return;
+    const L = this._dl; if (!L.length) return;
     const N = this.NX, NZ = this.NZ, H = this.H, C = this.C, CH = this.CH, S = CH + 1;
-    const x0 = Math.max(0, d.x0 - 2), x1 = Math.min(N - 1, d.x1 + 2), z0 = Math.max(0, d.z0 - 2), z1 = Math.min(NZ - 1, d.z1 + 2);
-    this.dirty = { x0: 1e9, z0: 1e9, x1: -1, z1: -1 };
     const ry = (i, j) => { i = i < 0 ? 0 : i >= N ? N - 1 : i; j = j < 0 ? 0 : j >= NZ ? NZ - 1 : j; const h = H[j * N + i]; return h > 0.014 ? h - 0.02 : -0.07; };
-    const touched = new Set();
-    const ci0 = Math.floor(Math.max(0, x0 - 1) / CH), ci1 = Math.floor(Math.min(N - 1, x1) / CH), cj0 = Math.floor(Math.max(0, z0 - 1) / CH), cj1 = Math.floor(Math.min(NZ - 1, z1) / CH);
-    const nCX = Math.ceil((N - 1) / CH);
-    for (let cj = Math.max(0, cj0 - 1); cj <= cj1; cj++) for (let ci = Math.max(0, ci0 - 1); ci <= ci1; ci++) {
-      const ch = this.chunks[cj * nCX + ci]; if (!ch) continue;
+    // a snowstorm dirties the whole town at once: that is spread over a few frames (carving touches only a few chunks)
+    const n = all ? L.length : Math.min(L.length, 18);
+    for (let q = 0; q < n; q++) {
+      const c = L[q], ch = this.chunks[c];
+      const x0 = Math.max(0, this._dx0[c] - 2), x1 = Math.min(N - 1, this._dx1[c] + 2), z0 = Math.max(0, this._dz0[c] - 2), z1 = Math.min(NZ - 1, this._dz1[c] + 2);
+      this._dx0[c] = 1e9; this._dx1[c] = -1; this._dz0[c] = 1e9; this._dz1[c] = -1;
+      if (!ch) continue;
       const a0 = Math.max(x0, ch.i0), a1 = Math.min(x1, ch.i1), b0 = Math.max(z0, ch.j0), b1 = Math.min(z1, ch.j1);
       if (a0 > a1 || b0 > b1) continue;
       const pos = ch.geo.attributes.position.array, nor = ch.geo.attributes.normal.array, col = ch.geo.attributes.color.array;
@@ -278,9 +298,9 @@ const SNOW = {
         col[o3 + 1] = clamp((lerp(0.62, 0.925, ao) + lip) * v, 0, 1) * 255;
         col[o3 + 2] = clamp((lerp(0.84, 0.97, ao) + lip) * v, 0, 1) * 255;
       }
-      touched.add(ch);
+      const a = ch.geo.attributes; a.position.needsUpdate = true; a.normal.needsUpdate = true; a.color.needsUpdate = true;
     }
-    for (const ch of touched) { const a = ch.geo.attributes; a.position.needsUpdate = true; a.normal.needsUpdate = true; a.color.needsUpdate = true; }
+    L.splice(0, n);
   },
 
   // ---- save / load (quantized RLE) ----
@@ -304,6 +324,11 @@ const SNOW = {
     try {
       const s = atob(str), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
       const H = this.H, T = this.T; let k = 0;
+      // the snow is stored for the paved cells in order: it only fits the same ground (else it would come back shifted)
+      let total = 0, n1 = 0;
+      for (let o = 0; o + 2 < b.length; o += 3) total += b[o + 1] | (b[o + 2] << 8);
+      for (let q = 0; q < T.length; q++) if (T[q] === 1) n1++;
+      if (total !== n1) return false;
       for (let o = 0; o + 2 < b.length; o += 3) {
         const v = b[o] / 200; let run = b[o + 1] | (b[o + 2] << 8);
         while (run > 0 && k < H.length) { if (T[k] === 1) { H[k] = v; run--; } k++; }

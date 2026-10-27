@@ -75,7 +75,7 @@ const CH_SCHOOL = {
     const curbM = new THREE.MeshStandardMaterial({ color: 0xc4c7cb, roughness: 0.8 }), cg = [];
     for (const x of [-4.5, 4.5]) { const g = new THREE.BoxGeometry(0.16, 0.08, 100); g.translate(x, 0.04, 0); cg.push(g.toNonIndexed()); }
     const curb = new THREE.Mesh(mergeGeoms(cg), curbM); curb.receiveShadow = true; scene.add(curb);
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     // ---- the school ----
     const sch = litBuilding('school', -1.55, -69.55, 0, 1.35, new V3(-1.2, 0, -63.4), 0.1);
     this.school = sch;
@@ -86,7 +86,7 @@ const CH_SCHOOL = {
     const bus = busTint(place('bus', 3.4, 56.2, Math.PI, 1, 0)); scene.add(bus); bus.updateMatrixWorld(true);
     const B = this.bus = { obj: bus, x: 3.4, z: 56.2, h: Math.PI, spd: 0, si: 0, pi: 0, state: 'ready', dwell: 0, honkT: 0, kidsIn: 0, lights: [] };
     // solid while it waits in the depot
-    B.park = [2.0, 50.3, 4.8, 61.9]; SNOW.paint(...B.park, (k) => { if (T[k] === 1) T[k] = 2; });
+    B.park = [2.0, 50.3, 4.8, 61.9]; B.parkCells = []; SNOW.paint(...B.park, (k) => { if (T[k] === 1 || T[k] === 3) { B.parkCells.push(k, T[k]); T[k] = 2; } });
     // stop lights on the bus roof (blink while the bus is stopped)
     const lm = new THREE.MeshBasicMaterial({ color: 0xff3020, toneMapped: false });
     for (const [lx, lz] of [[1.05, 5.7], [-1.05, 5.7], [1.05, -5.8], [-1.05, -5.8]]) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), lm.clone()); m.position.set(lx, 2.95, lz); bus.add(m); B.lights.push(m); }
@@ -253,7 +253,7 @@ const CH_SCHOOL = {
     const B = this.bus, o = B.obj;
     for (const L of B.lights) L.material.color.setHex(B.state === 'stop' && (performance.now() / 300 | 0) % 2 ? 0xff3020 : 0x5a1010);
     if (B.state === 'parked' || B.state === 'done') return;
-    if (B.state === 'ready') { if (this.released[1]) { B.state = 'go'; AUD.busHorn(); if (B.park) { SNOW.paint(...B.park, (k) => { if (SNOW.T[k] === 2) SNOW.T[k] = 1; }); B.park = null; } } else { if (Math.random() < dt * 3) FX.smoke(B.x - Math.sin(B.h) * 6.3, 0.4, B.z - Math.cos(B.h) * 6.3); return; } }
+    if (B.state === 'ready') { if (this.released[1]) { B.state = 'go'; AUD.busHorn(); this.unpark(); } else { if (Math.random() < dt * 3) FX.smoke(B.x - Math.sin(B.h) * 6.3, 0.4, B.z - Math.cos(B.h) * 6.3); return; } }
     if (B.state === 'stop') {
       B.dwell -= dt;
       if (B.dwell <= 0 && B.boarding <= 0) {
@@ -291,6 +291,8 @@ const CH_SCHOOL = {
     o.position.set(B.x, 0, B.z); o.rotation.y = B.h;
     if (B.spd > 0.5 && Math.random() < 0.4) FX.smoke(B.x - Math.sin(B.h) * 6.3 + Math.cos(B.h) * 0.8, 0.35, B.z - Math.cos(B.h) * 6.3 - Math.sin(B.h) * 0.8);
   },
+  // the bus leaves its spot in the depot: the ground there is free again (only the cells it took)
+  unpark() { const B = this.bus; if (!B.parkCells) return; for (let i = 0; i < B.parkCells.length; i += 2) if (SNOW.T[B.parkCells[i]] === 2) SNOW.T[B.parkCells[i]] = B.parkCells[i + 1]; B.parkCells = null; B.park = null; },
   door() { const B = this.bus, fx = Math.sin(B.h), fz = Math.cos(B.h); return [B.x + fx * 3.6 - fz * 1.5, B.z + fz * 3.6 + fx * 1.5]; },
   atStop(id) {
     const B = this.bus; B.boarding = 0;
@@ -346,8 +348,18 @@ const CH_SCHOOL = {
   load(o) {
     const B = this.bus; this.begin();
     this.released = o.r || {}; this.onTime = o.ot || 0; if (o.lg) { this.curLeg = o.lg[0]; this.legT = Math.max(8, o.lg[1]); }
-    if (o.b) { [B.si, B.pi, B.x, B.z, B.h, B.state, B.kidsIn] = o.b; if (B.state !== 'ready' && B.park) { SNOW.paint(...B.park, (k) => { if (SNOW.T[k] === 2) SNOW.T[k] = 1; }); B.park = null; } if (B.state === 'stop') { B.state = 'go'; B.pi = 0; B.si = Math.min(B.si + 1, this.route.length - 1); } B.obj.position.set(B.x, 0, B.z); B.obj.rotation.y = B.h; }
-    if (B.state === 'done' || GAME.done.bay) { B.state = 'done'; const [sx, sz] = [B.x, B.z]; B.obj.position.set(sx, 0, sz); }
+    if (o.b) {
+      [B.si, B.pi, B.x, B.z, B.h, B.state, B.kidsIn] = o.b; if (B.state !== 'ready') this.unpark();
+      // saved while kids were getting on: they all made it (and the friend who joins at the first stop still joins)
+      if (B.state === 'stop') {
+        const seg = this.route[B.si], S = seg && this.stops.find(q => q.id === seg.stop);
+        if (S) { const before = this.stops.filter(q => q.leg < S.leg).reduce((a, q) => a + q.n, 0); B.kidsIn = Math.max(B.kidsIn || 0, before + S.n); if (S.id === 'A') GAME.crew = Math.max(GAME.crew || 0, 3); }
+        B.state = 'go'; B.pi = 0; B.si = Math.min(B.si + 1, this.route.length - 1);
+      }
+      B.obj.position.set(B.x, 0, B.z); B.obj.rotation.y = B.h;
+      // the first stop's kids are on the bus: the friend who joins there is with you
+      if ((B.kidsIn || 0) >= this.stops[0].n) GAME.crew = Math.max(GAME.crew || 0, 3);
+    }
     for (const S of this.stops) if (o.sk && o.sk[S.id] === 0) { for (const n of this.stopKids[S.id] || []) NPC.kill(n); this.stopKids[S.id] = []; }
   },
 };

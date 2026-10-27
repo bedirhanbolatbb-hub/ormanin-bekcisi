@@ -14,6 +14,7 @@ const { chromium } = require('playwright');
     window.CrazyGames = { SDK: {
       environment: 'crazygames',
       init: () => Promise.resolve(),
+      user: { isUserAccountAvailable: true, getUser: () => Promise.resolve({ username: 'tester' }) },
       game: { settings: { muteAudio: false }, addSettingsChangeListener() {}, loadingStart() {}, loadingStop() {}, gameplayStart() {}, gameplayStop() {}, happytime() {} },
       data: {
         getItem: (k) => (k in data ? data[k] : null),

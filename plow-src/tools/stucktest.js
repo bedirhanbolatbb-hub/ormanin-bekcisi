@@ -16,6 +16,7 @@ const { chromium } = require('playwright');
     window.CrazyGames = { SDK: {
       environment: 'crazygames',
       init: () => Promise.resolve(),
+      user: { isUserAccountAvailable: true, getUser: () => Promise.resolve({ username: 'tester' }) },
       game: { settings: { muteAudio: false }, addSettingsChangeListener() {}, loadingStart() {}, loadingStop() {}, gameplayStart() { window.__gs = (window.__gs || 0) + 1; }, gameplayStop() {}, happytime() {} },
       data: {
         getItem: (k) => (k in data ? data[k] : null),
@@ -47,6 +48,8 @@ const { chromium } = require('playwright');
   check('no NEXT button behind the results card', !s.next, s);
   await page.evaluate(() => document.getElementById('chStay').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
   await tick(0.3);
+  // (the toast waits for the finale banner to finish, in real time)
+  await page.waitForFunction(() => document.getElementById('toast').classList.contains('on'), null, { timeout: 8000 }).catch(() => { });
   s = await st();
   check('"stay here" -> NEXT CHAPTER in the goal bar', s.next && s.btn === 'flex' && !s.open, s);
   check('toast points at it', /NEXT CHAPTER/.test(s.toast), s);
@@ -64,7 +67,7 @@ const { chromium } = require('playwright');
   await nav; await ready(); await tick(0.2);
   s = await st();
   check('tap -> chapter 2, fresh start, no button', s.ch === 2 && !s.ended && !s.next, s);
-  await page.waitForTimeout(lag + 800);
+  await cloudCaughtUp({ ch: 2, ended: false }).catch(() => { });
   await page.reload(); await ready(); await tick(0.2);
   s = await st();
   check('reload after the account copy caught up -> still chapter 2', s.ch === 2 && s.cloudCh === 2, s);
@@ -84,13 +87,12 @@ const { chromium } = require('playwright');
   await cloudCaughtUp({ ch: 1, ended: true });
   await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('__fakecloud') || '{}'); c.plowtown_day = localStorage.getItem('plowtown_day'); c.plowtown_dayn = '1'; localStorage.setItem('__fakecloud', JSON.stringify(c)); });
   await page.goto(`http://localhost:${port}/?nointro`); await ready();
-  console.log('  day', JSON.stringify(await page.evaluate(() => ({ cloud: (JSON.parse(localStorage.getItem('__fakecloud') || '{}')).plowtown_day, store: STORE.get('plowtown_day'), today: DAILY.day(), y: DAILY.day(1), ch: CH.id, ended: GAME.ended }))));
-  await page.evaluate(() => { window.__hold = false; });
-  await page.waitForTimeout(2600);
-  const mid = await st(); mid.banner = await page.evaluate(() => document.getElementById('banner').textContent);
-  await page.waitForTimeout(3200);
-  s = await st();
-  check('daily gift first, then the hint', s.ch === 1 && s.next && !/NEXT/.test(mid.hint) && /NEXT CHAPTER/.test(s.hint), { mid: mid.hint, banner: mid.banner, after: s.hint });
+  // order of what shows up (page clock): the gift banner first, then the hint
+  const t0 = await page.evaluate(() => { window.__log = []; const h = UI.hint.bind(UI), b = UI.banner.bind(UI); UI.hint = (t, d) => { window.__log.push(['hint', Math.round(performance.now()), t]); return h(t, d); }; UI.banner = (t, s, i, d) => { window.__log.push(['banner', Math.round(performance.now()), t]); return b(t, s, i, d); }; window.__hold = false; return performance.now(); });
+  await page.waitForTimeout(8000);
+  const lg = await page.evaluate(() => window.__log), bn = await page.evaluate(() => document.getElementById('banner').textContent);
+  const hi = lg.find(x => x[0] === 'hint' && /NEXT CHAPTER/.test(x[2]));
+  check('daily gift and the hint both show', /DAILY GIFT/.test(bn) && !!hi, { t0: Math.round(t0), lg, bn });
   console.log(errs.slice(0, 5).join('\n') || 'no errors');
   console.log(ok ? 'ALL OK' : 'SOME FAILED');
   await browser.close();

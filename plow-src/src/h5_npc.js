@@ -25,7 +25,8 @@ function makePersonLite(o) {
     }
     if (!geos.length) return;
     for (const c of kill) grp.remove(c);
-    const m = new THREE.Mesh(mergeGeoms(geos), PERSON_MAT); m.castShadow = !!cast; grp.add(m);
+    for (const g of geos) g.dispose();
+    const m = new THREE.Mesh(mergeGeoms(geos), PERSON_MAT); m.castShadow = !!cast; m.userData.own = 1; grp.add(m);
   };
   for (const g of [P.legL, P.legR, P.armL, P.armR]) bake(g, false);
   bake(P.head, true); bake(P.body, true);
@@ -63,7 +64,7 @@ const NPC = {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const n = this.list[i]; n.t += dt;
       // pop in / shrink out
-      if (n.state === 'out') { n.k = Math.max(0, n.k - dt / 0.3); if (n.k <= 0) { WORLD.scene.remove(n.P.root); if (n.bub) n.bub.remove(); this.list.splice(i, 1); continue; } }
+      if (n.state === 'out') { n.k = Math.max(0, n.k - dt / 0.3); if (n.k <= 0) { this.free(n); this.list.splice(i, 1); continue; } }
       else if (n.k < 1) n.k = Math.min(1, n.k + dt / 0.35);
       // walk the path
       let mv = 0;
@@ -89,4 +90,9 @@ const NPC = {
     }
   },
   byTag(tag) { return this.list.filter(n => n.tag === tag && n.state !== 'out'); },
+  // gone for good: also let go of the person's own meshes (crowds come and go all chapter long)
+  free(n) {
+    WORLD.scene.remove(n.P.root); if (n.bub) { n.bub.remove(); n.bub = null; }
+    n.P.root.traverse(o => { if (o.isMesh && o.userData.own) o.geometry.dispose(); });
+  },
 };

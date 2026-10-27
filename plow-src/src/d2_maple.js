@@ -166,7 +166,7 @@ const CH_MAPLE = {
     decor('bench_a', 20.4, -5.5, -Math.PI / 2, 1, 0, { solid: 0.05 }); decor('bench_a', 20.4, -14.5, -Math.PI / 2, 1, 0, { solid: 0.05 });
     const cocoa = place('cocoa', 21.2, -19.8, -Math.PI / 2.6, 1.2, 0); scene.add(cocoa); solidUnder(cocoa, 0.1, false);
     // 8) decor: fences, lamps, mailboxes, trees, snowmen
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     for (const L of LOTS) {
       const sx = L.side, fx = sx * 5.95;
       const z0 = L.c - 10.8, z1 = L.c + 10.8;

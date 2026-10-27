@@ -14,7 +14,7 @@ const CHUI = {
     addEventListener('resize', () => this.refit());
     const b = $('btnMap'); if (b) { b.innerHTML = '<svg viewBox="0 0 40 40"><path d="M6 10l9-4 10 4 9-4v24l-9 4-10-4-9 4z" fill="#fff" stroke="#2b3a55" stroke-width="2.6" stroke-linejoin="round"/><path d="M15 6v24M25 10v24" stroke="#2b3a55" stroke-width="2.2"/><circle cx="20" cy="17" r="3" fill="#e5483c"/></svg>'; b.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.map(); }; }
     // the NEXT CHAPTER button in the goal bar (shows once the chapter is done)
-    const n = $('goalNext'); if (n) n.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); const nx = chapterById(CH.id + 1); if (!nx || !GAME.ended || this.open) return; AUD.click(); this.go(nx.id); };
+    const n = $('goalNext'); if (n) n.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); const nx = chapterById(CH.id + 1); if (!nx || !GAME.ended || GAME.finishT > 0 || this.open) return; AUD.click(); this.go(nx.id); };
   },
   // the big cards always fit the screen (phones on their side, small game frames): shrink the whole card when needed
   fit(el, room) {
@@ -58,7 +58,7 @@ const CHUI = {
   // the big "chapter complete" moment
   results() {
     const C = CH, st = GAME.lastStars || 1, rec = GAME.chapters[C.id] || {}, next = chapterById(C.id + 1);
-    const bonus = niceNum((C.reward || 2000) * st);
+    const bonus = GAME.lastBonus || niceNum((C.reward || 2000) * st);
     const mm = Math.floor(GAME.time / 60), ss = String(Math.floor(GAME.time % 60)).padStart(2, '0');
     const nextHtml = next ? `<div class="chnext"><div class="chico sm">${CH_ICONS[next.key] || ''}</div><div><b>Next: ${next.name}</b><span>${next.tag}</span></div></div>`
       : `<div class="chnext"><div><b>More chapters are on the way!</b><span>Keep plowing the storms for coins</span></div></div>`;
@@ -74,7 +74,6 @@ const CHUI = {
       s.innerHTML = STAR_SVG(i < st); s.classList.add('pop'); if (i < st) { AUD.star && AUD.star(i); }
     }, 500 + i * 420);
     setTimeout(() => {
-      GAME.earn(bonus); UI.pending += bonus;
       const n = 24; for (let i = 0; i < n; i++) setTimeout(() => UI.flyCoin(null, bonus / n), i * 40);
       let t = 0; const lab = $('resBonus'); const iv = setInterval(() => { t += 0.06; if (!lab) return clearInterval(iv); lab.textContent = '+' + fmt(Math.round(bonus * Math.min(1, t))); if (t >= 1) clearInterval(iv); }, 30);
       AUD.bigWin && AUD.bigWin(); GAME.save();
@@ -91,22 +90,32 @@ const CHUI = {
         <div class="chinfo"><b>${C.id}. ${C.name}</b><span>${C.tag}</span><div class="mstars">${stars}</div></div>
         <div class="chbtn">${!open ? '🔒' : C.id === CH.id ? 'HERE' : 'PLAY'}</div></div>`;
     }).join('') + '<div class="chrow soon"><div class="chinfo"><b>More chapters soon</b><span>New places, new machines</span></div></div>';
-    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><button class="chlink" id="chMapX">Close</button></div>`);
-    el.querySelectorAll('.chrow[data-id]').forEach(r => r.onpointerdown = (e) => {
-      e.stopPropagation(); const id = +r.dataset.id; if (r.classList.contains('locked')) { AUD.deny(); return; }
+    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><button class="chlink" id="chMapX">Close</button></div>`);
+    // a tap (not a touch that starts scrolling the list) picks a chapter
+    el.querySelectorAll('.chrow[data-id]').forEach(r => r.onclick = (e) => {
+      e.stopPropagation(); AUD.init(); const id = +r.dataset.id; if (r.classList.contains('locked')) { AUD.deny(); return; }
       if (id === CH.id) { this.close('chMap'); return; }
+      // leaving a chapter you are in the middle of means it starts over next time: ask once
+      const busy = !GAME.ended && (GAME.time > 20 || Object.keys(GAME.done).length > 0);
+      if (busy && !r.classList.contains('sure')) {
+        el.querySelectorAll('.chrow.sure').forEach(o => { o.classList.remove('sure'); o.querySelector('.chbtn').textContent = 'PLAY'; });
+        r.classList.add('sure'); r.querySelector('.chbtn').textContent = 'SURE?';
+        el.querySelector('.chwarn').textContent = 'Chapter ' + CH.id + ' starts over if you leave it now. Tap again to go.';
+        AUD.click(); return;
+      }
       AUD.click(); this.go(id);
     });
     $('chMapX').onpointerdown = (e) => { e.stopPropagation(); this.close('chMap'); };
   },
   // snowy wipe to another chapter
   go(id) {
-    if (this._going) return; this._going = true;
+    if (this._going) return; this._going = true; CG.play(false);
     const f = $('chFade'), C = chapterById(id);
     f.innerHTML = `<div class="chname sm">Chapter ${id}</div><div class="chname">${C ? C.name : ''}</div>`;
     f.classList.add('on');
     GAME.goChapter(id);
     // a little longer on the snowy wipe, so the account copy is usually sent before the reload too
-    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 1400);
+    // (no storage at all in this browser: the chapter rides along in the address instead)
+    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); if (GAME.noStore) q.set('ch', id); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 1400);
   }
 };

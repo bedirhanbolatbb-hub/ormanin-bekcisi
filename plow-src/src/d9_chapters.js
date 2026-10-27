@@ -22,9 +22,10 @@ function litMats(obj) {
   return wins;
 }
 // a building that lights up (windows) when its job is done: { obj, wins, lit, litT, door }
-function litBuilding(key, x, z, rot, s, door, solidPad) {
+// (paved: it stands on paved ground or ice, which must turn solid under it too, or machines drive through it)
+function litBuilding(key, x, z, rot, s, door, solidPad, paved) {
   const o = place(key, x, z, rot, s, 0); WORLD.scene.add(o);
-  if (solidPad !== false) solidUnder(o, solidPad === undefined ? 0.12 : solidPad, false);
+  if (solidPad !== false) solidUnder(o, solidPad === undefined ? 0.12 : solidPad, !!paved);
   const B = { obj: o, wins: litMats(o), lit: 0, litT: 0, door: door || new V3(x, 0, z), smoke: null, x, z };
   WORLD.houses.push(B);
   return B;

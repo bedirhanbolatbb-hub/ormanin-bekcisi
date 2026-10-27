@@ -10,7 +10,7 @@ const CH_MARKET = {
   shop: ['truck', 'dumpplow', 'thrower', 'sleigh'],
   unlock: { tool: 'sleigh', goals: 2 },
   payMul: 2.4, par: [330, 520], reward: 15000,
-  crewYard: [-8.5, 55.5], crewJobs: ['walkN', 'walkE', 'walkW'],
+  crewYard: [-8.6, 50.4], crewJobs: ['walkN', 'walkE', 'walkW'],
   introCam: { from: [0, 34, 92], look: [0, 0.5, 14] },
   finaleCam: { from: [17, 15, -24], look: [0, 4.5, -47] },
   env: { sky: ['#0b1238', '#2c3570', '#c9788a'], fog: 0x323866, hemi: [0x6a7ad0, 0x232a58, 0.62], sun: [0xffa070, 0.62], sunOff: [-20, 14, 12], exposure: 0.74, fogNear: 40, fogFar: 112 },
@@ -54,7 +54,7 @@ const CH_MARKET = {
     mk('walkW', 'West walk', [pav('walkW')], { quiet: true });
   },
   build(scene, H, T) {
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     // ---- stalls along the market lane (dark until you clear their lane) ----
     this.stalls = [];
     const kinds = ['toystall', 'cocoastall', 'cocoastall', 'toystall'];
@@ -144,7 +144,8 @@ const CH_MARKET = {
     if (a.key.startsWith('lane')) {
       let pos = null, k = 0;
       for (const B of this.stalls) if (B.lane === a.key && !B.open) { this.openStall(B, silent, k++ * 0.35); pos = pos || B.door; }
-      if (a.key === 'lane1' && !silent) CREW.recruit(2.0);
+      // (back from a save: the friend who joins here is with you, even if the game closed the moment they came)
+      if (a.key === 'lane1') { if (!silent) CREW.recruit(2.0); else GAME.crew = Math.max(GAME.crew || 0, 4); }
       return pos;
     }
     if (a.key === 'plazaS') { if (!silent) { UI.toast('The band starts to play!'); this.band(); } this.bandOn = true; return new V3(10, 0, -40); }

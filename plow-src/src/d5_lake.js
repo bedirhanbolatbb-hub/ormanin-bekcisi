@@ -50,7 +50,7 @@ const CH_LAKE = {
     mk('shoreE', 'East shore', [pav('shoreE')], { quiet: true });
   },
   build(scene, H, T) {
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06, L = this.lake;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06, L = this.lake;
     // rink markings frozen into the ice (you uncover them): centre line, blue lines, face-off circles, goal creases
     const red = new THREE.MeshStandardMaterial({ color: 0xe5483c, roughness: 0.3 }), blue = new THREE.MeshStandardMaterial({ color: 0x2f6fe8, roughness: 0.3 });
     const rg = [], bg = [];
@@ -60,7 +60,7 @@ const CH_LAKE = {
     for (const zc of [2.6, -14.6]) { const g = new THREE.CircleGeometry(1.6, 24, zc > 0 ? Math.PI : 0, Math.PI); g.rotateX(-Math.PI / 2); g.translate(0, 0.009, zc); bg.push(g); }
     scene.add(new THREE.Mesh(mergeGeoms(rg), red)); scene.add(new THREE.Mesh(mergeGeoms(bg), blue));
     // ---- parking + skate rental ----
-    const kiosk = litBuilding('kiosk', 11.2, 53.0, -Math.PI / 2, 1.25, new V3(9.6, 0, 53), 0.1); this.kiosk = kiosk;
+    const kiosk = litBuilding('kiosk', 11.2, 53.0, -Math.PI / 2, 1.25, new V3(9.6, 0, 53), 0.1, true); this.kiosk = kiosk;
     const ks = makeSign('SKATE RENTAL', '#2a6fd6'); ks.position.set(9.6, 3.8, 53); ks.rotation.y = -Math.PI / 2; ks.scale.setScalar(2.2); scene.add(ks);
     decor('bench_a', -11.6, 46, Math.PI / 2, 1, 0, { solid: 0.05, paved: true }); decor('saltbin', -11.4, 55.2, 0.3, 1.4, 0, { solid: 0.05, paved: true });
     for (const [x, z] of [[-12.9, 40], [12.9, 40], [-12.9, 55], [12.9, 46]]) decor('lamp_a', x, z, 0, 1.1, yardY(x, z), { trunk: 0.3 });
@@ -80,7 +80,7 @@ const CH_LAKE = {
     decor('snowarch', 24.6, 10, -1.2, 1.6, yardY(24.6, 10));
     // ---- ice fishing huts out on the ice ----
     this.huts = [];
-    for (const [x, z, r] of [[-9.5, -24.5, 0.3], [8.5, -21.5, -0.4], [2.0, -29.5, 0.1]]) { const h = litBuilding('hut', x, z, r, 0.9, new V3(x, 0, z + 1.8), 0.15); this.huts.push(h); }
+    for (const [x, z, r] of [[-9.5, -24.5, 0.3], [8.5, -21.5, -0.4], [2.0, -29.5, 0.1]]) { const h = litBuilding('hut', x, z, r, 0.9, new V3(x, 0, z + 1.8), 0.15, true); this.huts.push(h); }
     // trees and banks around the lake
     const rr = mulberry(444), fk = ['fir_a', 'fir_b', 'fir_c', 'spruce_s', 'birch'];
     for (let i = 0; i < 90; i++) {
@@ -99,8 +99,9 @@ const CH_LAKE = {
     if (a.key === 'rink') { this.startHockey(silent); this.addSkaters(2, [0, -6], [14, 8], silent); return new V3(0, 0, -6); }
     if (a.key === 'huts') {
       for (const h of this.huts) { h.litT = 1; if (silent) { h.lit = 1; applyLit(h, 1); } }
-      if (!silent) for (const h of this.huts) { const f = NPC.spawn({ x: h.door.x, z: h.door.z, h: 0, kind: 'adult', pose: 'wave', tag: 'fish', look: Object.assign(NPC.look('adult'), { hat: 0x3a4a5a, brim: 0x2a3440, beard: 0x8a6a4a }) }); NPC.say(f, ['Fish are biting!', 'Thanks, friend!', 'Look at this one!'][(Math.random() * 3) | 0], 3); }
-      this.fishOn = true; if (!silent) CREW.recruit(2.0);
+      // the ice fishers come out of their huts (also when you come back to the lake later)
+      for (const h of this.huts) { const f = NPC.spawn({ x: h.door.x, z: h.door.z, h: 0, kind: 'adult', pose: 'wave', tag: 'fish', pop: !silent, look: Object.assign(NPC.look('adult'), { hat: 0x3a4a5a, brim: 0x2a3440, beard: 0x8a6a4a }) }); if (!silent) NPC.say(f, ['Fish are biting!', 'Thanks, friend!', 'Look at this one!'][(Math.random() * 3) | 0], 3); }
+      this.fishOn = true; if (!silent) CREW.recruit(2.0); else GAME.crew = Math.max(GAME.crew || 0, 5);
       return new V3(0, 0, -25);
     }
     if (a.key === 'dock') { this.boathouse.litT = 1; this.sauna.litT = 1; if (silent) { this.boathouse.lit = 1; applyLit(this.boathouse, 1); this.sauna.lit = 1; applyLit(this.sauna, 1); } this.addSkaters(4, [0, -38], [11, 6], silent); return new V3(0, 0, -44); }

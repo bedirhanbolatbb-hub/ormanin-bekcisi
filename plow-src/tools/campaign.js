@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
   const page = await ctx.newPage(); const errs = [];
   page.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
   for (let ch = a; ch <= b; ch++) {
-    await page.goto('http://localhost:8765/?nointro&bot&botsave&norender' + (ch === 1 && a === 1 ? '&fresh' : '') + '&ch=' + ch + (process.env.CQ || ''));
+    await page.goto('http://localhost:' + (process.env.PORT || 8765) + '/?nointro&bot&botsave&norender' + (ch === 1 && a === 1 ? '&fresh' : '') + '&ch=' + ch + (process.env.CQ || ''));
     await page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
     const r = await page.evaluate((maxT) => {
       window.__hold = true; const buys = []; let last = PL.tool; const lvT = [0, 0, 0, 0];
@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
       const end = { time: +GAME.time.toFixed(0), coins: Math.round(GAME.coins), earned: Math.round(GAME.earned), ended: GAME.ended, lv: JSON.stringify(GAME.lv[PL.tool] || []), stars: GAME.lastStars };
       for (let i = 0; i < 30 * 8 && CHUI.open !== 'chRes'; i++) __step(1, 1 / 30);
       return { ch: CH.id, start, end, buys, lvT, res: CHUI.open };
-    }, 420);
+    }, +(process.env.MAXT || 420));
     await page.waitForTimeout(3000);
     r.after = await page.evaluate(() => { GAME.save(); return Math.round(GAME.coins); });
     console.log(JSON.stringify(r));

@@ -40,8 +40,9 @@ const UI = {
   init() {
     this.cv = $('fx2d'); this.g = this.cv.getContext('2d');
     $('coinIco').innerHTML = ICONS.coin; $('loadTag').querySelector('.ci').innerHTML = ICONS.coin;
-    $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd;
-    $('btnMute').onclick = (e) => { e.stopPropagation(); AUD.init(); AUD.setMuted(!AUD.muted); $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd; STORE.set('plowtown_mute', AUD.muted ? '1' : '0'); };
+    this.refreshMute();
+    // your own sound switch (the CrazyGames mute setting is on top of it: while that is on, it stays quiet)
+    $('btnMute').onclick = (e) => { e.stopPropagation(); AUD.init(); AUD.setMuted(!AUD._um); this.refreshMute(); STORE.set('plowtown_mute', AUD._um ? '1' : '0'); };
     const ups = $('ups');
     ups.innerHTML = '';
     this.upBtns = [];
@@ -51,13 +52,15 @@ const UI = {
       ups.appendChild(b); this.upBtns.push(b);
     }
     const tb = document.createElement('button'); tb.className = 'up toolcard'; tb.innerHTML = `<div class="ui-ico"></div><div class="ui-lbl"></div><div class="tc-bar"><i></i></div><div class="ui-cost"><span class="ci">${ICONS.coin}</span><b></b></div>`;
-    tb.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); const t = GAME.nextTool(); if (t) GAME.buyTool(t); });
+    // (a quick double tap must not buy the machine after the new one too: the card shows the old one for a moment)
+    tb.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); if (performance.now() < (this._tbLock || 0)) return; const t = GAME.nextTool(); if (t && GAME.buyTool(t)) { this._tbLock = performance.now() + 600; this._uiT = 0; } });
     ups.appendChild(tb); this.toolBtn = tb;
     this.refreshTools();
     window.addEventListener('resize', () => this.resize()); this.resize();
   },
   resize() { const d = Math.min(2, devicePixelRatio || 1); this.dpr = d; this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this._coinRect = null; },
   shownCoins() { return GAME.coins - this.pending; },
+  refreshMute() { const b = $('btnMute'); if (b) b.innerHTML = AUD.muted ? ICONS.mute : ICONS.snd; },
   pulseTool(t) {
     const box = $('tools'); const b = [...box.children].find(x => x.dataset.t === t);
     if (b) { b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 6000); }
@@ -77,8 +80,20 @@ const UI = {
     this._updLoadTag();
     this._updStreak();
     this._draw(dt);
-    if (this._hintT > 0) { this._hintT -= dt; if (this._hintT <= 0) $('hint').classList.remove('on'); }
-    if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) $('toast').classList.remove('on'); }
+    // (a hint that would sit under a toast on a small screen waits, its time paused, until the toast is gone)
+    if (this._hintT > 0 && !this._under) { this._hintT -= dt; if (this._hintT <= 0) $('hint').classList.remove('on'); }
+    if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) { $('toast').classList.remove('on'); this._clash(); } }
+  },
+  _clash() {
+    const h = $('hint'), t = $('toast');
+    let under = false;
+    if (this._hintT > 0 && this._toastT > 0) {
+      // (where both end up, not where the hint is while it slides in: both are centred with translateX(-50%))
+      const box = e => { const l = e.offsetLeft - e.offsetWidth / 2; return [l, e.offsetTop, l + e.offsetWidth, e.offsetTop + e.offsetHeight]; };
+      const a = box(h), b = box(t);
+      under = a[0] < b[2] && b[0] < a[2] && a[1] < b[3] + 4 && b[1] < a[3] + 4;
+    }
+    this._under = under; h.classList.toggle('under', under);
   },
   _updButtons(shown) {
     const t = PL.tool, T = TIER[t], LB = T.labels || UPLABELS[T.kind];
@@ -141,7 +156,7 @@ const UI = {
     $('goalBar').firstChild.style.width = (f * 100).toFixed(1) + '%';
     $('goalPct').textContent = lab;
     // chapter done and another one waits: the goal bar carries the button to it
-    const nx = GAME.ended && !CHUI.open && !!chapterById(CH.id + 1);
+    const nx = GAME.ended && GAME.finishT <= 0 && !CHUI.open && !!chapterById(CH.id + 1);
     if (nx !== this._nextOn) { this._nextOn = nx; $('goal').classList.toggle('next', nx); }
   },
   _v: new V3(),
@@ -205,11 +220,16 @@ const UI = {
   hint(t, dur) {
     // on phones the hint sits where the big banners pop: wait for the banner to finish
     const wait = (this._bnUntil || 0) - performance.now();
-    if (wait > 0 && innerWidth <= 640) { clearTimeout(this._hq); this._hqT = t; this._hq = setTimeout(() => { this._hqT = null; this.hint(t, dur); }, wait + 60); return; }
-    const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3;
+    if (wait > 0 && (innerWidth <= 640 || innerHeight <= 500)) { clearTimeout(this._hq); this._hqT = t; this._hq = setTimeout(() => { this._hqT = null; this.hint(t, dur); }, wait + 60); return; }
+    const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; this._clash();
   },
   unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; if (this._hqT && this._hqT.startsWith(pre)) { clearTimeout(this._hq); this._hqT = null; } },
-  toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },
+  // (a toast that comes with a big banner waits for the banner to finish, so neither hides the other)
+  toast(t) {
+    const wait = (this._bnUntil || 0) - performance.now();
+    if (wait > 0) { clearTimeout(this._tq); this._tq = setTimeout(() => this.toast(t), wait + 60); return; }
+    const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; this._clash();
+  },
   banner(title, sub, ico, dur) {
     if (this._hintT > 0) { this._hintT = 0; $('hint').classList.remove('on'); }
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;

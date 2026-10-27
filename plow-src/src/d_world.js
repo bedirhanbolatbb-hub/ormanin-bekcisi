@@ -200,7 +200,8 @@ function buildWorld(scene) {
   }
   // 2) paved areas
   for (const p of PAVED) {
-    if (p.noSnow) continue;
+    // swept ground with no snow on it (the bus depot): you can walk and drive there, nothing to clear
+    if (p.noSnow) { SNOW.paint(p.r.x0, p.r.z0, p.r.x1, p.r.z1, (k, x, z) => { if (p.mask && !p.mask(x, z)) return; T[k] = 3; H[k] = 0; }); continue; }
     SNOW.paint(p.r.x0, p.r.z0, p.r.x1, p.r.z1, (k, x, z) => {
       if (p.mask && !p.mask(x, z)) return;
       T[k] = 1;

@@ -26,7 +26,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #coinTxt{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:29px;line-height:1;min-width:30px;letter-spacing:.5px;}
 #coinBox.bump{animation:bump .18s ease-out;}
 @keyframes bump{50%{transform:scale(1.1);}}
-#goal{position:absolute;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--card);padding:7px 14px 7px 8px;border-radius:18px;width:min(440px,calc(100vw - 250px));box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);}
+#goal{position:absolute;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--card);padding:7px 14px 7px 8px;border-radius:18px;width:min(440px,calc(100vw - 320px));box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);}
 #goal.pop{animation:gpop .5s cubic-bezier(.2,1.6,.4,1);}
 @keyframes gpop{0%{transform:translateX(-50%) scale(.7);opacity:.2}100%{transform:translateX(-50%) scale(1);opacity:1}}
 #goalIco{width:40px;height:40px;flex:none;background:#eef4fb;border-radius:12px;padding:3px;}
@@ -118,8 +118,11 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 @keyframes fullp{50%{scale:1.12;}}
 #hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:rgba(30,42,64,.82);color:#fff;font-weight:800;font-size:17px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;}
 #hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
+#hint.on.under{opacity:0;}
 #toast{position:absolute;left:50%;top:84px;transform:translateX(-50%);background:rgba(255,255,255,.95);font-weight:800;font-size:14px;padding:8px 16px;border-radius:12px;opacity:0;transition:opacity .3s;box-shadow:0 4px 14px rgba(43,58,85,.2);}
 #toast.on{opacity:1;}
+/* with a countdown on screen, the toast sits under it */
+#hud:has(#timer.on) #toast{top:140px;}
 #banner{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%) scale(.5);text-align:center;opacity:0;pointer-events:none;}
 #banner.on{animation:bnr 2.3s forwards;}
 /* with the bus clock on screen the banner sits a little lower, clear of it */
@@ -230,6 +233,9 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .chbtn{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#fff;background:var(--grn);padding:4px 14px;border-radius:12px;box-shadow:0 3px 0 #23935a;}
 .chrow.cur .chbtn{background:#ffc23d;color:#2b3a55;box-shadow:0 3px 0 #d69a00;}
 .chrow.locked .chbtn{background:#c9d5e4;box-shadow:none;}
+.chrow.sure .chbtn{background:#ff8a1e;box-shadow:0 3px 0 #c8650a;}
+.chwarn{margin-top:8px;min-height:18px;font-weight:800;font-size:14px;color:#ffd34d;text-align:center;}
+.chwarn:empty{display:none;}
 #chFade{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(#7aa7dc,#cfe0f1 70%,#eef4fa);}
 #chFade.on{display:flex;animation:fadein .5s;}
 @media (max-width:640px){
@@ -243,8 +249,9 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   .ui-lbl{font-size:10.5px;}
   .ui-cost b{font-size:14px;}
   #ups{gap:6px;}
-  #hint{bottom:auto;top:124px;font-size:15px;}
-  #toast{top:170px;}
+  #hint{bottom:auto;top:124px;font-size:15px;white-space:normal;width:max-content;max-width:calc(100vw - 24px);text-align:center;}
+  /* phones: the toast goes just above the goal bar, clear of the big banners */
+  #toast,#hud:has(#timer.on) #toast{top:auto;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 160px);}
   #timer{top:calc(max(12px,env(safe-area-inset-top)) + 62px);}
   .bn-t{font-size:32px;}
   #tools{bottom:auto;top:70px;}
@@ -252,7 +259,13 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   #coinTxt{font-size:25px;}
 }
 @media (max-width:400px){ #goalNext span{display:none;} }
+/* narrow phones: the school bus clock moves right, clear of the map button */
+@media (max-width:420px){ #timer{left:auto;right:max(12px,env(safe-area-inset-right));transform:none;} #timer .ti-route{width:56px;} #timer.warn{animation:tw2 .5s infinite;} }
+@keyframes tw2{50%{transform:scale(1.07)}}
 @media (max-height:500px){ #hint{bottom:auto;top:70px;} #banner{top:30%;}
+  /* short screens: hints go under the countdown when it is on; toasts sit above the cards */
+  #hud:has(#timer.on) #hint{top:134px;}
+  #toast,#hud:has(#timer.on) #toast{top:auto;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 160px);}
   /* short landscape screens (phones on their side, small game frames): slimmer cards so the road stays visible */
   #ups{transform:translateX(-50%) scale(.8);transform-origin:50% 100%;}
   #goal{padding:5px 12px 5px 7px;}
@@ -294,27 +307,50 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 // ==== a1_cg.js ====
 // ---------- CrazyGames bridge: only active on CrazyGames (everywhere else it quietly does nothing) ----------
 const CG = {
-  sdk: null, env: 'none', playing: false, mute: false, hold: false, onLate: null,
+  sdk: null, env: 'none', playing: false, mute: false, hold: false, onLate: null, latePending: false,
+  // who is playing: undefined = not known, null = a guest, else the CrazyGames username
+  uid: undefined,
   async init() {
     const s = window.CrazyGames && window.CrazyGames.SDK;
     if (!s || /[?&](bot|nosdk)\b/.test(location.search)) return;
     // the SDK fetches the player's saved game before it is ready, which can take a while on a slow line:
     // wait up to 6 s, and if it is ready later, take it then (meanwhile the game runs and saves on this device)
-    let late = false;
-    const ready = Promise.resolve().then(() => s.init()).then(() => this.attach(s, late), () => { });
+    const ready = Promise.resolve().then(() => s.init()).then(() => this.attach(s), () => { });
     await Promise.race([ready, new Promise(r => setTimeout(r, 6000))]);
-    late = true;
+    this._raceOver = true;
   },
-  attach(s, late) {
+  async attach(s) {
     this.env = s.environment;
     // local tests and other sites: no SDK calls at all (?useLocalSdk=true&cgtest tries the SDK's local mode)
     if (this.env !== 'crazygames' && !(this.env === 'local' && /[?&]cgtest\b/.test(location.search))) return;
+    // late (the game already started from this device): not one write to the account until we know
+    // whether it holds a newer game than this start found
+    if (this._raceOver) { this.hold = true; this.sdk = s; }
+    this.uid = await this.who(s);
+    const late = !!this._raceOver;
+    if (late) this.hold = true;
     this.sdk = s;
     try {
       this.mute = !!(s.game.settings && s.game.settings.muteAudio);
-      s.game.addSettingsChangeListener(st => { this.mute = !!(st && st.muteAudio); try { AUD.setMuted(AUD._um); } catch (e) { } });
+      s.game.addSettingsChangeListener(st => { this.mute = !!(st && st.muteAudio); try { AUD.setMuted(AUD._um); UI.refreshMute && UI.refreshMute(); } catch (e) { } });
     } catch (e) { }
-    if (late) { if (this.playing) this.call(x => x.game.gameplayStart()); try { if (this.onLate) this.onLate(); } catch (e) { } }
+    try { AUD.setMuted(AUD._um); UI.refreshMute && UI.refreshMute(); } catch (e) { }
+    if (late) { if (this.playing) this.call(x => x.game.gameplayStart()); this.latePending = true; this.runLate(); }
+  },
+  // the late check runs once both the SDK and the game are there (whichever comes last)
+  runLate() { if (!this.latePending || !this.onLate) return; this.latePending = false; try { this.onLate(); } catch (e) { this.hold = false; } },
+  // the player's CrazyGames name (null for a guest), so this device's own copy of a game only ever goes to the same player
+  who(s) {
+    return new Promise(res => {
+      let done = false; const fin = v => { if (!done) { done = true; res(v); } };
+      setTimeout(() => fin(undefined), 1500);
+      try {
+        const U = s.user;
+        if (!U || !U.getUser) return fin(undefined);
+        if (U.isUserAccountAvailable === false) return fin(null);
+        Promise.resolve(U.getUser()).then(u => fin(u ? String(u.username || u.userId || 'player') : null), () => fin(undefined));
+      } catch (e) { fin(undefined); }
+    });
   },
   call(fn) { try { if (this.sdk) return fn(this.sdk); } catch (e) { } },
   loadingStart() { this.call(s => s.game.loadingStart()); },
@@ -328,6 +364,10 @@ const CG = {
   // is what gets saved right now going up to the account? (0 yes, 1 no SDK here, 2 held back on purpose)
   syncState() { return this.sdk ? (this.hold ? 2 : 0) : 1; },
 };
+// from the very first moment (also while loading): arrow keys, space and the mouse wheel play the game, they never
+// scroll the CrazyGames page around it (the chapter list still scrolls with the wheel)
+addEventListener('keydown', e => { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); }, { passive: false });
+addEventListener('wheel', e => { if (!(e.target && e.target.closest && e.target.closest('.chlist'))) e.preventDefault(); }, { passive: false });
 
 // ==== a_util.js ====
 'use strict';
@@ -456,11 +496,13 @@ void main() {
 // ==== b_audio.js ====
 // ---------- procedural audio (no files) ----------
 const AUD = {
-  ctx: null, ok: false, _um: false, musicOn: true,
+  ctx: null, _ok: false, _um: false, musicOn: true,
+  // sounds only go out while the audio is really running (a suspended one would queue them all up and fire them at once)
+  get ok() { return this._ok && this.ctx.state === 'running'; },
   // your own mute button, or the CrazyGames site setting
   get muted() { return this._um || (typeof CG !== 'undefined' && CG.mute); }, set muted(v) { this._um = !!v; },
   init() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    if (this.ctx) { if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') { try { const p = this.ctx.resume(); if (p && p.catch) p.catch(() => { }); } catch (e) { } } return; }
     try {
       const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
       const ctx = this.ctx = new C();
@@ -491,7 +533,7 @@ const AUD = {
       this.blowN = this._loopNoise(this.noise, 'bandpass', 2400, 0.6);
       // wind
       this.wind = this._loopNoise(this.brown, 'lowpass', 520, 0.5); this.wind.g.gain.value = 0.05;
-      this.ok = true;
+      this._ok = true;
       this._musT = ctx.currentTime + 0.3; this._musStep = 0;
     } catch (e) { console.warn('audio', e); }
   },
@@ -646,6 +688,8 @@ const AUD = {
     if (!this.musicOn) return;
     const S = this.song || SONG_MAPLE, step = 60 / S.bpm / (S.div || 2), spb = S.spb || 8, cpb = S.cpb || 1;
     const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+    // after a long pause (muted, hidden) the music picks up from now instead of playing every missed note at once
+    if (this._musT < ctx.currentTime - 0.2) this._musT = ctx.currentTime + 0.05;
     while (this._musT < ctx.currentTime + 0.4) {
       const st = this._musStep, t = this._musT;
       const bar = Math.floor(st / spb), chord = S.prog[Math.floor(bar / cpb) % S.prog.length], inBar = st % spb;
@@ -777,7 +821,12 @@ const SNOW = {
   init() {
     const n = this.NX * this.NZ;
     this.H = new Float32Array(n); this.T = new Uint8Array(n); this.A = new Uint8Array(n);
-    this.dirty = { x0: 1e9, z0: 1e9, x1: -1, z1: -1 };
+    // which mesh chunks need rebuilding, and where inside them (grid cells): each carver only costs its own chunks
+    this._ncx = Math.ceil((this.NX - 1) / this.CH); this._ncz = Math.ceil((this.NZ - 1) / this.CH);
+    const nc = this._ncx * this._ncz;
+    this._dx0 = new Int32Array(nc).fill(1e9); this._dx1 = new Int32Array(nc).fill(-1);
+    this._dz0 = new Int32Array(nc).fill(1e9); this._dz1 = new Int32Array(nc).fill(-1);
+    this._dl = [];
   },
   ix(x) { return Math.round((x - this.X0) / this.C); },
   iz(z) { return Math.round((z - this.Z0) / this.C); },
@@ -887,7 +936,7 @@ const SNOW = {
       const h = H[k], nh = Math.min(1.2, h + amt * (0.85 + 0.3 * ((k * 2654435761 >>> 0) % 1000) / 1000));
       H[k] = nh; if (A[k] && h < THR && nh >= THR) this.areas[A[k]].cleared--;
     }
-    this.dirty = { x0: 0, z0: 0, x1: this.NX - 1, z1: this.NZ - 1 };
+    this.markAll();
   },
   // clear every remaining sample of area (auto-finish). returns list of positions (subsampled) for fx
   clearArea(a) {
@@ -921,10 +970,25 @@ const SNOW = {
     return { x: this.X0 + (best % N) * C, z: this.Z0 + ((best / N) | 0) * C };
   },
   _mark(i, j) {
-    const d = this.dirty;
-    if (i < d.x0) d.x0 = i; if (i > d.x1) d.x1 = i; if (j < d.z0) d.z0 = j; if (j > d.z1) d.z1 = j;
+    // every chunk whose vertices read this sample (normals and shading look 2 cells around)
+    const CH = this.CH, nx = this._ncx;
+    const a0 = i < 3 ? 0 : ((i - 3) / CH) | 0, a1 = Math.min(nx - 1, ((i + 2) / CH) | 0);
+    const b0 = j < 3 ? 0 : ((j - 3) / CH) | 0, b1 = Math.min(this._ncz - 1, ((j + 2) / CH) | 0);
+    for (let cj = b0; cj <= b1; cj++) for (let ci = a0; ci <= a1; ci++) {
+      const c = cj * nx + ci;
+      if (this._dx1[c] < 0) this._dl.push(c);
+      if (i < this._dx0[c]) this._dx0[c] = i; if (i > this._dx1[c]) this._dx1[c] = i;
+      if (j < this._dz0[c]) this._dz0[c] = j; if (j > this._dz1[c]) this._dz1[c] = j;
+    }
   },
-  markAll() { this.dirty = { x0: 0, z0: 0, x1: this.NX - 1, z1: this.NZ - 1 }; },
+  markAll() {
+    const CH = this.CH, nx = this._ncx;
+    for (let cj = 0; cj < this._ncz; cj++) for (let ci = 0; ci < nx; ci++) {
+      const c = cj * nx + ci;
+      if (this._dx1[c] < 0) this._dl.push(c);
+      this._dx0[c] = ci * CH; this._dx1[c] = Math.min(this.NX - 1, ci * CH + CH); this._dz0[c] = cj * CH; this._dz1[c] = Math.min(this.NZ - 1, cj * CH + CH);
+    }
+  },
   setHighlight(areaId) {
     if (this.hlArea === areaId) return;
     const old = this.hlArea; this.hlArea = areaId;
@@ -996,16 +1060,16 @@ const SNOW = {
   },
   _y: null,
   flush(all) {
-    const d = this.dirty; if (d.x1 < 0) return;
+    const L = this._dl; if (!L.length) return;
     const N = this.NX, NZ = this.NZ, H = this.H, C = this.C, CH = this.CH, S = CH + 1;
-    const x0 = Math.max(0, d.x0 - 2), x1 = Math.min(N - 1, d.x1 + 2), z0 = Math.max(0, d.z0 - 2), z1 = Math.min(NZ - 1, d.z1 + 2);
-    this.dirty = { x0: 1e9, z0: 1e9, x1: -1, z1: -1 };
     const ry = (i, j) => { i = i < 0 ? 0 : i >= N ? N - 1 : i; j = j < 0 ? 0 : j >= NZ ? NZ - 1 : j; const h = H[j * N + i]; return h > 0.014 ? h - 0.02 : -0.07; };
-    const touched = new Set();
-    const ci0 = Math.floor(Math.max(0, x0 - 1) / CH), ci1 = Math.floor(Math.min(N - 1, x1) / CH), cj0 = Math.floor(Math.max(0, z0 - 1) / CH), cj1 = Math.floor(Math.min(NZ - 1, z1) / CH);
-    const nCX = Math.ceil((N - 1) / CH);
-    for (let cj = Math.max(0, cj0 - 1); cj <= cj1; cj++) for (let ci = Math.max(0, ci0 - 1); ci <= ci1; ci++) {
-      const ch = this.chunks[cj * nCX + ci]; if (!ch) continue;
+    // a snowstorm dirties the whole town at once: that is spread over a few frames (carving touches only a few chunks)
+    const n = all ? L.length : Math.min(L.length, 18);
+    for (let q = 0; q < n; q++) {
+      const c = L[q], ch = this.chunks[c];
+      const x0 = Math.max(0, this._dx0[c] - 2), x1 = Math.min(N - 1, this._dx1[c] + 2), z0 = Math.max(0, this._dz0[c] - 2), z1 = Math.min(NZ - 1, this._dz1[c] + 2);
+      this._dx0[c] = 1e9; this._dx1[c] = -1; this._dz0[c] = 1e9; this._dz1[c] = -1;
+      if (!ch) continue;
       const a0 = Math.max(x0, ch.i0), a1 = Math.min(x1, ch.i1), b0 = Math.max(z0, ch.j0), b1 = Math.min(z1, ch.j1);
       if (a0 > a1 || b0 > b1) continue;
       const pos = ch.geo.attributes.position.array, nor = ch.geo.attributes.normal.array, col = ch.geo.attributes.color.array;
@@ -1023,9 +1087,9 @@ const SNOW = {
         col[o3 + 1] = clamp((lerp(0.62, 0.925, ao) + lip) * v, 0, 1) * 255;
         col[o3 + 2] = clamp((lerp(0.84, 0.97, ao) + lip) * v, 0, 1) * 255;
       }
-      touched.add(ch);
+      const a = ch.geo.attributes; a.position.needsUpdate = true; a.normal.needsUpdate = true; a.color.needsUpdate = true;
     }
-    for (const ch of touched) { const a = ch.geo.attributes; a.position.needsUpdate = true; a.normal.needsUpdate = true; a.color.needsUpdate = true; }
+    L.splice(0, n);
   },
 
   // ---- save / load (quantized RLE) ----
@@ -1049,6 +1113,11 @@ const SNOW = {
     try {
       const s = atob(str), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
       const H = this.H, T = this.T; let k = 0;
+      // the snow is stored for the paved cells in order: it only fits the same ground (else it would come back shifted)
+      let total = 0, n1 = 0;
+      for (let o = 0; o + 2 < b.length; o += 3) total += b[o + 1] | (b[o + 2] << 8);
+      for (let q = 0; q < T.length; q++) if (T[q] === 1) n1++;
+      if (total !== n1) return false;
       for (let o = 0; o + 2 < b.length; o += 3) {
         const v = b[o] / 200; let run = b[o + 1] | (b[o + 2] << 8);
         while (run > 0 && k < H.length) { if (T[k] === 1) { H[k] = v; run--; } k++; }
@@ -1227,7 +1296,7 @@ const CH_MAPLE = {
     decor('bench_a', 20.4, -5.5, -Math.PI / 2, 1, 0, { solid: 0.05 }); decor('bench_a', 20.4, -14.5, -Math.PI / 2, 1, 0, { solid: 0.05 });
     const cocoa = place('cocoa', 21.2, -19.8, -Math.PI / 2.6, 1.2, 0); scene.add(cocoa); solidUnder(cocoa, 0.1, false);
     // 8) decor: fences, lamps, mailboxes, trees, snowmen
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     for (const L of LOTS) {
       const sx = L.side, fx = sx * 5.95;
       const z0 = L.c - 10.8, z1 = L.c + 10.8;
@@ -1360,7 +1429,7 @@ const CH_SCHOOL = {
     const curbM = new THREE.MeshStandardMaterial({ color: 0xc4c7cb, roughness: 0.8 }), cg = [];
     for (const x of [-4.5, 4.5]) { const g = new THREE.BoxGeometry(0.16, 0.08, 100); g.translate(x, 0.04, 0); cg.push(g.toNonIndexed()); }
     const curb = new THREE.Mesh(mergeGeoms(cg), curbM); curb.receiveShadow = true; scene.add(curb);
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     // ---- the school ----
     const sch = litBuilding('school', -1.55, -69.55, 0, 1.35, new V3(-1.2, 0, -63.4), 0.1);
     this.school = sch;
@@ -1371,7 +1440,7 @@ const CH_SCHOOL = {
     const bus = busTint(place('bus', 3.4, 56.2, Math.PI, 1, 0)); scene.add(bus); bus.updateMatrixWorld(true);
     const B = this.bus = { obj: bus, x: 3.4, z: 56.2, h: Math.PI, spd: 0, si: 0, pi: 0, state: 'ready', dwell: 0, honkT: 0, kidsIn: 0, lights: [] };
     // solid while it waits in the depot
-    B.park = [2.0, 50.3, 4.8, 61.9]; SNOW.paint(...B.park, (k) => { if (T[k] === 1) T[k] = 2; });
+    B.park = [2.0, 50.3, 4.8, 61.9]; B.parkCells = []; SNOW.paint(...B.park, (k) => { if (T[k] === 1 || T[k] === 3) { B.parkCells.push(k, T[k]); T[k] = 2; } });
     // stop lights on the bus roof (blink while the bus is stopped)
     const lm = new THREE.MeshBasicMaterial({ color: 0xff3020, toneMapped: false });
     for (const [lx, lz] of [[1.05, 5.7], [-1.05, 5.7], [1.05, -5.8], [-1.05, -5.8]]) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), lm.clone()); m.position.set(lx, 2.95, lz); bus.add(m); B.lights.push(m); }
@@ -1538,7 +1607,7 @@ const CH_SCHOOL = {
     const B = this.bus, o = B.obj;
     for (const L of B.lights) L.material.color.setHex(B.state === 'stop' && (performance.now() / 300 | 0) % 2 ? 0xff3020 : 0x5a1010);
     if (B.state === 'parked' || B.state === 'done') return;
-    if (B.state === 'ready') { if (this.released[1]) { B.state = 'go'; AUD.busHorn(); if (B.park) { SNOW.paint(...B.park, (k) => { if (SNOW.T[k] === 2) SNOW.T[k] = 1; }); B.park = null; } } else { if (Math.random() < dt * 3) FX.smoke(B.x - Math.sin(B.h) * 6.3, 0.4, B.z - Math.cos(B.h) * 6.3); return; } }
+    if (B.state === 'ready') { if (this.released[1]) { B.state = 'go'; AUD.busHorn(); this.unpark(); } else { if (Math.random() < dt * 3) FX.smoke(B.x - Math.sin(B.h) * 6.3, 0.4, B.z - Math.cos(B.h) * 6.3); return; } }
     if (B.state === 'stop') {
       B.dwell -= dt;
       if (B.dwell <= 0 && B.boarding <= 0) {
@@ -1576,6 +1645,8 @@ const CH_SCHOOL = {
     o.position.set(B.x, 0, B.z); o.rotation.y = B.h;
     if (B.spd > 0.5 && Math.random() < 0.4) FX.smoke(B.x - Math.sin(B.h) * 6.3 + Math.cos(B.h) * 0.8, 0.35, B.z - Math.cos(B.h) * 6.3 - Math.sin(B.h) * 0.8);
   },
+  // the bus leaves its spot in the depot: the ground there is free again (only the cells it took)
+  unpark() { const B = this.bus; if (!B.parkCells) return; for (let i = 0; i < B.parkCells.length; i += 2) if (SNOW.T[B.parkCells[i]] === 2) SNOW.T[B.parkCells[i]] = B.parkCells[i + 1]; B.parkCells = null; B.park = null; },
   door() { const B = this.bus, fx = Math.sin(B.h), fz = Math.cos(B.h); return [B.x + fx * 3.6 - fz * 1.5, B.z + fz * 3.6 + fx * 1.5]; },
   atStop(id) {
     const B = this.bus; B.boarding = 0;
@@ -1631,8 +1702,18 @@ const CH_SCHOOL = {
   load(o) {
     const B = this.bus; this.begin();
     this.released = o.r || {}; this.onTime = o.ot || 0; if (o.lg) { this.curLeg = o.lg[0]; this.legT = Math.max(8, o.lg[1]); }
-    if (o.b) { [B.si, B.pi, B.x, B.z, B.h, B.state, B.kidsIn] = o.b; if (B.state !== 'ready' && B.park) { SNOW.paint(...B.park, (k) => { if (SNOW.T[k] === 2) SNOW.T[k] = 1; }); B.park = null; } if (B.state === 'stop') { B.state = 'go'; B.pi = 0; B.si = Math.min(B.si + 1, this.route.length - 1); } B.obj.position.set(B.x, 0, B.z); B.obj.rotation.y = B.h; }
-    if (B.state === 'done' || GAME.done.bay) { B.state = 'done'; const [sx, sz] = [B.x, B.z]; B.obj.position.set(sx, 0, sz); }
+    if (o.b) {
+      [B.si, B.pi, B.x, B.z, B.h, B.state, B.kidsIn] = o.b; if (B.state !== 'ready') this.unpark();
+      // saved while kids were getting on: they all made it (and the friend who joins at the first stop still joins)
+      if (B.state === 'stop') {
+        const seg = this.route[B.si], S = seg && this.stops.find(q => q.id === seg.stop);
+        if (S) { const before = this.stops.filter(q => q.leg < S.leg).reduce((a, q) => a + q.n, 0); B.kidsIn = Math.max(B.kidsIn || 0, before + S.n); if (S.id === 'A') GAME.crew = Math.max(GAME.crew || 0, 3); }
+        B.state = 'go'; B.pi = 0; B.si = Math.min(B.si + 1, this.route.length - 1);
+      }
+      B.obj.position.set(B.x, 0, B.z); B.obj.rotation.y = B.h;
+      // the first stop's kids are on the bus: the friend who joins there is with you
+      if ((B.kidsIn || 0) >= this.stops[0].n) GAME.crew = Math.max(GAME.crew || 0, 3);
+    }
     for (const S of this.stops) if (o.sk && o.sk[S.id] === 0) { for (const n of this.stopKids[S.id] || []) NPC.kill(n); this.stopKids[S.id] = []; }
   },
 };
@@ -1650,7 +1731,7 @@ const CH_MARKET = {
   shop: ['truck', 'dumpplow', 'thrower', 'sleigh'],
   unlock: { tool: 'sleigh', goals: 2 },
   payMul: 2.4, par: [330, 520], reward: 15000,
-  crewYard: [-8.5, 55.5], crewJobs: ['walkN', 'walkE', 'walkW'],
+  crewYard: [-8.6, 50.4], crewJobs: ['walkN', 'walkE', 'walkW'],
   introCam: { from: [0, 34, 92], look: [0, 0.5, 14] },
   finaleCam: { from: [17, 15, -24], look: [0, 4.5, -47] },
   env: { sky: ['#0b1238', '#2c3570', '#c9788a'], fog: 0x323866, hemi: [0x6a7ad0, 0x232a58, 0.62], sun: [0xffa070, 0.62], sunOff: [-20, 14, 12], exposure: 0.74, fogNear: 40, fogFar: 112 },
@@ -1694,7 +1775,7 @@ const CH_MARKET = {
     mk('walkW', 'West walk', [pav('walkW')], { quiet: true });
   },
   build(scene, H, T) {
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     // ---- stalls along the market lane (dark until you clear their lane) ----
     this.stalls = [];
     const kinds = ['toystall', 'cocoastall', 'cocoastall', 'toystall'];
@@ -1784,7 +1865,8 @@ const CH_MARKET = {
     if (a.key.startsWith('lane')) {
       let pos = null, k = 0;
       for (const B of this.stalls) if (B.lane === a.key && !B.open) { this.openStall(B, silent, k++ * 0.35); pos = pos || B.door; }
-      if (a.key === 'lane1' && !silent) CREW.recruit(2.0);
+      // (back from a save: the friend who joins here is with you, even if the game closed the moment they came)
+      if (a.key === 'lane1') { if (!silent) CREW.recruit(2.0); else GAME.crew = Math.max(GAME.crew || 0, 4); }
       return pos;
     }
     if (a.key === 'plazaS') { if (!silent) { UI.toast('The band starts to play!'); this.band(); } this.bandOn = true; return new V3(10, 0, -40); }
@@ -1943,7 +2025,7 @@ const CH_LAKE = {
     mk('shoreE', 'East shore', [pav('shoreE')], { quiet: true });
   },
   build(scene, H, T) {
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06, L = this.lake;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06, L = this.lake;
     // rink markings frozen into the ice (you uncover them): centre line, blue lines, face-off circles, goal creases
     const red = new THREE.MeshStandardMaterial({ color: 0xe5483c, roughness: 0.3 }), blue = new THREE.MeshStandardMaterial({ color: 0x2f6fe8, roughness: 0.3 });
     const rg = [], bg = [];
@@ -1953,7 +2035,7 @@ const CH_LAKE = {
     for (const zc of [2.6, -14.6]) { const g = new THREE.CircleGeometry(1.6, 24, zc > 0 ? Math.PI : 0, Math.PI); g.rotateX(-Math.PI / 2); g.translate(0, 0.009, zc); bg.push(g); }
     scene.add(new THREE.Mesh(mergeGeoms(rg), red)); scene.add(new THREE.Mesh(mergeGeoms(bg), blue));
     // ---- parking + skate rental ----
-    const kiosk = litBuilding('kiosk', 11.2, 53.0, -Math.PI / 2, 1.25, new V3(9.6, 0, 53), 0.1); this.kiosk = kiosk;
+    const kiosk = litBuilding('kiosk', 11.2, 53.0, -Math.PI / 2, 1.25, new V3(9.6, 0, 53), 0.1, true); this.kiosk = kiosk;
     const ks = makeSign('SKATE RENTAL', '#2a6fd6'); ks.position.set(9.6, 3.8, 53); ks.rotation.y = -Math.PI / 2; ks.scale.setScalar(2.2); scene.add(ks);
     decor('bench_a', -11.6, 46, Math.PI / 2, 1, 0, { solid: 0.05, paved: true }); decor('saltbin', -11.4, 55.2, 0.3, 1.4, 0, { solid: 0.05, paved: true });
     for (const [x, z] of [[-12.9, 40], [12.9, 40], [-12.9, 55], [12.9, 46]]) decor('lamp_a', x, z, 0, 1.1, yardY(x, z), { trunk: 0.3 });
@@ -1973,7 +2055,7 @@ const CH_LAKE = {
     decor('snowarch', 24.6, 10, -1.2, 1.6, yardY(24.6, 10));
     // ---- ice fishing huts out on the ice ----
     this.huts = [];
-    for (const [x, z, r] of [[-9.5, -24.5, 0.3], [8.5, -21.5, -0.4], [2.0, -29.5, 0.1]]) { const h = litBuilding('hut', x, z, r, 0.9, new V3(x, 0, z + 1.8), 0.15); this.huts.push(h); }
+    for (const [x, z, r] of [[-9.5, -24.5, 0.3], [8.5, -21.5, -0.4], [2.0, -29.5, 0.1]]) { const h = litBuilding('hut', x, z, r, 0.9, new V3(x, 0, z + 1.8), 0.15, true); this.huts.push(h); }
     // trees and banks around the lake
     const rr = mulberry(444), fk = ['fir_a', 'fir_b', 'fir_c', 'spruce_s', 'birch'];
     for (let i = 0; i < 90; i++) {
@@ -1992,8 +2074,9 @@ const CH_LAKE = {
     if (a.key === 'rink') { this.startHockey(silent); this.addSkaters(2, [0, -6], [14, 8], silent); return new V3(0, 0, -6); }
     if (a.key === 'huts') {
       for (const h of this.huts) { h.litT = 1; if (silent) { h.lit = 1; applyLit(h, 1); } }
-      if (!silent) for (const h of this.huts) { const f = NPC.spawn({ x: h.door.x, z: h.door.z, h: 0, kind: 'adult', pose: 'wave', tag: 'fish', look: Object.assign(NPC.look('adult'), { hat: 0x3a4a5a, brim: 0x2a3440, beard: 0x8a6a4a }) }); NPC.say(f, ['Fish are biting!', 'Thanks, friend!', 'Look at this one!'][(Math.random() * 3) | 0], 3); }
-      this.fishOn = true; if (!silent) CREW.recruit(2.0);
+      // the ice fishers come out of their huts (also when you come back to the lake later)
+      for (const h of this.huts) { const f = NPC.spawn({ x: h.door.x, z: h.door.z, h: 0, kind: 'adult', pose: 'wave', tag: 'fish', pop: !silent, look: Object.assign(NPC.look('adult'), { hat: 0x3a4a5a, brim: 0x2a3440, beard: 0x8a6a4a }) }); if (!silent) NPC.say(f, ['Fish are biting!', 'Thanks, friend!', 'Look at this one!'][(Math.random() * 3) | 0], 3); }
+      this.fishOn = true; if (!silent) CREW.recruit(2.0); else GAME.crew = Math.max(GAME.crew || 0, 5);
       return new V3(0, 0, -25);
     }
     if (a.key === 'dock') { this.boathouse.litT = 1; this.sauna.litT = 1; if (silent) { this.boathouse.lit = 1; applyLit(this.boathouse, 1); this.sauna.lit = 1; applyLit(this.sauna, 1); } this.addSkaters(4, [0, -38], [11, 6], silent); return new V3(0, 0, -44); }
@@ -2165,7 +2248,7 @@ const CH_RESORT = {
     return Math.max(0, base + ridge * Math.min(1, d / 40));
   },
   build(scene, H, T) {
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     // ---- mountains ----
     { const W = 340, D = 190, nx = 96, nz = 60, g = new THREE.PlaneGeometry(W, D, nx, nz); g.rotateX(-Math.PI / 2); g.translate(0, 0, -64 - D / 2 + 2);
       const p = g.attributes.position, col = new Float32Array(p.count * 3);
@@ -2253,10 +2336,11 @@ const CH_RESORT = {
   },
   onDone(a, silent) {
     if (a.key === 'parking') { if (!silent) this.shuttle(); return new V3(0, 0, 50); }
-    if (a.key === 'village') { for (const B of this.shops) { B.litT = 1; if (silent) { B.lit = 1; applyLit(B, 1); } } if (!silent) { this.walkers(6); CREW.recruit(2.0); } return new V3(0, 0, 30); }
-    if (a.key === 'lift') { this.startLift(silent); if (!silent) later(4.5, () => this.startAvalanche()); return new V3(20, 0, -20); }
+    if (a.key === 'village') { for (const B of this.shops) { B.litT = 1; if (silent) { B.lit = 1; applyLit(B, 1); } } if (!silent) { this.walkers(6); CREW.recruit(2.0); } else GAME.crew = Math.max(GAME.crew || 0, 5); return new V3(0, 0, 30); }
+    // (back from a save before the avalanche came: it still comes)
+    if (a.key === 'lift') { this.startLift(silent); later(silent ? 6 : 4.5, () => this.startAvalanche()); return new V3(20, 0, -20); }
     if (a.key === 'finish') { for (let i = 0; i < 10; i++) { const x = i < 5 ? -20.3 : 20.3, f = NPC.spawn({ x, z: 7 + (i % 5) * 1.4, h: x < 0 ? Math.PI / 2 : -Math.PI / 2, kind: Math.random() < 0.5 ? 'kid' : 'adult', pose: 'wave', tag: 'fan', pop: !silent }); f.P.root.traverse(m => { if (m.isMesh) m.castShadow = false; }); } return new V3(0, 0, 10); }
-    if (a.key === 'pisteS') { for (let i = 0; i < 3; i++) this.gateObjs[i].visible = true; if (!silent) { this.skiSchool(); } this.skiOn = true; return new V3(0, 0, -12); }
+    if (a.key === 'pisteS') { for (let i = 0; i < 3; i++) this.gateObjs[i].visible = true; this.skiSchool(); this.skiOn = true; return new V3(0, 0, -12); }
     if (a.key === 'pisteN') { for (const g of this.gateObjs) g.visible = true; return new V3(0, 0, -45); }
     return null;
   },
@@ -2348,8 +2432,9 @@ const CH_RESORT = {
       R.t += dt;
       for (const r of R.list) {
         if (r.done) continue;
-        const g = this.gates[r.gi], tx = g ? g[0] + (r.gi % 2 ? 1.6 : -1.6) : r.lane, tz = g ? g[1] : 12;
-        const dx = tx - r.n.x, dz = tz - r.n.z, d = Math.hypot(dx, dz);
+        // the racers start at the top: through the gates from the top one down, then to the finish
+        const G = this.gates, g = G[G.length - 1 - r.gi], tx = g ? g[0] + (r.gi % 2 ? 1.6 : -1.6) : r.lane, tz = g ? g[1] : 12;
+        const dx = tx - r.n.x, dz = tz - r.n.z, d = Math.hypot(dx, dz) || 1e-3;
         const sp = r.spd * (R.t < 1.2 ? R.t / 1.2 : 1);
         r.n.x += dx / d * sp * dt; r.n.z += dz / d * sp * dt; r.n.h = dampAng(r.n.h, Math.atan2(dx, dz), 8, dt); r.n.moving = 1;
         r.n.P.body.rotation.z = clamp(dx * 0.1, -0.35, 0.35);
@@ -2374,8 +2459,8 @@ const CH_RESORT = {
     later(4.5, () => LIFE.fireworks(0, 6, 7));
     this.party = 9;
   },
-  save() { return {}; },
-  load(o) { },
+  save() { return { av: this.avalanche ? 1 : 0 }; },
+  load(o) { if (o && o.av && !this.avalanche) this.avalanche = { z: 99, t: 0 }; },
 };
 // ski geometry: made by whoever needs it first (a skier, or the racers at the finale when no skier came down yet)
 function SKIS() { const g = new THREE.BoxGeometry(0.34, 0.04, 1.5); g.translate(0, 0.02, 0.15); return g; }
@@ -2405,9 +2490,10 @@ function litMats(obj) {
   return wins;
 }
 // a building that lights up (windows) when its job is done: { obj, wins, lit, litT, door }
-function litBuilding(key, x, z, rot, s, door, solidPad) {
+// (paved: it stands on paved ground or ice, which must turn solid under it too, or machines drive through it)
+function litBuilding(key, x, z, rot, s, door, solidPad, paved) {
   const o = place(key, x, z, rot, s, 0); WORLD.scene.add(o);
-  if (solidPad !== false) solidUnder(o, solidPad === undefined ? 0.12 : solidPad, false);
+  if (solidPad !== false) solidUnder(o, solidPad === undefined ? 0.12 : solidPad, !!paved);
   const B = { obj: o, wins: litMats(o), lit: 0, litT: 0, door: door || new V3(x, 0, z), smoke: null, x, z };
   WORLD.houses.push(B);
   return B;
@@ -2626,7 +2712,8 @@ function buildWorld(scene) {
   }
   // 2) paved areas
   for (const p of PAVED) {
-    if (p.noSnow) continue;
+    // swept ground with no snow on it (the bus depot): you can walk and drive there, nothing to clear
+    if (p.noSnow) { SNOW.paint(p.r.x0, p.r.z0, p.r.x1, p.r.z1, (k, x, z) => { if (p.mask && !p.mask(x, z)) return; T[k] = 3; H[k] = 0; }); continue; }
     SNOW.paint(p.r.x0, p.r.z0, p.r.x1, p.r.z1, (k, x, z) => {
       if (p.mask && !p.mask(x, z)) return;
       T[k] = 1;
@@ -3078,6 +3165,8 @@ const PL = {
     const fx = Math.sin(this.h), fz = Math.cos(this.h);
     const off = isB ? (this.blowerOff || 1.9) : 0.66 + (st.w > 0.9 ? 0.06 : 0), hl = isB ? 0.2 : 0.16;
     const cx = this.x + fx * off, cz = this.z + fz * off;
+    // (a jump - a new tool, a reload, being moved to a free spot - starts a fresh stroke instead of a line from the old spot)
+    if (this._lastCx !== undefined && Math.hypot(cx - this._lastCx, cz - this._lastCz) > 1.5) this._lastCx = this._lastCz = undefined;
     if (!this.full && v > 0.15) {
       const steps = this._lastCx === undefined ? 1 : Math.min(6, Math.ceil(Math.hypot(cx - this._lastCx, cz - this._lastCz) / 0.15));
       for (let s = 1; s <= steps; s++) {
@@ -3246,7 +3335,8 @@ const PL = {
     }
     const esc = this.escape > 0;
     let target = mag === 0 ? 0 : st.spd * mag * (al < 0.35 ? 1 : al < 1.1 ? 1 - (al - 0.35) * 1.05 : 0.15);
-    if (esc) { this.escape -= dt; target = -2.6; }
+    // (count down to exactly 0: a tiny leftover below zero used to switch the ice slide off for good)
+    if (esc) { this.escape = Math.max(0, this.escape - dt); target = -2.6; }
     const acc = target > this.spd ? (this.spd < 0 ? 14 : 7) : 12;
     this.spd += clamp(target - this.spd, -acc * dt, acc * dt);
     const turn = G.turn || 1.8;
@@ -3317,7 +3407,7 @@ const PL = {
   _afterMove(dt, st, G, x0, z0, h0, mag) {
     // ice: the machine keeps sliding the way it was going; grip pulls it back in line (the ice machine grips best)
     const dt1 = Math.max(dt, 1e-3);
-    if (CH.ice && CH.ice(x0, z0) && !this.escape && !this._path) {
+    if (CH.ice && CH.ice(x0, z0) && !(this.escape > 0) && !this._path) {
       const gk = 1 - Math.exp(-(G.grip || 2.0) * dt), wx = this.x - x0, wz = this.z - z0;
       const vx = lerp((this.svx || 0) * dt, wx, gk), vz = lerp((this.svz || 0) * dt, wz, gk);
       if (this.truckFree(x0 + vx, z0 + vz, this.h)) { this.x = x0 + vx; this.z = z0 + vz; }
@@ -3343,6 +3433,7 @@ const PL = {
     let removed = 0;
     const hx = Math.sin(this.h), hz = Math.cos(this.h);
     const cx = this.x + hx * G.carve, cz = this.z + hz * G.carve;
+    if (this._lastCx !== undefined && Math.hypot(cx - this._lastCx, cz - this._lastCz) > 2.2) this._lastCx = this._lastCz = undefined;
     if (!this.full && (this.spd > 0.2 || (this.svx || 0) * hx + (this.svz || 0) * hz > 0.6)) {
       const steps = this._lastCx === undefined ? 1 : Math.min(8, Math.ceil(Math.hypot(cx - this._lastCx, cz - this._lastCz) / 0.18));
       for (let s = 1; s <= steps; s++) {
@@ -3699,6 +3790,8 @@ const GAME = {
   spend(v) { if (this.coins + 1e-6 < v) return false; this.coins -= v; return true; },
   // the next machine after the one you use (machines you already own come back for free, e.g. when you replay a chapter)
   nextTool() { const s = CH.shop, i = s.indexOf(PL.tool); return i >= 0 && i + 1 < s.length ? s[i + 1] : (i < 0 ? s.find(k => !this.owned[k]) || null : null); },
+  // the machine this town gives you (chapter 1: the plow truck), while you do not have it yet
+  giftTool() { return CH.giftTruck ? CH.shop.find(k => TIER[k].gift && !this.owned[k]) || null : null; },
   handDone() { let n = 0; for (const k of HAND_AREAS) if (this.done[k]) n++; return n; },
   // each town's own special machine arrives part-way through the chapter (so buying it is a mid-chapter highlight)
   jobsDone() { let n = 0; for (const g of GOALS) if (g.a && this.done[g.a]) n++; return n; },
@@ -3760,7 +3853,8 @@ const GAME = {
       const area = g.a ? WORLD.areaByKey[g.a] : null;
       SNOW.setHighlight(area && !area.done ? area.id : 0);
       // all driveways done -> the town hands over its plow truck
-      { const nt = this.nextTool(); if (CH.giftTruck && nt && TIER[nt].gift && this.handDone() >= HAND_AREAS.length && this.giftT <= 0) this.giftT = 2.4; }
+      // (also when you never bought the last hand tool: the town does not wait for that)
+      if (!this.ended && this.giftTool() && this.handDone() >= HAND_AREAS.length && this.giftT <= 0) this.giftT = 2.4;
       // every job done -> the chapter's big finish, then the results
       if (!this.ended && GOALS[this.goalIdx()].end) this.finishChapter();
     }
@@ -3768,7 +3862,7 @@ const GAME = {
     // a chapter's own extras must never hold up the chapter itself (the results, the next chapter)
     if (CH.update) { try { CH.update(dt); } catch (e) { if (!this._chErr) { this._chErr = 1; console.warn('chapter', e); } } }
     if (this.finishT > 0) { this.finishT -= dt; if (this.finishT <= 0) CHUI.results(); }
-    if (this.giftT > 0) { this.giftT -= dt; const nt = this.nextTool(); if (this.giftT <= 0 && nt && TIER[nt].gift) { this.giftT = 0; this.buyTool(nt, true); } }
+    if (this.giftT > 0) { this.giftT -= dt; const gt = this.giftTool(); if (this.giftT <= 0 && gt && !this.ended) { this.giftT = 0; this.buyTool(gt, true); } }
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
     STREAK.update(dt);
@@ -3805,6 +3899,8 @@ const GAME = {
     const rec = this.chapters[CH.id] || (this.chapters[CH.id] = { stars: 0, best: 0 });
     this.lastStars = st; this.lastNew = st > rec.stars;
     rec.stars = Math.max(rec.stars, st); rec.best = rec.best ? Math.min(rec.best, this.time) : this.time; rec.done = 1;
+    // the chapter bonus is paid (and saved) right here; the results screen only shows it flying into your counter
+    const bonus = niceNum((CH.reward || 2000) * st); this.lastBonus = bonus; this.earn(bonus); UI.pending += bonus;
     if (CH.finale) { try { CH.finale(); } catch (e) { console.warn('finale', e); } }
     if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam') || QS.has('vid'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
     this.finishT = CH.finaleDelay || 5.5;
@@ -3815,39 +3911,74 @@ const GAME = {
     this.handoff(this.save(true));
   },
   // ---- save ----
+  sid: Math.random().toString(36).slice(2, 10),
+  // which of two saved games got further: coins earned only ever go up (a tie goes to the newer one)
+  better(a, b) { const ea = a.earned || 0, eb = b.earned || 0; return ea > eb + 0.5 || (Math.abs(ea - eb) <= 0.5 && (a.t || 0) > (b.t || 0)); },
   save(fresh) {
     if (QS.has('nosave') || (QS.has('bot') && !QS.has('botsave'))) return;
+    if (this.adopting || this.otherTabAhead()) return;
     const cs = fresh ? null : { id: CH.id, time: this.time, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), ended: this.ended, extra: CH.save ? CH.save() : null };
-    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now(), nc: CG.syncState() };
+    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now(), nc: CG.syncState(), sid: this.sid, u: CG.uid };
     const j = JSON.stringify(o);
-    STORE.set('plowtown_v4', j);
+    this._localOk = STORE.set('plowtown_v4', j);
     return j;
   },
   // moving on to another chapter reloads the page a moment after saving. On CrazyGames the account copy is sent
   // a second or more later, so the new start could still read the old copy and send the player back to the chapter
   // they just finished. The fresh save rides along in this tab and wins if it is newer.
-  handoff(j) { try { if (j) sessionStorage.setItem('plowtown_handoff', j); } catch (e) { } },
+  handoff(j) { if (!j) return; try { sessionStorage.setItem('plowtown_handoff', j); } catch (e) { if (!this._localOk) this.noStore = true; } },
   takeHandoff(o) {
     let h = null;
     try { h = JSON.parse(sessionStorage.getItem('plowtown_handoff') || 'null'); sessionStorage.removeItem('plowtown_handoff'); } catch (e) { h = null; }
-    if (!h || h.v !== this.ver || !(Date.now() - (h.t || 0) < 10 * 60 * 1000)) return o;
-    if (o && (o.t || 0) >= (h.t || 0)) return o;
+    // (not one saved while the account was being held back, and never another player's)
+    if (!h || h.v !== this.ver || h.nc === 2 || !(Date.now() - (h.t || 0) < 10 * 60 * 1000)) return o;
+    if (h.u !== undefined && CG.uid !== undefined && h.u !== CG.uid) return o;
+    if (o && !this.better(h, o)) return o;
     STORE.set('plowtown_v4', JSON.stringify(h));   // and put it back where it belongs
     return h;
+  },
+  // the same game open in another tab got further: this tab must not overwrite it, it loads that one instead
+  otherTabAhead() {
+    let cur = null; try { cur = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { return false; }
+    if (!cur || !cur.sid || cur.sid === this.sid || cur.v !== this.ver || cur.u !== CG.uid) return false;
+    // (it must have been written after this start: what was there when we started is not another tab moving on)
+    if ((cur.sid + ':' + (cur.t || 0)) === this._loc0) return false;
+    if (!((cur.earned || 0) > (this.earned || 0) + 1)) return false;
+    this.adopt(cur, 'tab'); return true;
+  },
+  // carry on from another (further) saved game: put it on this device and start again with it
+  adopt(c, why) {
+    if (this.adopting) return; this.adopting = true;
+    try { if (c) localStorage.setItem('plowtown_v4', JSON.stringify(Object.assign({}, c, { u: CG.uid, nc: 0 }))); else localStorage.removeItem('plowtown_v4'); sessionStorage.removeItem('plowtown_handoff'); } catch (e) { }
+    const f = $('chFade'); if (f) { f.innerHTML = `<div class="chname sm">${why === 'tab' ? 'Your game moved on in another tab' : 'Your saved game is here'}</div><div class="chname">Loading...</div>`; f.classList.add('on'); }
+    CG.play(false);
+    setTimeout(() => location.reload(), why === 'tab' ? 1600 : 900);
   },
   // before the world is built: coins, machines, crew and which chapter to play
   loadMeta() {
     let o = null;
+    try { const l = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); this._loc0 = l ? (l.sid || '') + ':' + (l.t || 0) : ''; } catch (e) { this._loc0 = ''; }
     if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) {
-      try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; }
-      // progress made while the CrazyGames SDK was not there never reached the account: this device's newer copy wins
-      if (CG.sdk) {
-        let l = null; try { l = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { l = null; }
-        if (l && l.nc === 1 && l.v === this.ver && (!o || (l.t || 0) > (o.t || 0))) { o = l; o.nc = 0; STORE.set('plowtown_v4', JSON.stringify(o)); }
+      let loc = null; try { loc = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { loc = null; }
+      if (!CG.sdk) o = loc;
+      else {
+        let acc = null, bad = false; const v = CG.get('plowtown_v4');
+        if (v != null) { try { acc = JSON.parse(v); } catch (e) { bad = true; } }
+        const fits = !!loc && loc.v === this.ver;
+        // nothing on the account yet: this device's game (a guest's, or this player's own) - never another player's
+        if (!acc && !bad) o = fits && (loc.u == null || loc.u === CG.uid) ? loc : null;
+        else {
+          o = acc;
+          // this device's copy got further than the account's (the last save never went up before the game closed,
+          // or it was made while the SDK was missing): it wins - only ever for the same player
+          const mine = fits && (bad || loc.nc === 1 || (CG.uid !== undefined && loc.u === CG.uid));
+          if (mine && (!o || o.v !== this.ver || this.better(loc, o))) o = loc;
+        }
+        if (o && o === loc) { o.nc = 0; o.u = CG.uid; STORE.set('plowtown_v4', JSON.stringify(o)); }
       }
       o = this.takeHandoff(o);
     }
-    this.loadedT = o ? (o.t || 0) : 0;
+    this.loadedT = o ? (o.t || 0) : 0; this.baseU = o ? o.u : undefined;
     // coming from the old single-street version: keep everything; if Maple Lane was already saved, go straight on to chapter 2
     if (!o && !QS.has('fresh') && !QS.has('bot')) {
       try {
@@ -3880,20 +4011,25 @@ const GAME = {
     if (!o || o.id !== CH.id) { this.startChapter(); return false; }
     try {
       this.time = o.time || 0; this.done = o.done || {}; this.ended = !!o.ended;
-      if (o.snow) { SNOW.deserialize(o.snow); SNOW.finalizeAreas(); SNOW.markAll(); }
       if (o.tr) TREASURE.list.forEach((t, i) => { if (o.tr[i] === '1') { t.found = t.gone = true; t.mesh.visible = false; } });
+      // first put back what the finished jobs changed in the town (open street, cars gone, the bus left its spot...),
+      // so the ground is the same as when the game was saved; then the snow on top of it
       // (one chapter hook failing must not throw the whole saved game away)
       for (const a of SNOW.areas) if (a && this.done[a.key]) { try { this.completeArea(a, true); } catch (e) { console.warn('restore', a.key, e); } }
       if (CH.load && o.extra) CH.load(o.extra);
+      if (o.snow) { if (!SNOW.deserialize(o.snow)) console.warn('snow save does not fit this town, fresh snow'); SNOW.finalizeAreas(); SNOW.markAll(); }
       PL.load = o.load || 0;
-      PL.x = o.x; PL.z = o.z; PL.h = o.h || Math.PI;
+      PL.x = Number.isFinite(o.x) ? o.x : CH.start.x; PL.z = Number.isFinite(o.z) ? o.z : CH.start.z; PL.h = Number.isFinite(o.h) ? o.h : Math.PI;
       if (o.tool && this.owned[o.tool] && TIER[o.tool]) { PL.tool = o.tool; }
       if (PL.kind === 'truck') { if (!PL.truckFree(PL.x, PL.z, PL.h)) { const s2 = PL.findTruckSpot(PL.x, PL.z); PL.x = s2.x; PL.z = s2.z; PL.h = s2.h; } }
       else if (!PL.kidFree(PL.x, PL.z)) { PL.x = CH.start.x; PL.z = CH.start.z; }
       PL.sledX = PL.x - Math.sin(PL.h) * 1.4; PL.sledZ = PL.z - Math.cos(PL.h) * 1.4;
       PL.applyTool();
       return true;
-    } catch (e) { console.warn('load', e); this.startChapter(); return false; }
+    } catch (e) {
+      // something did not fit: start the chapter over, but keep the books straight with the jobs already marked done
+      console.warn('load', e); this.startChapter(); for (const a of SNOW.areas) if (a && a.done) this.done[a.key] = 1; return false;
+    }
   },
   startChapter() {
     this.time = 0; this.done = {}; this.ended = false;
@@ -3971,13 +4107,17 @@ const DAILY = {
     if (QS.has('bot') || QS.has('nodaily')) return 0;
     const t = this.day(), last = STORE.get('plowtown_day'), n = +(STORE.get('plowtown_dayn') || 0);
     if (last === t) return 0;
+    // the device clock was set back: no gift (and the day stays) until the real date passes that day again
+    if (last && this.num(last) > this.num(t)) return 0;
     const run = last === this.day(1) ? Math.min(n + 1, 7) : 1;
     STORE.set('plowtown_day', t); STORE.set('plowtown_dayn', String(run));
     return last ? run : 0;      // the very first visit only remembers the day
   },
+  num(s) { const m = /^(\d+)-(\d+)-(\d+)$/.exec(s || ''); return m ? Math.round(new Date(+m[1], +m[2] - 1, +m[3]).getTime() / 86400000) : -1; },
+  // the gift is paid (and saved) the moment the day is counted; it flies into your counter a little later
+  pay(run) { const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run)); this.v = (this.v || 0) + v; GAME.earn(v); UI.pending += v; GAME.save(); },
   give(run) {
-    const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run));
-    GAME.earn(v); UI.pending += v;
+    const v = this.v || 0; if (!v) return; this.v = 0;
     for (let i = 0; i < 18; i++) setTimeout(() => UI.flyCoin(null, v / 18), 300 + i * 45);
     UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins' + (run > 1 ? ' \u00b7 day ' + run + ' in a row' : ''), 'star', 3.0);
     AUD.bigWin && AUD.bigWin(); GAME.save();
@@ -4010,6 +4150,8 @@ const PATH = {
   CS: 0.5,
   // walkable test for a person (paved or zone ground, a little clearance)
   ok(x, z) { const r = 0.2; return SNOW.walk(x, z) && SNOW.walk(x + r, z) && SNOW.walk(x - r, z) && SNOW.walk(x, z + r) && SNOW.walk(x, z - r); },
+  // a kid can also wade through a snowy lawn, just never through a house, a car or a fence
+  loose(x, z) { const r = 0.2; return !SNOW.solid(x, z) && !SNOW.solid(x + r, z) && !SNOW.solid(x - r, z) && !SNOW.solid(x, z + r) && !SNOW.solid(x, z - r); },
   // breadth-first search on a coarse grid; returns waypoints [[x,z],...] ending at the target, or null
   find(x0, z0, x1, z1, ok) {
     ok = ok || ((x, z) => this.ok(x, z));
@@ -4169,12 +4311,15 @@ const CREW = {
     const cur = GOALS[GAME.goalIdx()].a;
     const keys = (CH.crewJobs || HAND_AREAS).filter(k => WORLD.areaByKey[k]);
     const mid = a => { const r = a.lot ? a.lot.drive : a.rects[0]; return [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, Math.max(r.x1 - r.x0, r.z1 - r.z0)]; };
-    let cands = keys.map(k => WORLD.areaByKey[k]).filter(a => !a.done && !taken.has(a.key));
-    if (GAME.ended) cands = keys.map(k => WORLD.areaByKey[k]).filter(a => { if (taken.has(a.key)) return false; const m = mid(a); return SNOW.nearestSnow(m[0], m[1], a.id, 0.08, m[2] * 0.6 + 2); });
+    const away = a => h.avoid && h.avoid[a.key] > 0;
+    let cands = keys.map(k => WORLD.areaByKey[k]).filter(a => !a.done && !taken.has(a.key) && !away(a));
+    if (GAME.ended) cands = keys.map(k => WORLD.areaByKey[k]).filter(a => { if (taken.has(a.key) || away(a)) return false; const m = mid(a); return SNOW.nearestSnow(m[0], m[1], a.id, 0.08, m[2] * 0.6 + 2); });
     // nearest first (but not the job you are doing yourself)
     cands.sort((p, q) => { const a = mid(p), b = mid(q); return Math.hypot(a[0] - h.x, a[1] - h.z) - Math.hypot(b[0] - h.x, b[1] - h.z); });
     let a = cands.find(o => o.key !== cur) || cands[0] || null;
-    if (!a) for (const k of (CH.crewExtra || [])) { const ap = WORLD.areaByKey[k]; if (ap && !ap.done && !taken.has(k)) { a = ap; break; } }
+    if (!a) for (const k of (CH.crewExtra || [])) { const ap = WORLD.areaByKey[k]; if (ap && !ap.done && !taken.has(k) && !away(ap)) { a = ap; break; } }
+    // nothing to do: look again in a moment (not every frame)
+    if (!a) h.noJobT = 1.2;
     return a;
   },
   // route: out to the sidewalk, along it, into the driveway, then back-and-forth lanes over the driveway and the path
@@ -4182,7 +4327,7 @@ const CREW = {
     const W = [], lane = Math.max(0.45, h.D.w * 0.85);
     const go = (x, z, work) => W.push([x, z, !!work]);
     // walk there on cleared/paved ground (finds the way around yards and buildings)
-    const walkTo = (x, z) => { const p = PATH.find(h.x, h.z, x, z); if (p) for (const q of p) go(q[0], q[1]); else go(x, z); };
+    const walkTo = (x, z) => { const p = PATH.find(h.x, h.z, x, z) || PATH.find(h.x, h.z, x, z, (a, b) => PATH.loose(a, b)); if (p) for (const q of p) go(q[0], q[1]); else go(x, z); };
     if (a.lot) {
       const L = a.lot, s = L.side, dz = (L.drive.z0 + L.drive.z1) / 2;
       walkTo(s * 4.6, dz);
@@ -4225,15 +4370,42 @@ const CREW = {
     else if (CH.id === 1 && this.list.length < 2 && n >= CREW_DEFS[this.list.length].need) this.joinT = 2.6;
     for (const h of this.list) this._step(h, dt);
   },
+  // where this helper waits when there is nothing to do
+  yardSpot(h) {
+    if (h._yard) return h._yard;
+    const Y = CH.crewYard || [0, 0], x = Y[0] - h.i * 1.4, z = Y[1];
+    // (the nearest free ground, should that spot be taken by something solid)
+    for (let r = 0; r <= 4; r += 0.4) for (let k = 0; k < (r ? 12 : 1); k++) { const a = k / 12 * TAU, px = x + Math.sin(a) * r, pz = z + Math.cos(a) * r; if (PATH.ok(px, pz)) return (h._yard = [px, pz]); }
+    return (h._yard = [x, z]);
+  },
+  // no headway for a while: find a way round, skip that point, and in the end pop up where they were going
+  unstick(h) {
+    h.stuckT = 0; h.sx = h.x; h.sz = h.z; h.unst = (h.unst || 0) + 1;
+    if (h.job && h.wi < h.wps.length) {
+      if (h.unst === 1) {
+        const wp = h.wps[h.wi], p = PATH.find(h.x, h.z, wp[0], wp[1], (a, b) => PATH.loose(a, b));
+        if (p && p.length > 1) { h.wps.splice(h.wi, 0, ...p.slice(0, -1).map(q => [q[0], q[1], false])); return; }
+      }
+      if (h.unst <= 3) { h.wi++; return; }
+    } else if (h.homeW && h.unst === 1) { h.homeW = null; return; }
+    const t = h.job && h.wi < h.wps.length ? h.wps[h.wi] : this.yardSpot(h);
+    if (t && PATH.loose(t[0], t[1])) { FX.puff(h.x, 0.5, h.z, 8, 0.8); h.x = t[0]; h.z = t[1]; FX.puff(h.x, 0.5, h.z, 8, 0.8); h.homeW = null; }
+    else if (h.job) { (h.avoid || (h.avoid = {}))[h.job.key] = 10; h.job = null; }
+    h.unst = 0;
+  },
   _step(h, dt) {
     const D = h.D;
     if (h.noJobT > 0) h.noJobT -= dt;
+    if (h.avoid) for (const k in h.avoid) h.avoid[k] -= dt;
     if (h.job && (h.wi >= h.wps.length || (h.job.done && !GAME.ended))) h.job = null;
-    if (!h.job) { const a = this.pickJob(h); if (a) this.plan(h, a); }
+    if (!h.job) { const a = this.pickJob(h); if (a) { this.plan(h, a); h.homeW = null; } }
     let mvx = 0, mvz = 0, work = false;
-    if (!h.job) { // nothing to do: wait at the crew yard by the kiosk
-      const Y = CH.crewYard || [0, 0], ix = Y[0] - h.i * 1.4, iz = Y[1], dx = ix - h.x, dz = iz - h.z, d = Math.hypot(dx, dz);
+    if (!h.job) { // nothing to do: walk back to the crew yard (round houses and cars) and wait there
+      const Y = this.yardSpot(h);
+      if (!h.homeW) { h.homeW = Math.hypot(Y[0] - h.x, Y[1] - h.z) > 0.3 ? (PATH.find(h.x, h.z, Y[0], Y[1]) || PATH.find(h.x, h.z, Y[0], Y[1], (a, b) => PATH.loose(a, b)) || [Y]) : [Y]; h.homeI = 0; }
+      const wp = h.homeW[Math.min(h.homeI, h.homeW.length - 1)], dx = wp[0] - h.x, dz = wp[1] - h.z, d = Math.hypot(dx, dz);
       if (d > 0.3) { const sp = h.D.spd * 1.2; mvx = dx / d * sp; mvz = dz / d * sp; }
+      else if (h.homeI < h.homeW.length - 1) h.homeI++;
       else h.h = dampAng(h.h, 0, 4, dt);
     }
     if (h.job && h.wi < h.wps.length) {
@@ -4246,9 +4418,15 @@ const CREW = {
       const dx = h.x - PL.x, dz = h.z - PL.z, d = Math.hypot(dx, dz), R = PL.geo.halfW + 2.6;
       if (d < R) { const k = (R - d) / R * 4; mvx += dx / (d || 1) * k; mvz += dz / (d || 1) * k; }
     }
-    const nx = h.x + mvx * dt, nz = h.z + mvz * dt;
-    if (SNOW.walk(nx, nz) || !SNOW.walk(h.x, h.z)) { h.x = nx; h.z = nz; }
-    const v = Math.hypot(mvx, mvz); h.moving = damp(h.moving, clamp(v / D.spd, 0, 1), 10, dt);
+    // a kid can wade through a snowy lawn, never through a house, a car or a fence; along a wall they slide
+    const nx = h.x + mvx * dt, nz = h.z + mvz * dt, x0 = h.x, z0 = h.z, ok = (x, z) => !SNOW.solid(x, z);
+    if (ok(nx, nz) || !ok(h.x, h.z)) { h.x = nx; h.z = nz; } else if (ok(nx, h.z)) h.x = nx; else if (ok(h.x, nz)) h.z = nz;
+    // no headway although they want to go somewhere
+    if (Math.hypot(mvx, mvz) > 0.3) {
+      if (h.sx === undefined || Math.hypot(h.x - h.sx, h.z - h.sz) > 0.5) { h.sx = h.x; h.sz = h.z; h.stuckT = 0; if (h.sx !== undefined) h.unst = 0; }
+      else if ((h.stuckT = (h.stuckT || 0) + dt) > 1.5) this.unstick(h);
+    } else { h.stuckT = 0; h.sx = h.x; h.sz = h.z; }
+    const v = Math.hypot(h.x - x0, h.z - z0) / Math.max(dt, 1e-4); h.moving = damp(h.moving, clamp(v / D.spd, 0, 1), 10, dt);
     if (v > 0.2) h.h = dampAng(h.h, Math.atan2(mvx, mvz), 9, dt);
     // clear snow in front of the tool
     const fx = Math.sin(h.h), fz = Math.cos(h.h), off = D.tool === 'shovel' ? 0.62 : 1.5;
@@ -4302,7 +4480,7 @@ const CHUI = {
     addEventListener('resize', () => this.refit());
     const b = $('btnMap'); if (b) { b.innerHTML = '<svg viewBox="0 0 40 40"><path d="M6 10l9-4 10 4 9-4v24l-9 4-10-4-9 4z" fill="#fff" stroke="#2b3a55" stroke-width="2.6" stroke-linejoin="round"/><path d="M15 6v24M25 10v24" stroke="#2b3a55" stroke-width="2.2"/><circle cx="20" cy="17" r="3" fill="#e5483c"/></svg>'; b.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); this.map(); }; }
     // the NEXT CHAPTER button in the goal bar (shows once the chapter is done)
-    const n = $('goalNext'); if (n) n.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); const nx = chapterById(CH.id + 1); if (!nx || !GAME.ended || this.open) return; AUD.click(); this.go(nx.id); };
+    const n = $('goalNext'); if (n) n.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); const nx = chapterById(CH.id + 1); if (!nx || !GAME.ended || GAME.finishT > 0 || this.open) return; AUD.click(); this.go(nx.id); };
   },
   // the big cards always fit the screen (phones on their side, small game frames): shrink the whole card when needed
   fit(el, room) {
@@ -4346,7 +4524,7 @@ const CHUI = {
   // the big "chapter complete" moment
   results() {
     const C = CH, st = GAME.lastStars || 1, rec = GAME.chapters[C.id] || {}, next = chapterById(C.id + 1);
-    const bonus = niceNum((C.reward || 2000) * st);
+    const bonus = GAME.lastBonus || niceNum((C.reward || 2000) * st);
     const mm = Math.floor(GAME.time / 60), ss = String(Math.floor(GAME.time % 60)).padStart(2, '0');
     const nextHtml = next ? `<div class="chnext"><div class="chico sm">${CH_ICONS[next.key] || ''}</div><div><b>Next: ${next.name}</b><span>${next.tag}</span></div></div>`
       : `<div class="chnext"><div><b>More chapters are on the way!</b><span>Keep plowing the storms for coins</span></div></div>`;
@@ -4362,7 +4540,6 @@ const CHUI = {
       s.innerHTML = STAR_SVG(i < st); s.classList.add('pop'); if (i < st) { AUD.star && AUD.star(i); }
     }, 500 + i * 420);
     setTimeout(() => {
-      GAME.earn(bonus); UI.pending += bonus;
       const n = 24; for (let i = 0; i < n; i++) setTimeout(() => UI.flyCoin(null, bonus / n), i * 40);
       let t = 0; const lab = $('resBonus'); const iv = setInterval(() => { t += 0.06; if (!lab) return clearInterval(iv); lab.textContent = '+' + fmt(Math.round(bonus * Math.min(1, t))); if (t >= 1) clearInterval(iv); }, 30);
       AUD.bigWin && AUD.bigWin(); GAME.save();
@@ -4379,23 +4556,33 @@ const CHUI = {
         <div class="chinfo"><b>${C.id}. ${C.name}</b><span>${C.tag}</span><div class="mstars">${stars}</div></div>
         <div class="chbtn">${!open ? '🔒' : C.id === CH.id ? 'HERE' : 'PLAY'}</div></div>`;
     }).join('') + '<div class="chrow soon"><div class="chinfo"><b>More chapters soon</b><span>New places, new machines</span></div></div>';
-    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><button class="chlink" id="chMapX">Close</button></div>`);
-    el.querySelectorAll('.chrow[data-id]').forEach(r => r.onpointerdown = (e) => {
-      e.stopPropagation(); const id = +r.dataset.id; if (r.classList.contains('locked')) { AUD.deny(); return; }
+    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><button class="chlink" id="chMapX">Close</button></div>`);
+    // a tap (not a touch that starts scrolling the list) picks a chapter
+    el.querySelectorAll('.chrow[data-id]').forEach(r => r.onclick = (e) => {
+      e.stopPropagation(); AUD.init(); const id = +r.dataset.id; if (r.classList.contains('locked')) { AUD.deny(); return; }
       if (id === CH.id) { this.close('chMap'); return; }
+      // leaving a chapter you are in the middle of means it starts over next time: ask once
+      const busy = !GAME.ended && (GAME.time > 20 || Object.keys(GAME.done).length > 0);
+      if (busy && !r.classList.contains('sure')) {
+        el.querySelectorAll('.chrow.sure').forEach(o => { o.classList.remove('sure'); o.querySelector('.chbtn').textContent = 'PLAY'; });
+        r.classList.add('sure'); r.querySelector('.chbtn').textContent = 'SURE?';
+        el.querySelector('.chwarn').textContent = 'Chapter ' + CH.id + ' starts over if you leave it now. Tap again to go.';
+        AUD.click(); return;
+      }
       AUD.click(); this.go(id);
     });
     $('chMapX').onpointerdown = (e) => { e.stopPropagation(); this.close('chMap'); };
   },
   // snowy wipe to another chapter
   go(id) {
-    if (this._going) return; this._going = true;
+    if (this._going) return; this._going = true; CG.play(false);
     const f = $('chFade'), C = chapterById(id);
     f.innerHTML = `<div class="chname sm">Chapter ${id}</div><div class="chname">${C ? C.name : ''}</div>`;
     f.classList.add('on');
     GAME.goChapter(id);
     // a little longer on the snowy wipe, so the account copy is usually sent before the reload too
-    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 1400);
+    // (no storage at all in this browser: the chapter rides along in the address instead)
+    setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('ch'); q.delete('fresh'); if (GAME.noStore) q.set('ch', id); const s = q.toString(); location.href = location.pathname + (s ? '?' + s : ''); }, 1400);
   }
 };
 
@@ -4427,7 +4614,8 @@ function makePersonLite(o) {
     }
     if (!geos.length) return;
     for (const c of kill) grp.remove(c);
-    const m = new THREE.Mesh(mergeGeoms(geos), PERSON_MAT); m.castShadow = !!cast; grp.add(m);
+    for (const g of geos) g.dispose();
+    const m = new THREE.Mesh(mergeGeoms(geos), PERSON_MAT); m.castShadow = !!cast; m.userData.own = 1; grp.add(m);
   };
   for (const g of [P.legL, P.legR, P.armL, P.armR]) bake(g, false);
   bake(P.head, true); bake(P.body, true);
@@ -4465,7 +4653,7 @@ const NPC = {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const n = this.list[i]; n.t += dt;
       // pop in / shrink out
-      if (n.state === 'out') { n.k = Math.max(0, n.k - dt / 0.3); if (n.k <= 0) { WORLD.scene.remove(n.P.root); if (n.bub) n.bub.remove(); this.list.splice(i, 1); continue; } }
+      if (n.state === 'out') { n.k = Math.max(0, n.k - dt / 0.3); if (n.k <= 0) { this.free(n); this.list.splice(i, 1); continue; } }
       else if (n.k < 1) n.k = Math.min(1, n.k + dt / 0.35);
       // walk the path
       let mv = 0;
@@ -4491,6 +4679,11 @@ const NPC = {
     }
   },
   byTag(tag) { return this.list.filter(n => n.tag === tag && n.state !== 'out'); },
+  // gone for good: also let go of the person's own meshes (crowds come and go all chapter long)
+  free(n) {
+    WORLD.scene.remove(n.P.root); if (n.bub) { n.bub.remove(); n.bub = null; }
+    n.P.root.traverse(o => { if (o.isMesh && o.userData.own) o.geometry.dispose(); });
+  },
 };
 
 // ==== h_life.js ====
@@ -4523,6 +4716,8 @@ const LIFE = {
   },
   freeCar(car, silent) {
     car.state = 'free';
+    // the street is already open: this car drives off too (and its spot opens up, the same way on every load)
+    if (this.traffic) this.streetOpen(true);
     if (silent) { car.cap.visible = false; return; }
     car.capT = 0.001; AUD.horn();
     FX.puff(car.x, 1.2, car.z, 20, 1.8); FX.sparkle(car.x, 1.2, car.z, 14, 1.4);
@@ -4567,7 +4762,13 @@ const LIFE = {
     if (this.traffic) {
       this.trafT -= dt;
       if (this.trafT <= 0) { this.trafT = rnd(7, 13); this._spawnTraffic(); }
-      for (let i = this.movers.length - 1; i >= 0; i--) { const m = this.movers[i]; this._drive(m, dt); if (m.state === 'gone') { WORLD.scene.remove(m.obj); this.movers.splice(i, 1); } }
+      for (let i = this.movers.length - 1; i >= 0; i--) {
+        const m = this.movers[i]; m.t += dt;
+        // keep a gap to the car in front (cars queue up behind a plow instead of driving into each other)
+        const o = m.obj, fx = Math.sin(o.rotation.y), fz = Math.cos(o.rotation.y);
+        m.carAhead = this.movers.some(q => { if (q === m) return false; const rx = q.obj.position.x - o.position.x, rz = q.obj.position.z - o.position.z, a = rx * fx + rz * fz; return a > 0 && a < 7.5 && Math.abs(rx * fz - rz * fx) < 1.6; });
+        this._drive(m, dt); if (m.state === 'gone') { WORLD.scene.remove(m.obj); this.movers.splice(i, 1); }
+      }
     }
     // tree lights + fireworks
     if (WORLD.tree && WORLD.tree.lit > 0 && WORLD.tree.lit < 1) { WORLD.tree.lit = Math.min(1, WORLD.tree.lit + dt * 0.5); }
@@ -4583,12 +4784,14 @@ const LIFE = {
   },
   _v: new V3(), _up: new V3(0, 0.55, 0),
   _spawnTraffic() {
+    // a few cars at a time; none while the last one is still waiting at the end of the street
+    if (this.movers.length >= 4 || this.movers.some(m => m.pi === 0 && m.spd < 0.5 && m.t > 2)) return;
     const keys = ['car_blue', 'car_white', 'camper', 'icecream'];
     const k = keys[(Math.random() * keys.length) | 0];
     const north = Math.random() < 0.5;
     const lane = north ? -1.75 : 1.75;
     const obj = place(k, lane, north ? 58 : -58, north ? Math.PI : 0, 1, 0); WORLD.scene.add(obj);
-    const m = { obj, state: 'leave', wait: 0, path: north ? [[lane, 47], [lane, -47], [lane * 0.3, -60]] : [[lane, -47], [lane, 47], [lane * 0.3, 60]], pi: 0, spd: 0, x: obj.position.x, z: obj.position.z, rot: obj.rotation.y };
+    const m = { obj, state: 'leave', wait: 0, t: 0, path: north ? [[lane, 47], [lane, -47], [lane * 0.3, -60]] : [[lane, -47], [lane, 47], [lane * 0.3, 60]], pi: 0, spd: 0, x: obj.position.x, z: obj.position.z, rot: obj.rotation.y };
     this.movers.push(m);
   },
   _drive(c, dt) {
@@ -4599,9 +4802,9 @@ const LIFE = {
     // stop for the player
     const px = PL.x, pz = PL.z; const fx = Math.sin(o.rotation.y), fz = Math.cos(o.rotation.y);
     const rx = px - o.position.x, rz = pz - o.position.z, ahead = rx * fx + rz * fz, side = Math.abs(rx * fz - rz * fx);
-    const blocked = ahead > 0 && ahead < 6.5 && side < 2.6;
-    const want = blocked ? 0 : Math.min(6, d * 1.5 + 1.5);
-    c.spd = damp(c.spd, want, blocked ? 6 : 2, dt);
+    const blocked = ahead > 0 && ahead < 6.5 && side < 2.6, stop = blocked || c.carAhead;
+    const want = stop ? 0 : Math.min(6, d * 1.5 + 1.5);
+    c.spd = damp(c.spd, want, stop ? 6 : 2, dt);
     if (blocked && !c.honked) { c.honked = 1; AUD.horn(); setTimeout(() => c.honked = 0, 3000); }
     const th = Math.atan2(dx, dz);
     o.rotation.y = dampAng(o.rotation.y, th, 3.5, dt);
@@ -4653,8 +4856,9 @@ const UI = {
   init() {
     this.cv = $('fx2d'); this.g = this.cv.getContext('2d');
     $('coinIco').innerHTML = ICONS.coin; $('loadTag').querySelector('.ci').innerHTML = ICONS.coin;
-    $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd;
-    $('btnMute').onclick = (e) => { e.stopPropagation(); AUD.init(); AUD.setMuted(!AUD.muted); $('btnMute').innerHTML = AUD.muted ? ICONS.mute : ICONS.snd; STORE.set('plowtown_mute', AUD.muted ? '1' : '0'); };
+    this.refreshMute();
+    // your own sound switch (the CrazyGames mute setting is on top of it: while that is on, it stays quiet)
+    $('btnMute').onclick = (e) => { e.stopPropagation(); AUD.init(); AUD.setMuted(!AUD._um); this.refreshMute(); STORE.set('plowtown_mute', AUD._um ? '1' : '0'); };
     const ups = $('ups');
     ups.innerHTML = '';
     this.upBtns = [];
@@ -4664,13 +4868,15 @@ const UI = {
       ups.appendChild(b); this.upBtns.push(b);
     }
     const tb = document.createElement('button'); tb.className = 'up toolcard'; tb.innerHTML = `<div class="ui-ico"></div><div class="ui-lbl"></div><div class="tc-bar"><i></i></div><div class="ui-cost"><span class="ci">${ICONS.coin}</span><b></b></div>`;
-    tb.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); const t = GAME.nextTool(); if (t) GAME.buyTool(t); });
+    // (a quick double tap must not buy the machine after the new one too: the card shows the old one for a moment)
+    tb.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); if (performance.now() < (this._tbLock || 0)) return; const t = GAME.nextTool(); if (t && GAME.buyTool(t)) { this._tbLock = performance.now() + 600; this._uiT = 0; } });
     ups.appendChild(tb); this.toolBtn = tb;
     this.refreshTools();
     window.addEventListener('resize', () => this.resize()); this.resize();
   },
   resize() { const d = Math.min(2, devicePixelRatio || 1); this.dpr = d; this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this._coinRect = null; },
   shownCoins() { return GAME.coins - this.pending; },
+  refreshMute() { const b = $('btnMute'); if (b) b.innerHTML = AUD.muted ? ICONS.mute : ICONS.snd; },
   pulseTool(t) {
     const box = $('tools'); const b = [...box.children].find(x => x.dataset.t === t);
     if (b) { b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), 6000); }
@@ -4690,8 +4896,20 @@ const UI = {
     this._updLoadTag();
     this._updStreak();
     this._draw(dt);
-    if (this._hintT > 0) { this._hintT -= dt; if (this._hintT <= 0) $('hint').classList.remove('on'); }
-    if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) $('toast').classList.remove('on'); }
+    // (a hint that would sit under a toast on a small screen waits, its time paused, until the toast is gone)
+    if (this._hintT > 0 && !this._under) { this._hintT -= dt; if (this._hintT <= 0) $('hint').classList.remove('on'); }
+    if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) { $('toast').classList.remove('on'); this._clash(); } }
+  },
+  _clash() {
+    const h = $('hint'), t = $('toast');
+    let under = false;
+    if (this._hintT > 0 && this._toastT > 0) {
+      // (where both end up, not where the hint is while it slides in: both are centred with translateX(-50%))
+      const box = e => { const l = e.offsetLeft - e.offsetWidth / 2; return [l, e.offsetTop, l + e.offsetWidth, e.offsetTop + e.offsetHeight]; };
+      const a = box(h), b = box(t);
+      under = a[0] < b[2] && b[0] < a[2] && a[1] < b[3] + 4 && b[1] < a[3] + 4;
+    }
+    this._under = under; h.classList.toggle('under', under);
   },
   _updButtons(shown) {
     const t = PL.tool, T = TIER[t], LB = T.labels || UPLABELS[T.kind];
@@ -4754,7 +4972,7 @@ const UI = {
     $('goalBar').firstChild.style.width = (f * 100).toFixed(1) + '%';
     $('goalPct').textContent = lab;
     // chapter done and another one waits: the goal bar carries the button to it
-    const nx = GAME.ended && !CHUI.open && !!chapterById(CH.id + 1);
+    const nx = GAME.ended && GAME.finishT <= 0 && !CHUI.open && !!chapterById(CH.id + 1);
     if (nx !== this._nextOn) { this._nextOn = nx; $('goal').classList.toggle('next', nx); }
   },
   _v: new V3(),
@@ -4818,11 +5036,16 @@ const UI = {
   hint(t, dur) {
     // on phones the hint sits where the big banners pop: wait for the banner to finish
     const wait = (this._bnUntil || 0) - performance.now();
-    if (wait > 0 && innerWidth <= 640) { clearTimeout(this._hq); this._hqT = t; this._hq = setTimeout(() => { this._hqT = null; this.hint(t, dur); }, wait + 60); return; }
-    const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3;
+    if (wait > 0 && (innerWidth <= 640 || innerHeight <= 500)) { clearTimeout(this._hq); this._hqT = t; this._hq = setTimeout(() => { this._hqT = null; this.hint(t, dur); }, wait + 60); return; }
+    const el = $('hint'); el.textContent = t; el.classList.add('on'); this._hintT = dur || 3; this._clash();
   },
   unhint(pre) { const el = $('hint'); if (this._hintT > 0 && el.textContent.startsWith(pre)) this._hintT = 0.01; if (this._hqT && this._hqT.startsWith(pre)) { clearTimeout(this._hq); this._hqT = null; } },
-  toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; },
+  // (a toast that comes with a big banner waits for the banner to finish, so neither hides the other)
+  toast(t) {
+    const wait = (this._bnUntil || 0) - performance.now();
+    if (wait > 0) { clearTimeout(this._tq); this._tq = setTimeout(() => this.toast(t), wait + 60); return; }
+    const el = $('toast'); el.textContent = t; el.classList.add('on'); this._toastT = 4; this._clash();
+  },
   banner(title, sub, ico, dur) {
     if (this._hintT > 0) { this._hintT = 0; $('hint').classList.remove('on'); }
     const el = $('banner'); el.innerHTML = `<div class="bn-ico">${ICONS[ico] || ICONS.star}</div><div class="bn-t">${title}</div><div class="bn-s">${sub || ''}</div>`;
@@ -4934,6 +5157,8 @@ const INPUT = {
     const J = this.joy, R = 52;
     // a touch starts the stick (also when it lands on the chapter card's button: then you can drive straight away)
     this.start = (e) => {
+      // only the main button drives (a right-click must not grab the stick)
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       AUD.init(); GAME.started = true; if (CHUI.introUp) CHUI.introGo(true);
       if (J.active) return;
       J.active = true; J.id = e.pointerId; J.ox = e.clientX; J.oy = e.clientY; J.dx = 0; J.dy = 0; J.show = e.pointerType !== 'mouse' || true;
@@ -4947,7 +5172,8 @@ const INPUT = {
       J.dx = dx; J.dy = dy;
     });
     const up = e => { if (e.pointerId === J.id) { J.active = false; J.dx = J.dy = 0; } };
-    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
+    el.addEventListener('contextmenu', e => e.preventDefault());
   },
   block: false,
   get() {
@@ -4996,13 +5222,15 @@ const CAM = {
     return false;
   },
   update(dt, snap) {
-    const t = PL.kind, asp = innerWidth / innerHeight, gk = t === 'truck' ? PL.geo.cam : 1;
+    // (a frame that is 0 px wide for a moment must not leave the camera at NaN for good)
+    const t = PL.kind, asp = innerWidth > 0 && innerHeight > 0 ? innerWidth / innerHeight : 1.6, gk = t === 'truck' ? PL.geo.cam : 1;
     const port = asp < 0.9;
     const base = port ? (t === 'truck' ? 15 : t === 'blower' ? 11.5 : 10.5) : (t === 'truck' ? 18 : t === 'blower' ? 13 : 11.8);
     const wantW = port ? (t === 'truck' ? 13 : t === 'blower' ? 9.5 : 8.2) : (t === 'truck' ? 20 : t === 'blower' ? 13 : 11.5);
     const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * asp);
     const d = Math.max(base * gk, (wantW * gk / 2) / Math.tan(hf / 2) * 0.82);
-    this.d = snap ? d : damp(this.d, d, 2.2, dt);
+    this.d = snap || !Number.isFinite(this.d) ? d : damp(this.d, d, 2.2, dt);
+    if (!Number.isFinite(this.x) || !Number.isFinite(this.z)) { this.x = PL.x; this.z = PL.z; }
     const fx = Math.sin(PL.h), fz = Math.cos(PL.h);
     const ahead = t === 'truck' ? 1.0 + Math.max(0, PL.spd) * 0.15 : 0.45 + PL.moveAmt * 0.8;
     const tx = PL.x + fx * ahead, tz = PL.z + fz * ahead - (t === 'truck' ? 0.6 : 0.5);
@@ -5193,6 +5421,22 @@ const BOT = {
     }
     return pts;
   },
+  // human-paced test player: when the nearest snow does not come off for a while (a spot the machine cannot reach),
+  // look elsewhere in the job for a bit, like a person would
+  humanPick(a, p) {
+    const prog = a.cleared;
+    if (this._hp === undefined || prog > this._hp || this._ha !== a.id) { this._hp = prog; this._hs = 0; this._ha = a.id; } else this._hs += 0.35;
+    if (this._hs > 4) { this._hav = { x: p.x, z: p.z, t: 14 }; this._hs = 0; this._hr = null; }
+    if (this._hav && (this._hav.t -= 0.35) <= 0) this._hav = null;
+    if (!this._hav || Math.hypot(p.x - this._hav.x, p.z - this._hav.z) > 2.5) return p;
+    if (this._hr && (this._hr.t -= 0.35) > 0 && SNOW.depth(this._hr.x, this._hr.z) > 0.06) return this._hr;
+    const rs = a.lot ? [a.lot.drive, a.lot.path] : a.rects;
+    for (let n = 0; n < 300; n++) {
+      const r = rs[(Math.random() * rs.length) | 0], x = rnd(r.x0, r.x1), z = rnd(r.z0, r.z1), k = SNOW.idx(x, z);
+      if (k >= 0 && SNOW.A[k] === a.id && SNOW.T[k] === 1 && SNOW.H[k] > 0.08 && Math.hypot(x - this._hav.x, z - this._hav.z) > 2.5) { this._hr = { x, z, t: 3 }; return this._hr; }
+    }
+    return p;
+  },
   laneHasSnow(L) { const A = L[2] || L[0], B = L[3] || L[1]; for (let k = 0; k <= 10; k++) { const x = lerp(A[0], B[0], k / 10), z = lerp(A[1], B[1], k / 10); if (SNOW.depth(x, z) > 0.06 && SNOW.type(x, z) === 1) return true; } return false; },
   mark(k) { if (!this.last[k]) { this.last[k] = GAME.time; this.log.push(k + '@' + GAME.time.toFixed(1)); console.log('[BOT]', k, GAME.time.toFixed(1)); } },
   get(dt) {
@@ -5216,7 +5460,7 @@ const BOT = {
       }
       // lane sweeping on the goal area (efficient, human-like)
       const a0 = SNOW.areas[SNOW.hlArea] || null;
-      if (a0 && !a0.done) {
+      if (a0 && !a0.done && !this.human) {
         if (this.laneArea !== a0.id + PL.tool) { this.laneArea = a0.id + PL.tool; this.laneList = this.lanes(a0, PL.stats().w, truck); this.li = 0; this.lp = 0; }
         while (this.li < this.laneList.length && this.lp === 0 && !this.laneHasSnow(this.laneList[this.li])) this.li++;
         if (this.li < this.laneList.length) {
@@ -5228,11 +5472,12 @@ const BOT = {
           if (this.li < this.laneList.length) { const w2 = this.laneList[this.li][this.lp]; this.tgt = { x: w2[0], z: w2[1] }; this.rt = 0.35; }
         }
       }
-      if ((this.rt <= 0 || !this.tgt) && (!a0 || this.li >= (this.laneList || []).length)) {
+      if ((this.rt <= 0 || !this.tgt) && (!a0 || this.human || this.li >= (this.laneList || []).length)) {
         this.rt = 0.35;
         let a = SNOW.areas[SNOW.hlArea] || null;
         let p = a && !a.done ? SNOW.nearestSnow(PL.x + Math.sin(PL.h) * (truck ? 4 : 1), PL.z + Math.cos(PL.h) * (truck ? 4 : 1), a.id, 0.04, 150) : null;
         if (p && truck && !this.okCell(...this.cell(p.x, p.z), true) && CH.botTarget) p = CH.botTarget(p);
+        if (this.human && a && p) p = this.humanPick(a, p);
         if (!p) p = SNOW.nearestSnow(PL.x, PL.z, 0, 0.05, 150);
         this.tgt = p;
       }
@@ -5281,6 +5526,34 @@ const BOT = {
   }
 };
 
+// test only (?bot&human): a rougher, human-paced player, to see how long a normal player needs.
+// no tidy lanes (it heads for the nearest snow it sees), slow and shaky steering, short pauses, buys a few seconds late
+const HUMAN = {
+  out: { x: 0, y: 0 }, acc: 0, idle: 0, nextIdle: 35, wait: -1,
+  init() {
+    BOT.human = true;
+    const get = BOT.get.bind(BOT), buy = BOT.buy.bind(BOT);
+    BOT.buy = () => {
+      const c0 = UI.shownCoins(), nt = GAME.nextTool(), t = PL.tool;
+      const can = (nt && !TIER[nt].gift && !GAME.toolLocked(nt) && (GAME.owned[nt] || c0 >= TIER[nt].cost)) || [0, 1, 2].some(i => c0 >= GAME.upCost(t, i));
+      if (!can) { this.wait = -1; return; }
+      if (this.wait < 0) this.wait = rnd(2, 8);
+      if ((this.wait -= this._dt || 0) <= 0) { this.wait = -1; buy(); }
+    };
+    BOT.get = (dt) => {
+      this._dt = dt; this.acc += dt;
+      if (this.idle > 0) { this.idle -= dt; BOT.buy(); return { x: 0, y: 0 }; }
+      if ((this.nextIdle -= dt) <= 0) { this.nextIdle = rnd(25, 45); this.idle = rnd(1, 2.5); }
+      if (this.acc >= 0.3) {
+        const o = get(this.acc); this.acc = 0;
+        const n = (Math.random() + Math.random() + Math.random() - 1.5) * 0.42, c = Math.cos(n), s = Math.sin(n);
+        this.out = { x: o.x * c - o.y * s, y: o.x * s + o.y * c };
+      } else BOT.buy();
+      return this.out;
+    };
+  }
+};
+
 // ---------- boot ----------
 let renderer, scene;
 async function loadArt(name) {
@@ -5288,13 +5561,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v4.9'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v4.10'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.9'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v4.10'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -5330,12 +5603,19 @@ async function boot() {
   CREW.init(scene);
   if (STORE.get('plowtown_mute') === '1') AUD.muted = true;
   const resumed = GAME.loadChapter();
+  SNOW.flush(true);
   // the CrazyGames SDK turned up late: send our progress up, unless the account already holds a newer game
   // (played on another device) - then this session leaves the account alone and the next start picks that one up
   CG.onLate = () => {
     let c = null; try { c = JSON.parse(CG.get('plowtown_v4') || 'null'); } catch (e) { c = null; }
-    if (c && (c.t || 0) > (GAME.loadedT || 0) + 2000) CG.hold = true; else GAME.save();
+    const mine = GAME.baseU == null || CG.uid === undefined || GAME.baseU === CG.uid;
+    // the account has a game that got further than the one this start found on the device (a new phone, cleared data,
+    // a slow line) - or this start began from another player's game on a shared computer: carry on from the account's
+    if (c && c.v === GAME.ver && (!mine || GAME.better(c, { earned: GAME.earned, t: GAME.loadedT }))) { GAME.adopt(c); return; }
+    if (!c && !mine) { GAME.adopt(null); return; }
+    CG.hold = false; GAME.save();
   };
+  CG.runLate();
   for (let i = 0; i < Math.min(GAME.crew || 0, CREW_DEFS.length); i++) CREW.join(i, true);
   // test shortcut: ?skip=truck|dumpplow|groomer jumps to that stage (driveways done, tools owned)
   if (QS.has('skip') && CH.id === 1) {
@@ -5348,19 +5628,20 @@ async function boot() {
   UI.init();
   CHUI.init();
   INPUT.init($('c'));
-  if (QS.has('bot')) { BOT.init(); window.__hold = !QS.has('vid'); }
+  if (QS.has('bot')) { BOT.init(); if (QS.has('human')) HUMAN.init(); window.__hold = !QS.has('vid'); }
   lb.style.width = '100%';
   CAM.update(0, true);
   if (!resumed && !QS.has('bot') && !QS.has('nointro')) { CAM.intro = 1; setTimeout(() => CHUI.intro(), 700); }
   onResize(); addEventListener('resize', onResize);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) GAME.save(); if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
+  // a hidden tab gets no frames, so tell CrazyGames right here that play stopped (frames turn it back on)
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { GAME.save(); CG.play(false); } if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
   // warm up shaders
   renderer.compile(scene, CAM.cam);
   setTimeout(() => { $('loading').classList.add('off'); CG.loadingStop(); }, 150);
   // iOS wants a touchend / click to wake the sound up again
   for (const ev of ['touchend', 'click']) addEventListener(ev, () => AUD.init(), { passive: true });
   // a new day: the daily gift (after the chapter card when there is one)
-  const run = DAILY.check();
+  const run = DAILY.check(); if (run) DAILY.pay(run);
   if (!resumed) CH.firstHint = IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag';
   else if (GAME.ended && chapterById(CH.id + 1)) {
     // back in a chapter you already finished: point at the way on (after the daily gift banner, if there is one)
@@ -5371,7 +5652,7 @@ async function boot() {
   if (run) { if (resumed || QS.has('nointro')) setTimeout(() => DAILY.give(run), 1800); else CH.dailyGift = run; }
   console.log('boot ms', Math.round(performance.now() - t0));
   window.__ready = true;
-  window.__render = () => { SNOW.flush(); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
+  window.__render = () => { SNOW.flush(true); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
   window.__step = (n, dt) => { for (let i = 0; i < n; i++) step(dt || 1 / 30); };
   last = performance.now();
   requestAnimationFrame(frame);
@@ -5411,7 +5692,7 @@ function step(dt) {
 function frame(now) {
   requestAnimationFrame(frame);
   // you can play the moment the town shows (the chapter card and the fly-in never block): that is gameplay for CrazyGames
-  CG.play(!CHUI.open && !document.hidden && $('loading').classList.contains('off'));
+  CG.play(!CHUI.open && !CHUI._going && !document.hidden && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (dt <= 0) return;

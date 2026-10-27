@@ -373,6 +373,8 @@ const PL = {
     const fx = Math.sin(this.h), fz = Math.cos(this.h);
     const off = isB ? (this.blowerOff || 1.9) : 0.66 + (st.w > 0.9 ? 0.06 : 0), hl = isB ? 0.2 : 0.16;
     const cx = this.x + fx * off, cz = this.z + fz * off;
+    // (a jump - a new tool, a reload, being moved to a free spot - starts a fresh stroke instead of a line from the old spot)
+    if (this._lastCx !== undefined && Math.hypot(cx - this._lastCx, cz - this._lastCz) > 1.5) this._lastCx = this._lastCz = undefined;
     if (!this.full && v > 0.15) {
       const steps = this._lastCx === undefined ? 1 : Math.min(6, Math.ceil(Math.hypot(cx - this._lastCx, cz - this._lastCz) / 0.15));
       for (let s = 1; s <= steps; s++) {
@@ -541,7 +543,8 @@ const PL = {
     }
     const esc = this.escape > 0;
     let target = mag === 0 ? 0 : st.spd * mag * (al < 0.35 ? 1 : al < 1.1 ? 1 - (al - 0.35) * 1.05 : 0.15);
-    if (esc) { this.escape -= dt; target = -2.6; }
+    // (count down to exactly 0: a tiny leftover below zero used to switch the ice slide off for good)
+    if (esc) { this.escape = Math.max(0, this.escape - dt); target = -2.6; }
     const acc = target > this.spd ? (this.spd < 0 ? 14 : 7) : 12;
     this.spd += clamp(target - this.spd, -acc * dt, acc * dt);
     const turn = G.turn || 1.8;
@@ -612,7 +615,7 @@ const PL = {
   _afterMove(dt, st, G, x0, z0, h0, mag) {
     // ice: the machine keeps sliding the way it was going; grip pulls it back in line (the ice machine grips best)
     const dt1 = Math.max(dt, 1e-3);
-    if (CH.ice && CH.ice(x0, z0) && !this.escape && !this._path) {
+    if (CH.ice && CH.ice(x0, z0) && !(this.escape > 0) && !this._path) {
       const gk = 1 - Math.exp(-(G.grip || 2.0) * dt), wx = this.x - x0, wz = this.z - z0;
       const vx = lerp((this.svx || 0) * dt, wx, gk), vz = lerp((this.svz || 0) * dt, wz, gk);
       if (this.truckFree(x0 + vx, z0 + vz, this.h)) { this.x = x0 + vx; this.z = z0 + vz; }
@@ -638,6 +641,7 @@ const PL = {
     let removed = 0;
     const hx = Math.sin(this.h), hz = Math.cos(this.h);
     const cx = this.x + hx * G.carve, cz = this.z + hz * G.carve;
+    if (this._lastCx !== undefined && Math.hypot(cx - this._lastCx, cz - this._lastCz) > 2.2) this._lastCx = this._lastCz = undefined;
     if (!this.full && (this.spd > 0.2 || (this.svx || 0) * hx + (this.svz || 0) * hz > 0.6)) {
       const steps = this._lastCx === undefined ? 1 : Math.min(8, Math.ceil(Math.hypot(cx - this._lastCx, cz - this._lastCz) / 0.18));
       for (let s = 1; s <= steps; s++) {

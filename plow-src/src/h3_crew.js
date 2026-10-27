@@ -40,12 +40,15 @@ const CREW = {
     const cur = GOALS[GAME.goalIdx()].a;
     const keys = (CH.crewJobs || HAND_AREAS).filter(k => WORLD.areaByKey[k]);
     const mid = a => { const r = a.lot ? a.lot.drive : a.rects[0]; return [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, Math.max(r.x1 - r.x0, r.z1 - r.z0)]; };
-    let cands = keys.map(k => WORLD.areaByKey[k]).filter(a => !a.done && !taken.has(a.key));
-    if (GAME.ended) cands = keys.map(k => WORLD.areaByKey[k]).filter(a => { if (taken.has(a.key)) return false; const m = mid(a); return SNOW.nearestSnow(m[0], m[1], a.id, 0.08, m[2] * 0.6 + 2); });
+    const away = a => h.avoid && h.avoid[a.key] > 0;
+    let cands = keys.map(k => WORLD.areaByKey[k]).filter(a => !a.done && !taken.has(a.key) && !away(a));
+    if (GAME.ended) cands = keys.map(k => WORLD.areaByKey[k]).filter(a => { if (taken.has(a.key) || away(a)) return false; const m = mid(a); return SNOW.nearestSnow(m[0], m[1], a.id, 0.08, m[2] * 0.6 + 2); });
     // nearest first (but not the job you are doing yourself)
     cands.sort((p, q) => { const a = mid(p), b = mid(q); return Math.hypot(a[0] - h.x, a[1] - h.z) - Math.hypot(b[0] - h.x, b[1] - h.z); });
     let a = cands.find(o => o.key !== cur) || cands[0] || null;
-    if (!a) for (const k of (CH.crewExtra || [])) { const ap = WORLD.areaByKey[k]; if (ap && !ap.done && !taken.has(k)) { a = ap; break; } }
+    if (!a) for (const k of (CH.crewExtra || [])) { const ap = WORLD.areaByKey[k]; if (ap && !ap.done && !taken.has(k) && !away(ap)) { a = ap; break; } }
+    // nothing to do: look again in a moment (not every frame)
+    if (!a) h.noJobT = 1.2;
     return a;
   },
   // route: out to the sidewalk, along it, into the driveway, then back-and-forth lanes over the driveway and the path
@@ -53,7 +56,7 @@ const CREW = {
     const W = [], lane = Math.max(0.45, h.D.w * 0.85);
     const go = (x, z, work) => W.push([x, z, !!work]);
     // walk there on cleared/paved ground (finds the way around yards and buildings)
-    const walkTo = (x, z) => { const p = PATH.find(h.x, h.z, x, z); if (p) for (const q of p) go(q[0], q[1]); else go(x, z); };
+    const walkTo = (x, z) => { const p = PATH.find(h.x, h.z, x, z) || PATH.find(h.x, h.z, x, z, (a, b) => PATH.loose(a, b)); if (p) for (const q of p) go(q[0], q[1]); else go(x, z); };
     if (a.lot) {
       const L = a.lot, s = L.side, dz = (L.drive.z0 + L.drive.z1) / 2;
       walkTo(s * 4.6, dz);
@@ -96,15 +99,42 @@ const CREW = {
     else if (CH.id === 1 && this.list.length < 2 && n >= CREW_DEFS[this.list.length].need) this.joinT = 2.6;
     for (const h of this.list) this._step(h, dt);
   },
+  // where this helper waits when there is nothing to do
+  yardSpot(h) {
+    if (h._yard) return h._yard;
+    const Y = CH.crewYard || [0, 0], x = Y[0] - h.i * 1.4, z = Y[1];
+    // (the nearest free ground, should that spot be taken by something solid)
+    for (let r = 0; r <= 4; r += 0.4) for (let k = 0; k < (r ? 12 : 1); k++) { const a = k / 12 * TAU, px = x + Math.sin(a) * r, pz = z + Math.cos(a) * r; if (PATH.ok(px, pz)) return (h._yard = [px, pz]); }
+    return (h._yard = [x, z]);
+  },
+  // no headway for a while: find a way round, skip that point, and in the end pop up where they were going
+  unstick(h) {
+    h.stuckT = 0; h.sx = h.x; h.sz = h.z; h.unst = (h.unst || 0) + 1;
+    if (h.job && h.wi < h.wps.length) {
+      if (h.unst === 1) {
+        const wp = h.wps[h.wi], p = PATH.find(h.x, h.z, wp[0], wp[1], (a, b) => PATH.loose(a, b));
+        if (p && p.length > 1) { h.wps.splice(h.wi, 0, ...p.slice(0, -1).map(q => [q[0], q[1], false])); return; }
+      }
+      if (h.unst <= 3) { h.wi++; return; }
+    } else if (h.homeW && h.unst === 1) { h.homeW = null; return; }
+    const t = h.job && h.wi < h.wps.length ? h.wps[h.wi] : this.yardSpot(h);
+    if (t && PATH.loose(t[0], t[1])) { FX.puff(h.x, 0.5, h.z, 8, 0.8); h.x = t[0]; h.z = t[1]; FX.puff(h.x, 0.5, h.z, 8, 0.8); h.homeW = null; }
+    else if (h.job) { (h.avoid || (h.avoid = {}))[h.job.key] = 10; h.job = null; }
+    h.unst = 0;
+  },
   _step(h, dt) {
     const D = h.D;
     if (h.noJobT > 0) h.noJobT -= dt;
+    if (h.avoid) for (const k in h.avoid) h.avoid[k] -= dt;
     if (h.job && (h.wi >= h.wps.length || (h.job.done && !GAME.ended))) h.job = null;
-    if (!h.job) { const a = this.pickJob(h); if (a) this.plan(h, a); }
+    if (!h.job) { const a = this.pickJob(h); if (a) { this.plan(h, a); h.homeW = null; } }
     let mvx = 0, mvz = 0, work = false;
-    if (!h.job) { // nothing to do: wait at the crew yard by the kiosk
-      const Y = CH.crewYard || [0, 0], ix = Y[0] - h.i * 1.4, iz = Y[1], dx = ix - h.x, dz = iz - h.z, d = Math.hypot(dx, dz);
+    if (!h.job) { // nothing to do: walk back to the crew yard (round houses and cars) and wait there
+      const Y = this.yardSpot(h);
+      if (!h.homeW) { h.homeW = Math.hypot(Y[0] - h.x, Y[1] - h.z) > 0.3 ? (PATH.find(h.x, h.z, Y[0], Y[1]) || PATH.find(h.x, h.z, Y[0], Y[1], (a, b) => PATH.loose(a, b)) || [Y]) : [Y]; h.homeI = 0; }
+      const wp = h.homeW[Math.min(h.homeI, h.homeW.length - 1)], dx = wp[0] - h.x, dz = wp[1] - h.z, d = Math.hypot(dx, dz);
       if (d > 0.3) { const sp = h.D.spd * 1.2; mvx = dx / d * sp; mvz = dz / d * sp; }
+      else if (h.homeI < h.homeW.length - 1) h.homeI++;
       else h.h = dampAng(h.h, 0, 4, dt);
     }
     if (h.job && h.wi < h.wps.length) {
@@ -117,9 +147,15 @@ const CREW = {
       const dx = h.x - PL.x, dz = h.z - PL.z, d = Math.hypot(dx, dz), R = PL.geo.halfW + 2.6;
       if (d < R) { const k = (R - d) / R * 4; mvx += dx / (d || 1) * k; mvz += dz / (d || 1) * k; }
     }
-    const nx = h.x + mvx * dt, nz = h.z + mvz * dt;
-    if (SNOW.walk(nx, nz) || !SNOW.walk(h.x, h.z)) { h.x = nx; h.z = nz; }
-    const v = Math.hypot(mvx, mvz); h.moving = damp(h.moving, clamp(v / D.spd, 0, 1), 10, dt);
+    // a kid can wade through a snowy lawn, never through a house, a car or a fence; along a wall they slide
+    const nx = h.x + mvx * dt, nz = h.z + mvz * dt, x0 = h.x, z0 = h.z, ok = (x, z) => !SNOW.solid(x, z);
+    if (ok(nx, nz) || !ok(h.x, h.z)) { h.x = nx; h.z = nz; } else if (ok(nx, h.z)) h.x = nx; else if (ok(h.x, nz)) h.z = nz;
+    // no headway although they want to go somewhere
+    if (Math.hypot(mvx, mvz) > 0.3) {
+      if (h.sx === undefined || Math.hypot(h.x - h.sx, h.z - h.sz) > 0.5) { h.sx = h.x; h.sz = h.z; h.stuckT = 0; if (h.sx !== undefined) h.unst = 0; }
+      else if ((h.stuckT = (h.stuckT || 0) + dt) > 1.5) this.unstick(h);
+    } else { h.stuckT = 0; h.sx = h.x; h.sz = h.z; }
+    const v = Math.hypot(h.x - x0, h.z - z0) / Math.max(dt, 1e-4); h.moving = damp(h.moving, clamp(v / D.spd, 0, 1), 10, dt);
     if (v > 0.2) h.h = dampAng(h.h, Math.atan2(mvx, mvz), 9, dt);
     // clear snow in front of the tool
     const fx = Math.sin(h.h), fz = Math.cos(h.h), off = D.tool === 'shovel' ? 0.62 : 1.5;

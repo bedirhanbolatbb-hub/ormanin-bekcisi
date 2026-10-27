@@ -41,6 +41,8 @@ const GAME = {
   spend(v) { if (this.coins + 1e-6 < v) return false; this.coins -= v; return true; },
   // the next machine after the one you use (machines you already own come back for free, e.g. when you replay a chapter)
   nextTool() { const s = CH.shop, i = s.indexOf(PL.tool); return i >= 0 && i + 1 < s.length ? s[i + 1] : (i < 0 ? s.find(k => !this.owned[k]) || null : null); },
+  // the machine this town gives you (chapter 1: the plow truck), while you do not have it yet
+  giftTool() { return CH.giftTruck ? CH.shop.find(k => TIER[k].gift && !this.owned[k]) || null : null; },
   handDone() { let n = 0; for (const k of HAND_AREAS) if (this.done[k]) n++; return n; },
   // each town's own special machine arrives part-way through the chapter (so buying it is a mid-chapter highlight)
   jobsDone() { let n = 0; for (const g of GOALS) if (g.a && this.done[g.a]) n++; return n; },
@@ -102,7 +104,8 @@ const GAME = {
       const area = g.a ? WORLD.areaByKey[g.a] : null;
       SNOW.setHighlight(area && !area.done ? area.id : 0);
       // all driveways done -> the town hands over its plow truck
-      { const nt = this.nextTool(); if (CH.giftTruck && nt && TIER[nt].gift && this.handDone() >= HAND_AREAS.length && this.giftT <= 0) this.giftT = 2.4; }
+      // (also when you never bought the last hand tool: the town does not wait for that)
+      if (!this.ended && this.giftTool() && this.handDone() >= HAND_AREAS.length && this.giftT <= 0) this.giftT = 2.4;
       // every job done -> the chapter's big finish, then the results
       if (!this.ended && GOALS[this.goalIdx()].end) this.finishChapter();
     }
@@ -110,7 +113,7 @@ const GAME = {
     // a chapter's own extras must never hold up the chapter itself (the results, the next chapter)
     if (CH.update) { try { CH.update(dt); } catch (e) { if (!this._chErr) { this._chErr = 1; console.warn('chapter', e); } } }
     if (this.finishT > 0) { this.finishT -= dt; if (this.finishT <= 0) CHUI.results(); }
-    if (this.giftT > 0) { this.giftT -= dt; const nt = this.nextTool(); if (this.giftT <= 0 && nt && TIER[nt].gift) { this.giftT = 0; this.buyTool(nt, true); } }
+    if (this.giftT > 0) { this.giftT -= dt; const gt = this.giftTool(); if (this.giftT <= 0 && gt && !this.ended) { this.giftT = 0; this.buyTool(gt, true); } }
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
     STREAK.update(dt);
@@ -147,6 +150,8 @@ const GAME = {
     const rec = this.chapters[CH.id] || (this.chapters[CH.id] = { stars: 0, best: 0 });
     this.lastStars = st; this.lastNew = st > rec.stars;
     rec.stars = Math.max(rec.stars, st); rec.best = rec.best ? Math.min(rec.best, this.time) : this.time; rec.done = 1;
+    // the chapter bonus is paid (and saved) right here; the results screen only shows it flying into your counter
+    const bonus = niceNum((CH.reward || 2000) * st); this.lastBonus = bonus; this.earn(bonus); UI.pending += bonus;
     if (CH.finale) { try { CH.finale(); } catch (e) { console.warn('finale', e); } }
     if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam') || QS.has('vid'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
     this.finishT = CH.finaleDelay || 5.5;
@@ -157,39 +162,74 @@ const GAME = {
     this.handoff(this.save(true));
   },
   // ---- save ----
+  sid: Math.random().toString(36).slice(2, 10),
+  // which of two saved games got further: coins earned only ever go up (a tie goes to the newer one)
+  better(a, b) { const ea = a.earned || 0, eb = b.earned || 0; return ea > eb + 0.5 || (Math.abs(ea - eb) <= 0.5 && (a.t || 0) > (b.t || 0)); },
   save(fresh) {
     if (QS.has('nosave') || (QS.has('bot') && !QS.has('botsave'))) return;
+    if (this.adopting || this.otherTabAhead()) return;
     const cs = fresh ? null : { id: CH.id, time: this.time, done: this.done, tool: PL.tool, x: PL.x, z: PL.z, h: PL.h, load: PL.load, snow: SNOW.serialize(), tr: TREASURE.list.map(o => o.found ? 1 : 0).join(''), ended: this.ended, extra: CH.save ? CH.save() : null };
-    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now(), nc: CG.syncState() };
+    const o = { v: this.ver, coins: this.coins, earned: this.earned, total: this.totalTime, owned: this.owned, lv: this.lv, firstUp: this.firstUp, crew: this.crew || 0, chapter: this.chapter, chapters: this.chapters, cs, t: Date.now(), nc: CG.syncState(), sid: this.sid, u: CG.uid };
     const j = JSON.stringify(o);
-    STORE.set('plowtown_v4', j);
+    this._localOk = STORE.set('plowtown_v4', j);
     return j;
   },
   // moving on to another chapter reloads the page a moment after saving. On CrazyGames the account copy is sent
   // a second or more later, so the new start could still read the old copy and send the player back to the chapter
   // they just finished. The fresh save rides along in this tab and wins if it is newer.
-  handoff(j) { try { if (j) sessionStorage.setItem('plowtown_handoff', j); } catch (e) { } },
+  handoff(j) { if (!j) return; try { sessionStorage.setItem('plowtown_handoff', j); } catch (e) { if (!this._localOk) this.noStore = true; } },
   takeHandoff(o) {
     let h = null;
     try { h = JSON.parse(sessionStorage.getItem('plowtown_handoff') || 'null'); sessionStorage.removeItem('plowtown_handoff'); } catch (e) { h = null; }
-    if (!h || h.v !== this.ver || !(Date.now() - (h.t || 0) < 10 * 60 * 1000)) return o;
-    if (o && (o.t || 0) >= (h.t || 0)) return o;
+    // (not one saved while the account was being held back, and never another player's)
+    if (!h || h.v !== this.ver || h.nc === 2 || !(Date.now() - (h.t || 0) < 10 * 60 * 1000)) return o;
+    if (h.u !== undefined && CG.uid !== undefined && h.u !== CG.uid) return o;
+    if (o && !this.better(h, o)) return o;
     STORE.set('plowtown_v4', JSON.stringify(h));   // and put it back where it belongs
     return h;
+  },
+  // the same game open in another tab got further: this tab must not overwrite it, it loads that one instead
+  otherTabAhead() {
+    let cur = null; try { cur = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { return false; }
+    if (!cur || !cur.sid || cur.sid === this.sid || cur.v !== this.ver || cur.u !== CG.uid) return false;
+    // (it must have been written after this start: what was there when we started is not another tab moving on)
+    if ((cur.sid + ':' + (cur.t || 0)) === this._loc0) return false;
+    if (!((cur.earned || 0) > (this.earned || 0) + 1)) return false;
+    this.adopt(cur, 'tab'); return true;
+  },
+  // carry on from another (further) saved game: put it on this device and start again with it
+  adopt(c, why) {
+    if (this.adopting) return; this.adopting = true;
+    try { if (c) localStorage.setItem('plowtown_v4', JSON.stringify(Object.assign({}, c, { u: CG.uid, nc: 0 }))); else localStorage.removeItem('plowtown_v4'); sessionStorage.removeItem('plowtown_handoff'); } catch (e) { }
+    const f = $('chFade'); if (f) { f.innerHTML = `<div class="chname sm">${why === 'tab' ? 'Your game moved on in another tab' : 'Your saved game is here'}</div><div class="chname">Loading...</div>`; f.classList.add('on'); }
+    CG.play(false);
+    setTimeout(() => location.reload(), why === 'tab' ? 1600 : 900);
   },
   // before the world is built: coins, machines, crew and which chapter to play
   loadMeta() {
     let o = null;
+    try { const l = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); this._loc0 = l ? (l.sid || '') + ':' + (l.t || 0) : ''; } catch (e) { this._loc0 = ''; }
     if (!QS.has('fresh') && (!QS.has('bot') || QS.has('botsave'))) {
-      try { o = JSON.parse(STORE.get('plowtown_v4') || 'null'); } catch (e) { o = null; }
-      // progress made while the CrazyGames SDK was not there never reached the account: this device's newer copy wins
-      if (CG.sdk) {
-        let l = null; try { l = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { l = null; }
-        if (l && l.nc === 1 && l.v === this.ver && (!o || (l.t || 0) > (o.t || 0))) { o = l; o.nc = 0; STORE.set('plowtown_v4', JSON.stringify(o)); }
+      let loc = null; try { loc = JSON.parse(localStorage.getItem('plowtown_v4') || 'null'); } catch (e) { loc = null; }
+      if (!CG.sdk) o = loc;
+      else {
+        let acc = null, bad = false; const v = CG.get('plowtown_v4');
+        if (v != null) { try { acc = JSON.parse(v); } catch (e) { bad = true; } }
+        const fits = !!loc && loc.v === this.ver;
+        // nothing on the account yet: this device's game (a guest's, or this player's own) - never another player's
+        if (!acc && !bad) o = fits && (loc.u == null || loc.u === CG.uid) ? loc : null;
+        else {
+          o = acc;
+          // this device's copy got further than the account's (the last save never went up before the game closed,
+          // or it was made while the SDK was missing): it wins - only ever for the same player
+          const mine = fits && (bad || loc.nc === 1 || (CG.uid !== undefined && loc.u === CG.uid));
+          if (mine && (!o || o.v !== this.ver || this.better(loc, o))) o = loc;
+        }
+        if (o && o === loc) { o.nc = 0; o.u = CG.uid; STORE.set('plowtown_v4', JSON.stringify(o)); }
       }
       o = this.takeHandoff(o);
     }
-    this.loadedT = o ? (o.t || 0) : 0;
+    this.loadedT = o ? (o.t || 0) : 0; this.baseU = o ? o.u : undefined;
     // coming from the old single-street version: keep everything; if Maple Lane was already saved, go straight on to chapter 2
     if (!o && !QS.has('fresh') && !QS.has('bot')) {
       try {
@@ -222,20 +262,25 @@ const GAME = {
     if (!o || o.id !== CH.id) { this.startChapter(); return false; }
     try {
       this.time = o.time || 0; this.done = o.done || {}; this.ended = !!o.ended;
-      if (o.snow) { SNOW.deserialize(o.snow); SNOW.finalizeAreas(); SNOW.markAll(); }
       if (o.tr) TREASURE.list.forEach((t, i) => { if (o.tr[i] === '1') { t.found = t.gone = true; t.mesh.visible = false; } });
+      // first put back what the finished jobs changed in the town (open street, cars gone, the bus left its spot...),
+      // so the ground is the same as when the game was saved; then the snow on top of it
       // (one chapter hook failing must not throw the whole saved game away)
       for (const a of SNOW.areas) if (a && this.done[a.key]) { try { this.completeArea(a, true); } catch (e) { console.warn('restore', a.key, e); } }
       if (CH.load && o.extra) CH.load(o.extra);
+      if (o.snow) { if (!SNOW.deserialize(o.snow)) console.warn('snow save does not fit this town, fresh snow'); SNOW.finalizeAreas(); SNOW.markAll(); }
       PL.load = o.load || 0;
-      PL.x = o.x; PL.z = o.z; PL.h = o.h || Math.PI;
+      PL.x = Number.isFinite(o.x) ? o.x : CH.start.x; PL.z = Number.isFinite(o.z) ? o.z : CH.start.z; PL.h = Number.isFinite(o.h) ? o.h : Math.PI;
       if (o.tool && this.owned[o.tool] && TIER[o.tool]) { PL.tool = o.tool; }
       if (PL.kind === 'truck') { if (!PL.truckFree(PL.x, PL.z, PL.h)) { const s2 = PL.findTruckSpot(PL.x, PL.z); PL.x = s2.x; PL.z = s2.z; PL.h = s2.h; } }
       else if (!PL.kidFree(PL.x, PL.z)) { PL.x = CH.start.x; PL.z = CH.start.z; }
       PL.sledX = PL.x - Math.sin(PL.h) * 1.4; PL.sledZ = PL.z - Math.cos(PL.h) * 1.4;
       PL.applyTool();
       return true;
-    } catch (e) { console.warn('load', e); this.startChapter(); return false; }
+    } catch (e) {
+      // something did not fit: start the chapter over, but keep the books straight with the jobs already marked done
+      console.warn('load', e); this.startChapter(); for (const a of SNOW.areas) if (a && a.done) this.done[a.key] = 1; return false;
+    }
   },
   startChapter() {
     this.time = 0; this.done = {}; this.ended = false;
@@ -313,13 +358,17 @@ const DAILY = {
     if (QS.has('bot') || QS.has('nodaily')) return 0;
     const t = this.day(), last = STORE.get('plowtown_day'), n = +(STORE.get('plowtown_dayn') || 0);
     if (last === t) return 0;
+    // the device clock was set back: no gift (and the day stays) until the real date passes that day again
+    if (last && this.num(last) > this.num(t)) return 0;
     const run = last === this.day(1) ? Math.min(n + 1, 7) : 1;
     STORE.set('plowtown_day', t); STORE.set('plowtown_dayn', String(run));
     return last ? run : 0;      // the very first visit only remembers the day
   },
+  num(s) { const m = /^(\d+)-(\d+)-(\d+)$/.exec(s || ''); return m ? Math.round(new Date(+m[1], +m[2] - 1, +m[3]).getTime() / 86400000) : -1; },
+  // the gift is paid (and saved) the moment the day is counted; it flies into your counter a little later
+  pay(run) { const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run)); this.v = (this.v || 0) + v; GAME.earn(v); UI.pending += v; GAME.save(); },
   give(run) {
-    const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run));
-    GAME.earn(v); UI.pending += v;
+    const v = this.v || 0; if (!v) return; this.v = 0;
     for (let i = 0; i < 18; i++) setTimeout(() => UI.flyCoin(null, v / 18), 300 + i * 45);
     UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins' + (run > 1 ? ' \u00b7 day ' + run + ' in a row' : ''), 'star', 3.0);
     AUD.bigWin && AUD.bigWin(); GAME.save();

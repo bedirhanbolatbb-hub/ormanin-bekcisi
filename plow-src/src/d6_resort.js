@@ -61,7 +61,7 @@ const CH_RESORT = {
     return Math.max(0, base + ridge * Math.min(1, d / 40));
   },
   build(scene, H, T) {
-    const yardY = (x, z) => SNOW.depth(x, z) - 0.06;
+    const yardY = (x, z) => SNOW.type(x, z) === 1 ? 0 : SNOW.depth(x, z) - 0.06;
     // ---- mountains ----
     { const W = 340, D = 190, nx = 96, nz = 60, g = new THREE.PlaneGeometry(W, D, nx, nz); g.rotateX(-Math.PI / 2); g.translate(0, 0, -64 - D / 2 + 2);
       const p = g.attributes.position, col = new Float32Array(p.count * 3);
@@ -149,10 +149,11 @@ const CH_RESORT = {
   },
   onDone(a, silent) {
     if (a.key === 'parking') { if (!silent) this.shuttle(); return new V3(0, 0, 50); }
-    if (a.key === 'village') { for (const B of this.shops) { B.litT = 1; if (silent) { B.lit = 1; applyLit(B, 1); } } if (!silent) { this.walkers(6); CREW.recruit(2.0); } return new V3(0, 0, 30); }
-    if (a.key === 'lift') { this.startLift(silent); if (!silent) later(4.5, () => this.startAvalanche()); return new V3(20, 0, -20); }
+    if (a.key === 'village') { for (const B of this.shops) { B.litT = 1; if (silent) { B.lit = 1; applyLit(B, 1); } } if (!silent) { this.walkers(6); CREW.recruit(2.0); } else GAME.crew = Math.max(GAME.crew || 0, 5); return new V3(0, 0, 30); }
+    // (back from a save before the avalanche came: it still comes)
+    if (a.key === 'lift') { this.startLift(silent); later(silent ? 6 : 4.5, () => this.startAvalanche()); return new V3(20, 0, -20); }
     if (a.key === 'finish') { for (let i = 0; i < 10; i++) { const x = i < 5 ? -20.3 : 20.3, f = NPC.spawn({ x, z: 7 + (i % 5) * 1.4, h: x < 0 ? Math.PI / 2 : -Math.PI / 2, kind: Math.random() < 0.5 ? 'kid' : 'adult', pose: 'wave', tag: 'fan', pop: !silent }); f.P.root.traverse(m => { if (m.isMesh) m.castShadow = false; }); } return new V3(0, 0, 10); }
-    if (a.key === 'pisteS') { for (let i = 0; i < 3; i++) this.gateObjs[i].visible = true; if (!silent) { this.skiSchool(); } this.skiOn = true; return new V3(0, 0, -12); }
+    if (a.key === 'pisteS') { for (let i = 0; i < 3; i++) this.gateObjs[i].visible = true; this.skiSchool(); this.skiOn = true; return new V3(0, 0, -12); }
     if (a.key === 'pisteN') { for (const g of this.gateObjs) g.visible = true; return new V3(0, 0, -45); }
     return null;
   },
@@ -244,8 +245,9 @@ const CH_RESORT = {
       R.t += dt;
       for (const r of R.list) {
         if (r.done) continue;
-        const g = this.gates[r.gi], tx = g ? g[0] + (r.gi % 2 ? 1.6 : -1.6) : r.lane, tz = g ? g[1] : 12;
-        const dx = tx - r.n.x, dz = tz - r.n.z, d = Math.hypot(dx, dz);
+        // the racers start at the top: through the gates from the top one down, then to the finish
+        const G = this.gates, g = G[G.length - 1 - r.gi], tx = g ? g[0] + (r.gi % 2 ? 1.6 : -1.6) : r.lane, tz = g ? g[1] : 12;
+        const dx = tx - r.n.x, dz = tz - r.n.z, d = Math.hypot(dx, dz) || 1e-3;
         const sp = r.spd * (R.t < 1.2 ? R.t / 1.2 : 1);
         r.n.x += dx / d * sp * dt; r.n.z += dz / d * sp * dt; r.n.h = dampAng(r.n.h, Math.atan2(dx, dz), 8, dt); r.n.moving = 1;
         r.n.P.body.rotation.z = clamp(dx * 0.1, -0.35, 0.35);
@@ -270,8 +272,8 @@ const CH_RESORT = {
     later(4.5, () => LIFE.fireworks(0, 6, 7));
     this.party = 9;
   },
-  save() { return {}; },
-  load(o) { },
+  save() { return { av: this.avalanche ? 1 : 0 }; },
+  load(o) { if (o && o.av && !this.avalanche) this.avalanche = { z: 99, t: 0 }; },
 };
 // ski geometry: made by whoever needs it first (a skier, or the racers at the finale when no skier came down yet)
 function SKIS() { const g = new THREE.BoxGeometry(0.34, 0.04, 1.5); g.translate(0, 0.02, 0.15); return g; }

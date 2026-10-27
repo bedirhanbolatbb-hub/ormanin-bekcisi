@@ -3,6 +3,8 @@ const PATH = {
   CS: 0.5,
   // walkable test for a person (paved or zone ground, a little clearance)
   ok(x, z) { const r = 0.2; return SNOW.walk(x, z) && SNOW.walk(x + r, z) && SNOW.walk(x - r, z) && SNOW.walk(x, z + r) && SNOW.walk(x, z - r); },
+  // a kid can also wade through a snowy lawn, just never through a house, a car or a fence
+  loose(x, z) { const r = 0.2; return !SNOW.solid(x, z) && !SNOW.solid(x + r, z) && !SNOW.solid(x - r, z) && !SNOW.solid(x, z + r) && !SNOW.solid(x, z - r); },
   // breadth-first search on a coarse grid; returns waypoints [[x,z],...] ending at the target, or null
   find(x0, z0, x1, z1, ok) {
     ok = ok || ((x, z) => this.ok(x, z));

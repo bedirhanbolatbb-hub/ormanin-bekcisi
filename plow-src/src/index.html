@@ -19,7 +19,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #coinTxt{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:29px;line-height:1;min-width:30px;letter-spacing:.5px;}
 #coinBox.bump{animation:bump .18s ease-out;}
 @keyframes bump{50%{transform:scale(1.1);}}
-#goal{position:absolute;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--card);padding:7px 14px 7px 8px;border-radius:18px;width:min(440px,calc(100vw - 250px));box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);}
+#goal{position:absolute;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--card);padding:7px 14px 7px 8px;border-radius:18px;width:min(440px,calc(100vw - 320px));box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);}
 #goal.pop{animation:gpop .5s cubic-bezier(.2,1.6,.4,1);}
 @keyframes gpop{0%{transform:translateX(-50%) scale(.7);opacity:.2}100%{transform:translateX(-50%) scale(1);opacity:1}}
 #goalIco{width:40px;height:40px;flex:none;background:#eef4fb;border-radius:12px;padding:3px;}
@@ -111,8 +111,11 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 @keyframes fullp{50%{scale:1.12;}}
 #hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:rgba(30,42,64,.82);color:#fff;font-weight:800;font-size:17px;padding:10px 20px;border-radius:999px;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;}
 #hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
+#hint.on.under{opacity:0;}
 #toast{position:absolute;left:50%;top:84px;transform:translateX(-50%);background:rgba(255,255,255,.95);font-weight:800;font-size:14px;padding:8px 16px;border-radius:12px;opacity:0;transition:opacity .3s;box-shadow:0 4px 14px rgba(43,58,85,.2);}
 #toast.on{opacity:1;}
+/* with a countdown on screen, the toast sits under it */
+#hud:has(#timer.on) #toast{top:140px;}
 #banner{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%) scale(.5);text-align:center;opacity:0;pointer-events:none;}
 #banner.on{animation:bnr 2.3s forwards;}
 /* with the bus clock on screen the banner sits a little lower, clear of it */
@@ -223,6 +226,9 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .chbtn{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#fff;background:var(--grn);padding:4px 14px;border-radius:12px;box-shadow:0 3px 0 #23935a;}
 .chrow.cur .chbtn{background:#ffc23d;color:#2b3a55;box-shadow:0 3px 0 #d69a00;}
 .chrow.locked .chbtn{background:#c9d5e4;box-shadow:none;}
+.chrow.sure .chbtn{background:#ff8a1e;box-shadow:0 3px 0 #c8650a;}
+.chwarn{margin-top:8px;min-height:18px;font-weight:800;font-size:14px;color:#ffd34d;text-align:center;}
+.chwarn:empty{display:none;}
 #chFade{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(#7aa7dc,#cfe0f1 70%,#eef4fa);}
 #chFade.on{display:flex;animation:fadein .5s;}
 @media (max-width:640px){
@@ -236,8 +242,9 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   .ui-lbl{font-size:10.5px;}
   .ui-cost b{font-size:14px;}
   #ups{gap:6px;}
-  #hint{bottom:auto;top:124px;font-size:15px;}
-  #toast{top:170px;}
+  #hint{bottom:auto;top:124px;font-size:15px;white-space:normal;width:max-content;max-width:calc(100vw - 24px);text-align:center;}
+  /* phones: the toast goes just above the goal bar, clear of the big banners */
+  #toast,#hud:has(#timer.on) #toast{top:auto;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 160px);}
   #timer{top:calc(max(12px,env(safe-area-inset-top)) + 62px);}
   .bn-t{font-size:32px;}
   #tools{bottom:auto;top:70px;}
@@ -245,7 +252,13 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   #coinTxt{font-size:25px;}
 }
 @media (max-width:400px){ #goalNext span{display:none;} }
+/* narrow phones: the school bus clock moves right, clear of the map button */
+@media (max-width:420px){ #timer{left:auto;right:max(12px,env(safe-area-inset-right));transform:none;} #timer .ti-route{width:56px;} #timer.warn{animation:tw2 .5s infinite;} }
+@keyframes tw2{50%{transform:scale(1.07)}}
 @media (max-height:500px){ #hint{bottom:auto;top:70px;} #banner{top:30%;}
+  /* short screens: hints go under the countdown when it is on; toasts sit above the cards */
+  #hud:has(#timer.on) #hint{top:134px;}
+  #toast,#hud:has(#timer.on) #toast{top:auto;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 160px);}
   /* short landscape screens (phones on their side, small game frames): slimmer cards so the road stays visible */
   #ups{transform:translateX(-50%) scale(.8);transform-origin:50% 100%;}
   #goal{padding:5px 12px 5px 7px;}

@@ -27,6 +27,8 @@ const LIFE = {
   },
   freeCar(car, silent) {
     car.state = 'free';
+    // the street is already open: this car drives off too (and its spot opens up, the same way on every load)
+    if (this.traffic) this.streetOpen(true);
     if (silent) { car.cap.visible = false; return; }
     car.capT = 0.001; AUD.horn();
     FX.puff(car.x, 1.2, car.z, 20, 1.8); FX.sparkle(car.x, 1.2, car.z, 14, 1.4);
@@ -71,7 +73,13 @@ const LIFE = {
     if (this.traffic) {
       this.trafT -= dt;
       if (this.trafT <= 0) { this.trafT = rnd(7, 13); this._spawnTraffic(); }
-      for (let i = this.movers.length - 1; i >= 0; i--) { const m = this.movers[i]; this._drive(m, dt); if (m.state === 'gone') { WORLD.scene.remove(m.obj); this.movers.splice(i, 1); } }
+      for (let i = this.movers.length - 1; i >= 0; i--) {
+        const m = this.movers[i]; m.t += dt;
+        // keep a gap to the car in front (cars queue up behind a plow instead of driving into each other)
+        const o = m.obj, fx = Math.sin(o.rotation.y), fz = Math.cos(o.rotation.y);
+        m.carAhead = this.movers.some(q => { if (q === m) return false; const rx = q.obj.position.x - o.position.x, rz = q.obj.position.z - o.position.z, a = rx * fx + rz * fz; return a > 0 && a < 7.5 && Math.abs(rx * fz - rz * fx) < 1.6; });
+        this._drive(m, dt); if (m.state === 'gone') { WORLD.scene.remove(m.obj); this.movers.splice(i, 1); }
+      }
     }
     // tree lights + fireworks
     if (WORLD.tree && WORLD.tree.lit > 0 && WORLD.tree.lit < 1) { WORLD.tree.lit = Math.min(1, WORLD.tree.lit + dt * 0.5); }
@@ -87,12 +95,14 @@ const LIFE = {
   },
   _v: new V3(), _up: new V3(0, 0.55, 0),
   _spawnTraffic() {
+    // a few cars at a time; none while the last one is still waiting at the end of the street
+    if (this.movers.length >= 4 || this.movers.some(m => m.pi === 0 && m.spd < 0.5 && m.t > 2)) return;
     const keys = ['car_blue', 'car_white', 'camper', 'icecream'];
     const k = keys[(Math.random() * keys.length) | 0];
     const north = Math.random() < 0.5;
     const lane = north ? -1.75 : 1.75;
     const obj = place(k, lane, north ? 58 : -58, north ? Math.PI : 0, 1, 0); WORLD.scene.add(obj);
-    const m = { obj, state: 'leave', wait: 0, path: north ? [[lane, 47], [lane, -47], [lane * 0.3, -60]] : [[lane, -47], [lane, 47], [lane * 0.3, 60]], pi: 0, spd: 0, x: obj.position.x, z: obj.position.z, rot: obj.rotation.y };
+    const m = { obj, state: 'leave', wait: 0, t: 0, path: north ? [[lane, 47], [lane, -47], [lane * 0.3, -60]] : [[lane, -47], [lane, 47], [lane * 0.3, 60]], pi: 0, spd: 0, x: obj.position.x, z: obj.position.z, rot: obj.rotation.y };
     this.movers.push(m);
   },
   _drive(c, dt) {
@@ -103,9 +113,9 @@ const LIFE = {
     // stop for the player
     const px = PL.x, pz = PL.z; const fx = Math.sin(o.rotation.y), fz = Math.cos(o.rotation.y);
     const rx = px - o.position.x, rz = pz - o.position.z, ahead = rx * fx + rz * fz, side = Math.abs(rx * fz - rz * fx);
-    const blocked = ahead > 0 && ahead < 6.5 && side < 2.6;
-    const want = blocked ? 0 : Math.min(6, d * 1.5 + 1.5);
-    c.spd = damp(c.spd, want, blocked ? 6 : 2, dt);
+    const blocked = ahead > 0 && ahead < 6.5 && side < 2.6, stop = blocked || c.carAhead;
+    const want = stop ? 0 : Math.min(6, d * 1.5 + 1.5);
+    c.spd = damp(c.spd, want, stop ? 6 : 2, dt);
     if (blocked && !c.honked) { c.honked = 1; AUD.horn(); setTimeout(() => c.honked = 0, 3000); }
     const th = Math.atan2(dx, dz);
     o.rotation.y = dampAng(o.rotation.y, th, 3.5, dt);

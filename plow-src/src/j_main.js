@@ -8,6 +8,8 @@ const INPUT = {
     const J = this.joy, R = 52;
     // a touch starts the stick (also when it lands on the chapter card's button: then you can drive straight away)
     this.start = (e) => {
+      // only the main button drives (a right-click must not grab the stick)
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       AUD.init(); GAME.started = true; if (CHUI.introUp) CHUI.introGo(true);
       if (J.active) return;
       J.active = true; J.id = e.pointerId; J.ox = e.clientX; J.oy = e.clientY; J.dx = 0; J.dy = 0; J.show = e.pointerType !== 'mouse' || true;
@@ -21,7 +23,8 @@ const INPUT = {
       J.dx = dx; J.dy = dy;
     });
     const up = e => { if (e.pointerId === J.id) { J.active = false; J.dx = J.dy = 0; } };
-    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
+    el.addEventListener('contextmenu', e => e.preventDefault());
   },
   block: false,
   get() {
@@ -70,13 +73,15 @@ const CAM = {
     return false;
   },
   update(dt, snap) {
-    const t = PL.kind, asp = innerWidth / innerHeight, gk = t === 'truck' ? PL.geo.cam : 1;
+    // (a frame that is 0 px wide for a moment must not leave the camera at NaN for good)
+    const t = PL.kind, asp = innerWidth > 0 && innerHeight > 0 ? innerWidth / innerHeight : 1.6, gk = t === 'truck' ? PL.geo.cam : 1;
     const port = asp < 0.9;
     const base = port ? (t === 'truck' ? 15 : t === 'blower' ? 11.5 : 10.5) : (t === 'truck' ? 18 : t === 'blower' ? 13 : 11.8);
     const wantW = port ? (t === 'truck' ? 13 : t === 'blower' ? 9.5 : 8.2) : (t === 'truck' ? 20 : t === 'blower' ? 13 : 11.5);
     const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * asp);
     const d = Math.max(base * gk, (wantW * gk / 2) / Math.tan(hf / 2) * 0.82);
-    this.d = snap ? d : damp(this.d, d, 2.2, dt);
+    this.d = snap || !Number.isFinite(this.d) ? d : damp(this.d, d, 2.2, dt);
+    if (!Number.isFinite(this.x) || !Number.isFinite(this.z)) { this.x = PL.x; this.z = PL.z; }
     const fx = Math.sin(PL.h), fz = Math.cos(PL.h);
     const ahead = t === 'truck' ? 1.0 + Math.max(0, PL.spd) * 0.15 : 0.45 + PL.moveAmt * 0.8;
     const tx = PL.x + fx * ahead, tz = PL.z + fz * ahead - (t === 'truck' ? 0.6 : 0.5);
@@ -267,6 +272,22 @@ const BOT = {
     }
     return pts;
   },
+  // human-paced test player: when the nearest snow does not come off for a while (a spot the machine cannot reach),
+  // look elsewhere in the job for a bit, like a person would
+  humanPick(a, p) {
+    const prog = a.cleared;
+    if (this._hp === undefined || prog > this._hp || this._ha !== a.id) { this._hp = prog; this._hs = 0; this._ha = a.id; } else this._hs += 0.35;
+    if (this._hs > 4) { this._hav = { x: p.x, z: p.z, t: 14 }; this._hs = 0; this._hr = null; }
+    if (this._hav && (this._hav.t -= 0.35) <= 0) this._hav = null;
+    if (!this._hav || Math.hypot(p.x - this._hav.x, p.z - this._hav.z) > 2.5) return p;
+    if (this._hr && (this._hr.t -= 0.35) > 0 && SNOW.depth(this._hr.x, this._hr.z) > 0.06) return this._hr;
+    const rs = a.lot ? [a.lot.drive, a.lot.path] : a.rects;
+    for (let n = 0; n < 300; n++) {
+      const r = rs[(Math.random() * rs.length) | 0], x = rnd(r.x0, r.x1), z = rnd(r.z0, r.z1), k = SNOW.idx(x, z);
+      if (k >= 0 && SNOW.A[k] === a.id && SNOW.T[k] === 1 && SNOW.H[k] > 0.08 && Math.hypot(x - this._hav.x, z - this._hav.z) > 2.5) { this._hr = { x, z, t: 3 }; return this._hr; }
+    }
+    return p;
+  },
   laneHasSnow(L) { const A = L[2] || L[0], B = L[3] || L[1]; for (let k = 0; k <= 10; k++) { const x = lerp(A[0], B[0], k / 10), z = lerp(A[1], B[1], k / 10); if (SNOW.depth(x, z) > 0.06 && SNOW.type(x, z) === 1) return true; } return false; },
   mark(k) { if (!this.last[k]) { this.last[k] = GAME.time; this.log.push(k + '@' + GAME.time.toFixed(1)); console.log('[BOT]', k, GAME.time.toFixed(1)); } },
   get(dt) {
@@ -290,7 +311,7 @@ const BOT = {
       }
       // lane sweeping on the goal area (efficient, human-like)
       const a0 = SNOW.areas[SNOW.hlArea] || null;
-      if (a0 && !a0.done) {
+      if (a0 && !a0.done && !this.human) {
         if (this.laneArea !== a0.id + PL.tool) { this.laneArea = a0.id + PL.tool; this.laneList = this.lanes(a0, PL.stats().w, truck); this.li = 0; this.lp = 0; }
         while (this.li < this.laneList.length && this.lp === 0 && !this.laneHasSnow(this.laneList[this.li])) this.li++;
         if (this.li < this.laneList.length) {
@@ -302,11 +323,12 @@ const BOT = {
           if (this.li < this.laneList.length) { const w2 = this.laneList[this.li][this.lp]; this.tgt = { x: w2[0], z: w2[1] }; this.rt = 0.35; }
         }
       }
-      if ((this.rt <= 0 || !this.tgt) && (!a0 || this.li >= (this.laneList || []).length)) {
+      if ((this.rt <= 0 || !this.tgt) && (!a0 || this.human || this.li >= (this.laneList || []).length)) {
         this.rt = 0.35;
         let a = SNOW.areas[SNOW.hlArea] || null;
         let p = a && !a.done ? SNOW.nearestSnow(PL.x + Math.sin(PL.h) * (truck ? 4 : 1), PL.z + Math.cos(PL.h) * (truck ? 4 : 1), a.id, 0.04, 150) : null;
         if (p && truck && !this.okCell(...this.cell(p.x, p.z), true) && CH.botTarget) p = CH.botTarget(p);
+        if (this.human && a && p) p = this.humanPick(a, p);
         if (!p) p = SNOW.nearestSnow(PL.x, PL.z, 0, 0.05, 150);
         this.tgt = p;
       }
@@ -352,6 +374,34 @@ const BOT = {
     }
     const l = Math.hypot(dx, dz) || 1;
     return { x: dx / l, y: -dz / l };
+  }
+};
+
+// test only (?bot&human): a rougher, human-paced player, to see how long a normal player needs.
+// no tidy lanes (it heads for the nearest snow it sees), slow and shaky steering, short pauses, buys a few seconds late
+const HUMAN = {
+  out: { x: 0, y: 0 }, acc: 0, idle: 0, nextIdle: 35, wait: -1,
+  init() {
+    BOT.human = true;
+    const get = BOT.get.bind(BOT), buy = BOT.buy.bind(BOT);
+    BOT.buy = () => {
+      const c0 = UI.shownCoins(), nt = GAME.nextTool(), t = PL.tool;
+      const can = (nt && !TIER[nt].gift && !GAME.toolLocked(nt) && (GAME.owned[nt] || c0 >= TIER[nt].cost)) || [0, 1, 2].some(i => c0 >= GAME.upCost(t, i));
+      if (!can) { this.wait = -1; return; }
+      if (this.wait < 0) this.wait = rnd(2, 8);
+      if ((this.wait -= this._dt || 0) <= 0) { this.wait = -1; buy(); }
+    };
+    BOT.get = (dt) => {
+      this._dt = dt; this.acc += dt;
+      if (this.idle > 0) { this.idle -= dt; BOT.buy(); return { x: 0, y: 0 }; }
+      if ((this.nextIdle -= dt) <= 0) { this.nextIdle = rnd(25, 45); this.idle = rnd(1, 2.5); }
+      if (this.acc >= 0.3) {
+        const o = get(this.acc); this.acc = 0;
+        const n = (Math.random() + Math.random() + Math.random() - 1.5) * 0.42, c = Math.cos(n), s = Math.sin(n);
+        this.out = { x: o.x * c - o.y * s, y: o.x * s + o.y * c };
+      } else BOT.buy();
+      return this.out;
+    };
   }
 };
 
@@ -404,12 +454,19 @@ async function boot() {
   CREW.init(scene);
   if (STORE.get('plowtown_mute') === '1') AUD.muted = true;
   const resumed = GAME.loadChapter();
+  SNOW.flush(true);
   // the CrazyGames SDK turned up late: send our progress up, unless the account already holds a newer game
   // (played on another device) - then this session leaves the account alone and the next start picks that one up
   CG.onLate = () => {
     let c = null; try { c = JSON.parse(CG.get('plowtown_v4') || 'null'); } catch (e) { c = null; }
-    if (c && (c.t || 0) > (GAME.loadedT || 0) + 2000) CG.hold = true; else GAME.save();
+    const mine = GAME.baseU == null || CG.uid === undefined || GAME.baseU === CG.uid;
+    // the account has a game that got further than the one this start found on the device (a new phone, cleared data,
+    // a slow line) - or this start began from another player's game on a shared computer: carry on from the account's
+    if (c && c.v === GAME.ver && (!mine || GAME.better(c, { earned: GAME.earned, t: GAME.loadedT }))) { GAME.adopt(c); return; }
+    if (!c && !mine) { GAME.adopt(null); return; }
+    CG.hold = false; GAME.save();
   };
+  CG.runLate();
   for (let i = 0; i < Math.min(GAME.crew || 0, CREW_DEFS.length); i++) CREW.join(i, true);
   // test shortcut: ?skip=truck|dumpplow|groomer jumps to that stage (driveways done, tools owned)
   if (QS.has('skip') && CH.id === 1) {
@@ -422,19 +479,20 @@ async function boot() {
   UI.init();
   CHUI.init();
   INPUT.init($('c'));
-  if (QS.has('bot')) { BOT.init(); window.__hold = !QS.has('vid'); }
+  if (QS.has('bot')) { BOT.init(); if (QS.has('human')) HUMAN.init(); window.__hold = !QS.has('vid'); }
   lb.style.width = '100%';
   CAM.update(0, true);
   if (!resumed && !QS.has('bot') && !QS.has('nointro')) { CAM.intro = 1; setTimeout(() => CHUI.intro(), 700); }
   onResize(); addEventListener('resize', onResize);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) GAME.save(); if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
+  // a hidden tab gets no frames, so tell CrazyGames right here that play stopped (frames turn it back on)
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { GAME.save(); CG.play(false); } if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
   // warm up shaders
   renderer.compile(scene, CAM.cam);
   setTimeout(() => { $('loading').classList.add('off'); CG.loadingStop(); }, 150);
   // iOS wants a touchend / click to wake the sound up again
   for (const ev of ['touchend', 'click']) addEventListener(ev, () => AUD.init(), { passive: true });
   // a new day: the daily gift (after the chapter card when there is one)
-  const run = DAILY.check();
+  const run = DAILY.check(); if (run) DAILY.pay(run);
   if (!resumed) CH.firstHint = IS_TOUCH ? 'Drag anywhere to move' : 'Move with WASD / arrows or drag';
   else if (GAME.ended && chapterById(CH.id + 1)) {
     // back in a chapter you already finished: point at the way on (after the daily gift banner, if there is one)
@@ -445,7 +503,7 @@ async function boot() {
   if (run) { if (resumed || QS.has('nointro')) setTimeout(() => DAILY.give(run), 1800); else CH.dailyGift = run; }
   console.log('boot ms', Math.round(performance.now() - t0));
   window.__ready = true;
-  window.__render = () => { SNOW.flush(); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
+  window.__render = () => { SNOW.flush(true); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
   window.__step = (n, dt) => { for (let i = 0; i < n; i++) step(dt || 1 / 30); };
   last = performance.now();
   requestAnimationFrame(frame);
@@ -485,7 +543,7 @@ function step(dt) {
 function frame(now) {
   requestAnimationFrame(frame);
   // you can play the moment the town shows (the chapter card and the fly-in never block): that is gameplay for CrazyGames
-  CG.play(!CHUI.open && !document.hidden && $('loading').classList.contains('off'));
+  CG.play(!CHUI.open && !CHUI._going && !document.hidden && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (dt <= 0) return;

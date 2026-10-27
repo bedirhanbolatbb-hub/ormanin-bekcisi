@@ -1,10 +1,12 @@
 // ---------- procedural audio (no files) ----------
 const AUD = {
-  ctx: null, ok: false, _um: false, musicOn: true,
+  ctx: null, _ok: false, _um: false, musicOn: true,
+  // sounds only go out while the audio is really running (a suspended one would queue them all up and fire them at once)
+  get ok() { return this._ok && this.ctx.state === 'running'; },
   // your own mute button, or the CrazyGames site setting
   get muted() { return this._um || (typeof CG !== 'undefined' && CG.mute); }, set muted(v) { this._um = !!v; },
   init() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    if (this.ctx) { if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') { try { const p = this.ctx.resume(); if (p && p.catch) p.catch(() => { }); } catch (e) { } } return; }
     try {
       const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
       const ctx = this.ctx = new C();
@@ -35,7 +37,7 @@ const AUD = {
       this.blowN = this._loopNoise(this.noise, 'bandpass', 2400, 0.6);
       // wind
       this.wind = this._loopNoise(this.brown, 'lowpass', 520, 0.5); this.wind.g.gain.value = 0.05;
-      this.ok = true;
+      this._ok = true;
       this._musT = ctx.currentTime + 0.3; this._musStep = 0;
     } catch (e) { console.warn('audio', e); }
   },
@@ -190,6 +192,8 @@ const AUD = {
     if (!this.musicOn) return;
     const S = this.song || SONG_MAPLE, step = 60 / S.bpm / (S.div || 2), spb = S.spb || 8, cpb = S.cpb || 1;
     const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+    // after a long pause (muted, hidden) the music picks up from now instead of playing every missed note at once
+    if (this._musT < ctx.currentTime - 0.2) this._musT = ctx.currentTime + 0.05;
     while (this._musT < ctx.currentTime + 0.4) {
       const st = this._musStep, t = this._musT;
       const bar = Math.floor(st / spb), chord = S.prog[Math.floor(bar / cpb) % S.prog.length], inBar = st % spb;
