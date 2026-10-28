@@ -9,7 +9,15 @@ for f in sorted(glob.glob(os.path.join(src,'*.js'))):
     js+='\n// ==== '+os.path.basename(f)+' ====\n'+open(f,encoding='utf-8').read()
 # player log library (ByteBrew web SDK, MIT) goes first, so errors are caught from the very start
 bb=os.path.join(root,'vendor','bytebrew.js')
-if os.path.exists(bb): js='\n// ==== bytebrew.js ====\n'+open(bb,encoding='utf-8').read()+'\n'+js
+if os.path.exists(bb):
+    sdk=open(bb,encoding='utf-8').read()
+    # The library remembers the player in cookies whose names are the same for every game on a site.
+    # Grovehold lives on the same site, so a Grovehold player looked like a known Plow Crew player and the
+    # log service refused the session. Plow Crew gets its own names, so each game knows its players apart.
+    for a,b in [('"bb_u_id"','"pc_u_id"'),('"bb_u_h_init"','"pc_u_h_init"'),('"bb_tr_on"','"pc_tr_on"')]:
+        assert sdk.count(a)==1,'bytebrew.js changed: '+a
+        sdk=sdk.replace(a,b)
+    js='\n// ==== bytebrew.js ====\n'+sdk+'\n'+js
 ver=open(os.path.join(root,'VERSION')).read().strip() if os.path.exists(os.path.join(root,'VERSION')) else 'dev'
 js=js.replace('__VER__',ver)
 html=html.replace('/*FONTS*/',fonts).replace('/*GAME*/',js)
