@@ -401,10 +401,16 @@ const PCLOG = (function () {
   const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (_) { } return null; };
   let userOff = store(OFFK) === '1';
   const force = /[?&]privnote/.test(location.search);
-  // (tests and the developer's own machine never send anything)
+  // (tests and the developer's own machine never send anything; an app that serves the game from its own
+  //  "localhost" over https or its own address still counts as a real player)
   function blocked() {
-    return !ID || !KEY || location.protocol === 'file:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ||
+    return !ID || !KEY || location.protocol === 'file:' || (location.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ||
       /[?&](nolog|bot)(&|=|$)/.test(location.search);
+  }
+  // where the game is played, as a plain word (a site's own address can carry keys that are none of our business)
+  function where() {
+    const h = String(location.hostname || '');
+    return /crazygames/i.test(h) ? 'crazygames' : /github\.io$/i.test(h) ? 'web' : (h.split('.').slice(-2).join('.') || location.protocol).slice(0, 30);
   }
   function init() {
     if (ok || userOff || blocked()) return;
@@ -429,12 +435,12 @@ const PCLOG = (function () {
   }
   function err(kind, msg, src) {
     if (!ok || userOff || errs >= 6) return; errs++;
-    ev('pc_error', { kind, msg: String(msg || '').slice(0, 90), src: String(src || '').split('/').pop().slice(0, 60) });
+    ev('pc_error', { kind, msg: String(msg || '').replace(/[?#]\S*/g, '').slice(0, 90), src: String(src || '').split(/[?#]/)[0].split('/').pop().slice(0, 60) });
   }
   // errors are caught from the very start (a game that never loads must show up too)
   function early() {
     init(); if (!ok || handlers) return; handlers = true;
-    addEventListener('error', e => { const er = e.error; err('error', (er && er.message) || e.message, (e.filename || '') + ':' + (e.lineno || 0)); });
+    addEventListener('error', e => { const er = e.error; err('error', (er && er.message) || e.message, String(e.filename || '').split(/[?#]/)[0] + ':' + (e.lineno || 0)); });
     addEventListener('unhandledrejection', e => { const r = e.reason; err('promise', (r && (r.message || r.name)) || String(r), ''); });
   }
   function bootFail(e) { ev('pc_boot_fail', { msg: String((e && e.message) || e).slice(0, 90) }); }
@@ -442,7 +448,7 @@ const PCLOG = (function () {
   function start(resumed) {
     if (!ok || userOff || started) return; started = true;
     let ret = 'new'; try { ret = GAME.earned > 0 || GAME.chapter > 1 ? 'back' : 'new'; } catch (_) { }
-    ev('pc_start', { ret, resumed: resumed ? '1' : '0', dev: IS_TOUCH ? 'touch' : 'mouse', scr: innerWidth + 'x' + innerHeight, host: String(location.hostname).slice(0, 40) });
+    ev('pc_start', { ret, resumed: resumed ? '1' : '0', dev: IS_TOUCH ? 'touch' : 'mouse', scr: innerWidth + 'x' + innerHeight, host: where() });
     const wrap = (obj, fn, after) => { const f = obj[fn]; if (typeof f !== 'function') return; obj[fn] = function () { const r = f.apply(this, arguments); try { after.apply(this, arguments); } catch (_) { } return r; }; };
     wrap(GAME, 'completeArea', (a, silent) => { if (!silent && a && !a.quiet) ev('pc_job', { job: a.key, jobs: String(Object.keys(GAME.done).length) }); });
     wrap(GAME, 'buyTool', (t) => ev('pc_tool', { buy: t }));
