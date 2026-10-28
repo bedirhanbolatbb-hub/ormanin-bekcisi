@@ -27,7 +27,7 @@ const CHUI = {
     const k = Math.min(1, innerHeight * (room || 0.96) / Math.max(1, w.offsetHeight));
     if (k < 1) w.style.transform = `scale(${k.toFixed(3)})`;
   },
-  refit() { if (this.introUp) this.fit($('chIntro'), 0.9); if (this.open === 'chRes') this.fit($('chRes')); },
+  refit() { if (this.introUp) this.fit($('chIntro'), 0.9); if (this.open === 'chRes' || this.open === 'chPriv') this.fit($(this.open)); },
   _show(id, html) {
     const el = $(id); el.innerHTML = html; el.classList.add('on'); this.open = id; INPUT.block = true;
     return el;
@@ -41,10 +41,12 @@ const CHUI = {
     const C = CH, el = $('chIntro');
     el.innerHTML = `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
       <div class="chcard"><div class="chico">${CH_ICONS[C.key] || ''}</div><p>${C.intro}</p>${C.twist ? `<div class="chtwist">${C.twist}</div>` : ''}</div>
-      <button class="chgo" id="chGo">LET'S GO!</button></div>`;
+      <button class="chgo" id="chGo">LET'S GO!</button>${PCLOG.noticeDue() ? '<div class="chnote">We keep play stats to fix bugs. <button id="chPrivBtn">Privacy</button></div>' : ''}</div>`;
     el.classList.remove('out'); el.classList.add('on', 'soft'); this.introUp = true; document.body.classList.add('chsoft'); this.fit(el, 0.9);
     // the button starts it, but so does any touch, click or key (see INPUT); a drag from the button drives right away
     $('chGo').onpointerdown = (e) => { e.stopPropagation(); INPUT.start(e); AUD.click(); };
+    // (new players see a one-line privacy note here once; the full card waits with the chapter until it is closed)
+    const pb = $('chPrivBtn'); if (pb) pb.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); clearTimeout(this._introT); this.privacy('intro'); };
     clearTimeout(this._introT); this._introT = setTimeout(() => this.introGo(false), 4700);
     AUD.init && AUD.chapterIn && AUD.chapterIn();
   },
@@ -94,7 +96,8 @@ const CHUI = {
         <div class="chinfo"><b>${C.id}. ${C.name}</b><span>${C.tag}</span><div class="mstars">${stars}</div></div>
         <div class="chbtn">${!open ? '🔒' : C.id === CH.id ? 'HERE' : 'PLAY'}</div></div>`;
     }).join('') + '<div class="chrow soon"><div class="chinfo"><b>More chapters soon</b><span>New places, new machines</span></div></div>';
-    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><button class="chlink" id="chMapX">Close</button></div>`);
+    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><div class="chlinks"><button class="chlink" id="chMapX">Close</button>${PCLOG.avail() ? '<button class="chlink sm" id="chPrivLink">Privacy</button>' : ''}</div></div>`);
+    { const p = $('chPrivLink'); if (p) p.onpointerdown = (e) => { e.stopPropagation(); AUD.click(); this.privacy('map'); }; }
     // (a long list: start with the chapter you are in shown in the middle)
     { const L = el.querySelector('.chlist'), cur = el.querySelector('.chrow.cur'); if (L && cur) L.scrollTop = Math.max(0, cur.offsetTop - L.offsetTop - (L.clientHeight - cur.offsetHeight) / 2); }
     // a tap (not a touch that starts scrolling the list) picks a chapter
@@ -112,6 +115,26 @@ const CHUI = {
       AUD.click(); this.go(id);
     });
     $('chMapX').onpointerdown = (e) => { e.stopPropagation(); this.close('chMap'); };
+  },
+  // what the play stats are, and a switch to turn them off (from the chapter map, or the note on a chapter card)
+  privacy(back) {
+    if (this.open === 'chMap') this.close('chMap');
+    document.body.classList.add('privup');   // (the chapter card waits out of sight underneath)
+    const on = PCLOG.isOn();
+    const el = this._show('chPriv', `<div class="chwrap"><div class="chname sm">PRIVACY</div>
+      <div class="chcard chpriv"><p><b>Plow Crew keeps play stats</b> so we can find bugs and make the game better.</p>
+      <p><b>What is sent:</b> how far you get and how long you play, the jobs and machines you use, errors, how smoothly the game runs, your screen size, device type, language and country. A random player number is kept in a cookie, so visits can be told apart.</p>
+      <p><b>Never sent:</b> your name, email or anything you type. We don't sell this data or use it for ads.</p>
+      <p>The stats go to ByteBrew (bytebrew.io), the analytics service we use.</p></div>
+      <div class="ptog"><span>Play stats: <b id="privState">${on ? 'ON' : 'OFF'}</b></span><button id="privTog">${on ? 'Turn off' : 'Turn on'}</button></div>
+      <button class="chgo sm" id="privX">OK</button></div>`);
+    this.fit(el);
+    $('privTog').onpointerdown = (e) => { e.stopPropagation(); AUD.click(); const now = !PCLOG.isOn(); PCLOG.setOn(now); $('privState').textContent = now ? 'ON' : 'OFF'; $('privTog').textContent = now ? 'Turn off' : 'Turn on'; };
+    $('privX').onpointerdown = (e) => {
+      e.stopPropagation(); AUD.click(); document.body.classList.remove('privup'); this.close('chPriv');
+      if (back === 'map') this.map();
+      else if (this.introUp) { clearTimeout(this._introT); this._introT = setTimeout(() => this.introGo(false), 2500); }
+    };
   },
   // snowy wipe to another chapter
   go(id) {

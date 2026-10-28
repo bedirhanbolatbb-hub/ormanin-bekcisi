@@ -236,6 +236,21 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 .chrow.sure .chbtn{background:#ff8a1e;box-shadow:0 3px 0 #c8650a;}
 .chwarn{margin-top:8px;min-height:18px;font-weight:800;font-size:14px;color:#ffd34d;text-align:center;}
 .chwarn:empty{display:none;}
+/* privacy: a one-line note on the chapter card for new players, and the full card (from the chapter map) */
+.chnote{margin-top:12px;font-weight:800;font-size:13px;color:#fff;text-align:center;background:rgba(20,30,52,.5);padding:1px 4px 1px 12px;border-radius:999px;}
+.chnote button{background:none;color:#ffe27a;font:inherit;font-weight:800;text-decoration:underline;padding:6px 8px 6px 2px;pointer-events:auto;}
+.chlinks{display:flex;gap:24px;align-items:baseline;justify-content:center;}
+.chlink.sm{font-size:13px;opacity:.7;}
+#chPriv{z-index:45;}
+body.privup #chIntro{visibility:hidden;}
+#chPriv .chwrap{width:min(480px,94vw);}
+.chpriv{text-align:left;max-height:min(46vh,330px);overflow-y:auto;padding:12px 16px;margin-top:12px;}
+.chpriv p{margin:0 0 8px;font-size:14px;line-height:1.38;font-weight:700;color:#53627d;}
+.chpriv p:last-child{margin-bottom:0;}
+.chpriv b{color:#2b3a55;}
+.ptog{margin-top:12px;display:flex;align-items:center;gap:12px;background:#fff;border-radius:999px;padding:5px 6px 5px 16px;font-weight:800;font-size:15px;color:#2b3a55;box-shadow:0 5px 0 #c9d5e4;}
+.ptog button{background:#eef4fb;color:#2a6fd6;font-weight:800;font-size:14px;padding:6px 14px;border-radius:999px;}
+.chgo.sm{font-size:21px;padding:6px 40px;margin-top:14px;animation:none;}
 #chFade{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(#7aa7dc,#cfe0f1 70%,#eef4fa);}
 #chFade.on{display:flex;animation:fadein .5s;}
 @media (max-width:640px){
@@ -298,7 +313,7 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
   <div id="timer"><div class="ti-ico"></div><b id="timerTxt">0:30</b><div class="ti-route"><i class="rb"></i><i class="rm"></i></div><span id="timerSub"></span></div>
   <button id="btnMap" aria-label="chapters"></button>
 </div>
-<div id="chIntro" class="chov"></div><div id="chRes" class="chov"></div><div id="chMap" class="chov"></div><div id="chFade"></div>
+<div id="chIntro" class="chov"></div><div id="chRes" class="chov"></div><div id="chMap" class="chov"></div><div id="chPriv" class="chov"></div><div id="chFade"></div>
 <div id="loading"><div class="flakes" id="flakes"></div><div class="logo">PLOW CREW<small>SNOW DAY RUSH</small></div><div class="lbar"><i id="loadbar"></i></div><div id="loadmsg">Loading the town…</div></div>
 <script>(function(){var f=document.getElementById('flakes');for(var i=0;i<40;i++){var e=document.createElement('i');var s=3+Math.random()*7;e.style.left=Math.random()*100+'%';e.style.width=e.style.height=s+'px';e.style.animationDuration=(4+Math.random()*6)+'s';e.style.animationDelay=(-Math.random()*8)+'s';f.appendChild(e);}})();</script>
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
@@ -376,18 +391,23 @@ addEventListener('keydown', e => { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'Ar
 addEventListener('wheel', e => { if (!(e.target && e.target.closest && e.target.closest('.chlist'))) e.preventDefault(); }, { passive: false });
 
 // ==== a2_log.js ====
-// ---------- player log (ByteBrew): where players stop, what goes wrong. No personal data. ----------
-// Off in tests (bot / nolog / localhost / file) and while the app keys below are empty.
+// ---------- player log (ByteBrew): where players stop, what goes wrong. No names, emails or anything typed. ----------
+// Off in tests (bot / nolog / localhost / file), and when the player switches it off (Privacy card, in the chapter map).
 const PCLOG = (function () {
   const ID = 'HG2tnhs8A', KEY = 'RfKAdPyMuIAyddUs05TnQW5uBBfGgJweyT66irHFQsM7YzhCNgRJN6PCNhl3dRKE', VER = 'v5.1';
-  let ok = false, errs = 0, hid = false, started = false, aliveT = 0, unst = 0;
+  const OFFK = 'pc_nostats', SEENK = 'pc_privseen';
+  let ok = false, errs = 0, hid = false, started = false, aliveT = 0, unst = 0, handlers = false;
   const t0 = Date.now();
-  function off() {
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (_) { } return null; };
+  let userOff = store(OFFK) === '1';
+  const force = /[?&]privnote/.test(location.search);
+  // (tests and the developer's own machine never send anything)
+  function blocked() {
     return !ID || !KEY || location.protocol === 'file:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ||
       /[?&](nolog|bot)(&|=|$)/.test(location.search);
   }
   function init() {
-    if (ok || off()) return;
+    if (ok || userOff || blocked()) return;
     try { if (window.ByteBrew) { window.ByteBrew.initializeByteBrew(ID, KEY, VER); ok = true; } } catch (e) { ok = false; }
   }
   function mins() { return Math.round((Date.now() - t0) / 6000) / 10; }
@@ -401,26 +421,26 @@ const PCLOG = (function () {
   const ready = () => { try { return !!window.ByteBrew.isByteBrewInitialized(); } catch (_) { return false; } };
   function send(name, o) { try { window.ByteBrew.newCustomEvent(name, o); } catch (_) { } }
   function ev(name, extra) {
-    if (!ok) return;
+    if (!ok || userOff) return;
     let o; try { o = Object.assign(base(), extra || {}); for (const k in o) o[k] = String(o[k]).replace(/[;:=]/g, ' ').slice(0, 90); } catch (_) { return; }
     if (ready()) { send(name, o); return; }
     if (waiting.length < 30) waiting.push([name, o]);
-    if (!pump) pump = setInterval(() => { if (ready()) { clearInterval(pump); while (waiting.length) send(...waiting.shift()); } else if (++tries > 60) { clearInterval(pump); waiting.length = 0; } }, 1000);
+    if (!pump) pump = setInterval(() => { if (userOff) { clearInterval(pump); pump = 0; waiting.length = 0; } else if (ready()) { clearInterval(pump); pump = 0; while (waiting.length) send(...waiting.shift()); } else if (++tries > 60) { clearInterval(pump); waiting.length = 0; } }, 1000);
   }
   function err(kind, msg, src) {
-    if (!ok || errs >= 6) return; errs++;
+    if (!ok || userOff || errs >= 6) return; errs++;
     ev('pc_error', { kind, msg: String(msg || '').slice(0, 90), src: String(src || '').split('/').pop().slice(0, 60) });
   }
   // errors are caught from the very start (a game that never loads must show up too)
   function early() {
-    init(); if (!ok) return;
+    init(); if (!ok || handlers) return; handlers = true;
     addEventListener('error', e => { const er = e.error; err('error', (er && er.message) || e.message, (e.filename || '') + ':' + (e.lineno || 0)); });
     addEventListener('unhandledrejection', e => { const r = e.reason; err('promise', (r && (r.message || r.name)) || String(r), ''); });
   }
   function bootFail(e) { ev('pc_boot_fail', { msg: String((e && e.message) || e).slice(0, 90) }); }
   // once the game runs: hooks around a few game moments (the game itself is not changed)
   function start(resumed) {
-    if (!ok || started) return; started = true;
+    if (!ok || userOff || started) return; started = true;
     let ret = 'new'; try { ret = GAME.earned > 0 || GAME.chapter > 1 ? 'back' : 'new'; } catch (_) { }
     ev('pc_start', { ret, resumed: resumed ? '1' : '0', dev: IS_TOUCH ? 'touch' : 'mouse', scr: innerWidth + 'x' + innerHeight, host: String(location.hostname).slice(0, 40) });
     const wrap = (obj, fn, after) => { const f = obj[fn]; if (typeof f !== 'function') return; obj[fn] = function () { const r = f.apply(this, arguments); try { after.apply(this, arguments); } catch (_) { } return r; }; };
@@ -438,7 +458,21 @@ const PCLOG = (function () {
     addEventListener('pagehide', bye);
     document.addEventListener('visibilitychange', () => { if (document.hidden) bye(); else hid = false; });
   }
-  return { early, start, ev, err, bootFail, on: () => ok };
+  // the Privacy card: the player can switch the stats off, and back on (remembered on this device)
+  function setOn(on) {
+    userOff = !on; store(OFFK, on ? null : '1');
+    const B = window.ByteBrew; if (!B || blocked()) return;
+    if (!on) { waiting.length = 0; try { B.stopTracking(); } catch (_) { } return; }
+    try { B.restartTracking(); } catch (_) { }   // (the library's own switch goes back on; if it ran in this page it starts again by itself)
+    if (!ok) { early(); if (window.__ready) start(false); }
+  }
+  // a short note on the chapter card for players who have not seen it yet
+  function noticeDue() {
+    if (force) return true;
+    if (blocked() || store(SEENK)) return false;
+    store(SEENK, '1'); return true;
+  }
+  return { early, start, ev, err, bootFail, on: () => ok && !userOff, isOn: () => !userOff, setOn, noticeDue, avail: () => force || !blocked() };
 })();
 PCLOG.early();
 
@@ -5882,7 +5916,7 @@ const CHUI = {
     const k = Math.min(1, innerHeight * (room || 0.96) / Math.max(1, w.offsetHeight));
     if (k < 1) w.style.transform = `scale(${k.toFixed(3)})`;
   },
-  refit() { if (this.introUp) this.fit($('chIntro'), 0.9); if (this.open === 'chRes') this.fit($('chRes')); },
+  refit() { if (this.introUp) this.fit($('chIntro'), 0.9); if (this.open === 'chRes' || this.open === 'chPriv') this.fit($(this.open)); },
   _show(id, html) {
     const el = $(id); el.innerHTML = html; el.classList.add('on'); this.open = id; INPUT.block = true;
     return el;
@@ -5896,10 +5930,12 @@ const CHUI = {
     const C = CH, el = $('chIntro');
     el.innerHTML = `<div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">${C.name}</div><div class="chtag">${C.tag}</div>
       <div class="chcard"><div class="chico">${CH_ICONS[C.key] || ''}</div><p>${C.intro}</p>${C.twist ? `<div class="chtwist">${C.twist}</div>` : ''}</div>
-      <button class="chgo" id="chGo">LET'S GO!</button></div>`;
+      <button class="chgo" id="chGo">LET'S GO!</button>${PCLOG.noticeDue() ? '<div class="chnote">We keep play stats to fix bugs. <button id="chPrivBtn">Privacy</button></div>' : ''}</div>`;
     el.classList.remove('out'); el.classList.add('on', 'soft'); this.introUp = true; document.body.classList.add('chsoft'); this.fit(el, 0.9);
     // the button starts it, but so does any touch, click or key (see INPUT); a drag from the button drives right away
     $('chGo').onpointerdown = (e) => { e.stopPropagation(); INPUT.start(e); AUD.click(); };
+    // (new players see a one-line privacy note here once; the full card waits with the chapter until it is closed)
+    const pb = $('chPrivBtn'); if (pb) pb.onpointerdown = (e) => { e.stopPropagation(); AUD.init(); AUD.click(); clearTimeout(this._introT); this.privacy('intro'); };
     clearTimeout(this._introT); this._introT = setTimeout(() => this.introGo(false), 4700);
     AUD.init && AUD.chapterIn && AUD.chapterIn();
   },
@@ -5949,7 +5985,8 @@ const CHUI = {
         <div class="chinfo"><b>${C.id}. ${C.name}</b><span>${C.tag}</span><div class="mstars">${stars}</div></div>
         <div class="chbtn">${!open ? '🔒' : C.id === CH.id ? 'HERE' : 'PLAY'}</div></div>`;
     }).join('') + '<div class="chrow soon"><div class="chinfo"><b>More chapters soon</b><span>New places, new machines</span></div></div>';
-    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><button class="chlink" id="chMapX">Close</button></div>`);
+    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><div class="chlinks"><button class="chlink" id="chMapX">Close</button>${PCLOG.avail() ? '<button class="chlink sm" id="chPrivLink">Privacy</button>' : ''}</div></div>`);
+    { const p = $('chPrivLink'); if (p) p.onpointerdown = (e) => { e.stopPropagation(); AUD.click(); this.privacy('map'); }; }
     // (a long list: start with the chapter you are in shown in the middle)
     { const L = el.querySelector('.chlist'), cur = el.querySelector('.chrow.cur'); if (L && cur) L.scrollTop = Math.max(0, cur.offsetTop - L.offsetTop - (L.clientHeight - cur.offsetHeight) / 2); }
     // a tap (not a touch that starts scrolling the list) picks a chapter
@@ -5967,6 +6004,26 @@ const CHUI = {
       AUD.click(); this.go(id);
     });
     $('chMapX').onpointerdown = (e) => { e.stopPropagation(); this.close('chMap'); };
+  },
+  // what the play stats are, and a switch to turn them off (from the chapter map, or the note on a chapter card)
+  privacy(back) {
+    if (this.open === 'chMap') this.close('chMap');
+    document.body.classList.add('privup');   // (the chapter card waits out of sight underneath)
+    const on = PCLOG.isOn();
+    const el = this._show('chPriv', `<div class="chwrap"><div class="chname sm">PRIVACY</div>
+      <div class="chcard chpriv"><p><b>Plow Crew keeps play stats</b> so we can find bugs and make the game better.</p>
+      <p><b>What is sent:</b> how far you get and how long you play, the jobs and machines you use, errors, how smoothly the game runs, your screen size, device type, language and country. A random player number is kept in a cookie, so visits can be told apart.</p>
+      <p><b>Never sent:</b> your name, email or anything you type. We don't sell this data or use it for ads.</p>
+      <p>The stats go to ByteBrew (bytebrew.io), the analytics service we use.</p></div>
+      <div class="ptog"><span>Play stats: <b id="privState">${on ? 'ON' : 'OFF'}</b></span><button id="privTog">${on ? 'Turn off' : 'Turn on'}</button></div>
+      <button class="chgo sm" id="privX">OK</button></div>`);
+    this.fit(el);
+    $('privTog').onpointerdown = (e) => { e.stopPropagation(); AUD.click(); const now = !PCLOG.isOn(); PCLOG.setOn(now); $('privState').textContent = now ? 'ON' : 'OFF'; $('privTog').textContent = now ? 'Turn off' : 'Turn on'; };
+    $('privX').onpointerdown = (e) => {
+      e.stopPropagation(); AUD.click(); document.body.classList.remove('privup'); this.close('chPriv');
+      if (back === 'map') this.map();
+      else if (this.introUp) { clearTimeout(this._introT); this._introT = setTimeout(() => this.introGo(false), 2500); }
+    };
   },
   // snowy wipe to another chapter
   go(id) {

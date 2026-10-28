@@ -1,15 +1,20 @@
-// ---------- player log (ByteBrew): where players stop, what goes wrong. No personal data. ----------
-// Off in tests (bot / nolog / localhost / file) and while the app keys below are empty.
+// ---------- player log (ByteBrew): where players stop, what goes wrong. No names, emails or anything typed. ----------
+// Off in tests (bot / nolog / localhost / file), and when the player switches it off (Privacy card, in the chapter map).
 const PCLOG = (function () {
   const ID = 'HG2tnhs8A', KEY = 'RfKAdPyMuIAyddUs05TnQW5uBBfGgJweyT66irHFQsM7YzhCNgRJN6PCNhl3dRKE', VER = '__VER__';
-  let ok = false, errs = 0, hid = false, started = false, aliveT = 0, unst = 0;
+  const OFFK = 'pc_nostats', SEENK = 'pc_privseen';
+  let ok = false, errs = 0, hid = false, started = false, aliveT = 0, unst = 0, handlers = false;
   const t0 = Date.now();
-  function off() {
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (_) { } return null; };
+  let userOff = store(OFFK) === '1';
+  const force = /[?&]privnote/.test(location.search);
+  // (tests and the developer's own machine never send anything)
+  function blocked() {
     return !ID || !KEY || location.protocol === 'file:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ||
       /[?&](nolog|bot)(&|=|$)/.test(location.search);
   }
   function init() {
-    if (ok || off()) return;
+    if (ok || userOff || blocked()) return;
     try { if (window.ByteBrew) { window.ByteBrew.initializeByteBrew(ID, KEY, VER); ok = true; } } catch (e) { ok = false; }
   }
   function mins() { return Math.round((Date.now() - t0) / 6000) / 10; }
@@ -23,26 +28,26 @@ const PCLOG = (function () {
   const ready = () => { try { return !!window.ByteBrew.isByteBrewInitialized(); } catch (_) { return false; } };
   function send(name, o) { try { window.ByteBrew.newCustomEvent(name, o); } catch (_) { } }
   function ev(name, extra) {
-    if (!ok) return;
+    if (!ok || userOff) return;
     let o; try { o = Object.assign(base(), extra || {}); for (const k in o) o[k] = String(o[k]).replace(/[;:=]/g, ' ').slice(0, 90); } catch (_) { return; }
     if (ready()) { send(name, o); return; }
     if (waiting.length < 30) waiting.push([name, o]);
-    if (!pump) pump = setInterval(() => { if (ready()) { clearInterval(pump); while (waiting.length) send(...waiting.shift()); } else if (++tries > 60) { clearInterval(pump); waiting.length = 0; } }, 1000);
+    if (!pump) pump = setInterval(() => { if (userOff) { clearInterval(pump); pump = 0; waiting.length = 0; } else if (ready()) { clearInterval(pump); pump = 0; while (waiting.length) send(...waiting.shift()); } else if (++tries > 60) { clearInterval(pump); waiting.length = 0; } }, 1000);
   }
   function err(kind, msg, src) {
-    if (!ok || errs >= 6) return; errs++;
+    if (!ok || userOff || errs >= 6) return; errs++;
     ev('pc_error', { kind, msg: String(msg || '').slice(0, 90), src: String(src || '').split('/').pop().slice(0, 60) });
   }
   // errors are caught from the very start (a game that never loads must show up too)
   function early() {
-    init(); if (!ok) return;
+    init(); if (!ok || handlers) return; handlers = true;
     addEventListener('error', e => { const er = e.error; err('error', (er && er.message) || e.message, (e.filename || '') + ':' + (e.lineno || 0)); });
     addEventListener('unhandledrejection', e => { const r = e.reason; err('promise', (r && (r.message || r.name)) || String(r), ''); });
   }
   function bootFail(e) { ev('pc_boot_fail', { msg: String((e && e.message) || e).slice(0, 90) }); }
   // once the game runs: hooks around a few game moments (the game itself is not changed)
   function start(resumed) {
-    if (!ok || started) return; started = true;
+    if (!ok || userOff || started) return; started = true;
     let ret = 'new'; try { ret = GAME.earned > 0 || GAME.chapter > 1 ? 'back' : 'new'; } catch (_) { }
     ev('pc_start', { ret, resumed: resumed ? '1' : '0', dev: IS_TOUCH ? 'touch' : 'mouse', scr: innerWidth + 'x' + innerHeight, host: String(location.hostname).slice(0, 40) });
     const wrap = (obj, fn, after) => { const f = obj[fn]; if (typeof f !== 'function') return; obj[fn] = function () { const r = f.apply(this, arguments); try { after.apply(this, arguments); } catch (_) { } return r; }; };
@@ -60,6 +65,20 @@ const PCLOG = (function () {
     addEventListener('pagehide', bye);
     document.addEventListener('visibilitychange', () => { if (document.hidden) bye(); else hid = false; });
   }
-  return { early, start, ev, err, bootFail, on: () => ok };
+  // the Privacy card: the player can switch the stats off, and back on (remembered on this device)
+  function setOn(on) {
+    userOff = !on; store(OFFK, on ? null : '1');
+    const B = window.ByteBrew; if (!B || blocked()) return;
+    if (!on) { waiting.length = 0; try { B.stopTracking(); } catch (_) { } return; }
+    try { B.restartTracking(); } catch (_) { }   // (the library's own switch goes back on; if it ran in this page it starts again by itself)
+    if (!ok) { early(); if (window.__ready) start(false); }
+  }
+  // a short note on the chapter card for players who have not seen it yet
+  function noticeDue() {
+    if (force) return true;
+    if (blocked() || store(SEENK)) return false;
+    store(SEENK, '1'); return true;
+  }
+  return { early, start, ev, err, bootFail, on: () => ok && !userOff, isOn: () => !userOff, setOn, noticeDue, avail: () => force || !blocked() };
 })();
 PCLOG.early();
