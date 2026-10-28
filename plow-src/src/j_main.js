@@ -506,6 +506,7 @@ async function boot() {
   if (run) { if (resumed || QS.has('nointro')) setTimeout(() => DAILY.give(run), 1800); else CH.dailyGift = run; }
   console.log('boot ms', Math.round(performance.now() - t0));
   window.__ready = true;
+  PCLOG.start(resumed);
   window.__render = () => { SNOW.flush(true); CAM.update(0, true); updXray(); placeSun(); FX.update(0.001); GUIDE.update(0.016); UI._uiT = 0; UI.update(0.016); renderer.render(scene, CAM.cam); };
   window.__step = (n, dt) => { for (let i = 0; i < n; i++) step(dt || 1 / 30); };
   last = performance.now();
@@ -564,4 +565,4 @@ function frame(now) {
   frameN++;
   if (!QS.has('norender') || frameN % 30 === 0) renderer.render(scene, CAM.cam);
 }
-boot().catch(e => { console.error(e); $('loadmsg').textContent = 'Could not start: ' + (e && e.message || e); });
+boot().catch(e => { console.error(e); PCLOG.bootFail(e); $('loadmsg').textContent = 'Could not start: ' + (e && e.message || e); });

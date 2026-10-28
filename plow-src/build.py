@@ -7,6 +7,9 @@ fonts=open(os.path.join(root,'vendor','fonts.css'),encoding='utf-8').read()
 js=''
 for f in sorted(glob.glob(os.path.join(src,'*.js'))):
     js+='\n// ==== '+os.path.basename(f)+' ====\n'+open(f,encoding='utf-8').read()
+# player log library (ByteBrew web SDK, MIT) goes first, so errors are caught from the very start
+bb=os.path.join(root,'vendor','bytebrew.js')
+if os.path.exists(bb): js='\n// ==== bytebrew.js ====\n'+open(bb,encoding='utf-8').read()+'\n'+js
 ver=open(os.path.join(root,'VERSION')).read().strip() if os.path.exists(os.path.join(root,'VERSION')) else 'dev'
 js=js.replace('__VER__',ver)
 html=html.replace('/*FONTS*/',fonts).replace('/*GAME*/',js)
