@@ -166,6 +166,8 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #timer.good b{color:#23935a;}
 #timer.late{background:#fff1d6;}
 #timer.late b{color:#e08a00;font-size:20px;}
+#timer.go{background:#e4f0ff;}
+#timer.go b{color:#2a6fd6;font-size:20px;}
 @keyframes tw{50%{transform:translateX(-50%) scale(1.07)}}
 #timer .ti-route{position:relative;width:92px;height:8px;border-radius:4px;background:#e3eaf3;display:none;margin:0 2px;}
 #timer.route .ti-route{display:block;}
@@ -178,6 +180,27 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #income.tick{animation:bump .2s ease-out;}
 #btnMap{position:absolute;left:max(12px,env(safe-area-inset-left));top:calc(max(12px,env(safe-area-inset-top)) + 58px);width:46px;height:46px;border-radius:14px;background:var(--card);box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);padding:6px;}
 #btnMap svg{width:100%;height:100%;display:block;}
+/* the daily storm button and the turbo gift, under the chapter map button */
+#side{position:absolute;left:max(12px,env(safe-area-inset-left));top:calc(max(12px,env(safe-area-inset-top)) + 118px);display:flex;flex-direction:column;align-items:flex-start;gap:9px;}
+#btnStorm{display:none;align-items:center;gap:8px;padding:5px 15px 5px 5px;border-radius:16px;background:linear-gradient(180deg,#72b6ff,#3a7de0);color:#fff;text-align:left;box-shadow:0 4px 0 #285ead,0 8px 20px rgba(58,125,224,.45);}
+#btnStorm.on{display:flex;}
+#btnStorm.ready{animation:dsp 1.2s infinite;}
+#btnStorm.run{background:linear-gradient(180deg,#ffbe45,#ff8a1e);box-shadow:0 4px 0 #d0600a,0 8px 20px rgba(255,122,26,.45);cursor:default;}
+#btnStorm:active{transform:translateY(3px);}
+#btnStorm .ds-ico{width:40px;height:40px;flex:none;background:rgba(255,255,255,.24);border-radius:12px;padding:3px;}
+#btnStorm .ds-ico svg{width:100%;height:100%;display:block;}
+#btnStorm .ds-txt{display:flex;flex-direction:column;line-height:1.05;}
+#btnStorm b{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:18px;letter-spacing:.3px;text-shadow:0 2px 0 rgba(20,50,110,.3);}
+#btnStorm.run b{text-shadow:0 2px 0 rgba(160,60,0,.35);}
+#btnStorm i{font-style:normal;font-weight:800;font-size:12.5px;opacity:.95;}
+@keyframes dsp{0%,100%{transform:scale(1)}50%{transform:scale(1.06);box-shadow:0 4px 0 #285ead,0 0 0 7px rgba(114,182,255,.42),0 8px 20px rgba(58,125,224,.45)}}
+#turbo{display:none;align-items:center;gap:5px;padding:3px 13px 3px 4px;border-radius:999px;background:linear-gradient(180deg,#fff3c4,#ffd34d);color:#7a4300;box-shadow:0 3px 0 #d69a00,0 6px 14px rgba(255,194,61,.45);}
+#turbo.on{display:flex;}
+#turbo .tb-ico{width:28px;height:28px;flex:none;}
+#turbo .tb-ico svg{width:100%;height:100%;display:block;}
+#turbo b{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:17px;line-height:1;padding-top:2px;white-space:nowrap;}
+.chdaily{margin-top:8px;font-weight:800;font-size:14px;color:#2b3a55;background:#e4f0ff;padding:4px 14px;border-radius:999px;text-align:center;}
+.chdaily.on{background:#ffe9b8;color:#7a4300;}
 .chov{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,rgba(43,70,120,.55),rgba(14,22,42,.82));pointer-events:auto;overflow:hidden;}
 .chov.on{display:flex;animation:fadein .35s;}
 .chwrap{position:relative;display:flex;flex-direction:column;align-items:center;width:min(440px,92vw);max-height:96vh;}
@@ -272,6 +295,13 @@ body.privup #chIntro{visibility:hidden;}
   #tools{bottom:auto;top:70px;}
   .tool{width:48px;height:48px;}
   #coinTxt{font-size:25px;}
+  /* phones: lower down the left edge, clear of the hints and the big banners */
+  #side{top:38%;}
+  #btnStorm{padding:4px 12px 4px 4px;}
+  #btnStorm .ds-ico{width:34px;height:34px;}
+  #btnStorm b{font-size:16px;}
+  #btnStorm i{font-size:11.5px;}
+  #turbo b{font-size:15px;}
 }
 @media (max-width:400px){ #goalNext span{display:none;} }
 /* narrow phones: the school bus clock moves right, clear of the map button */
@@ -305,6 +335,7 @@ body.privup #chIntro{visibility:hidden;}
   <div id="ups"></div>
   <div id="loadTag"><span class="ci"></span><div class="lb"><i></i></div><b></b></div>
   <div id="streak"><div class="in"><span class="fl"></span><b>x2</b><div class="hb"><i></i></div></div></div>
+  <div id="side"><button id="btnStorm" aria-label="daily storm"><span class="ds-ico"></span><span class="ds-txt"><b>DAILY STORM</b><i></i></span></button><div id="turbo"><span class="tb-ico"></span><b></b></div></div>
   <div id="hint"></div>
   <div id="toast"></div>
   <div id="banner"></div>
@@ -394,7 +425,7 @@ addEventListener('wheel', e => { if (!(e.target && e.target.closest && e.target.
 // ---------- player log (ByteBrew): where players stop, what goes wrong. No names, emails or anything typed. ----------
 // Off in tests (bot / nolog / localhost / file), and when the player switches it off (Privacy card, in the chapter map).
 const PCLOG = (function () {
-  const ID = 'HG2tnhs8A', KEY = 'RfKAdPyMuIAyddUs05TnQW5uBBfGgJweyT66irHFQsM7YzhCNgRJN6PCNhl3dRKE', VER = 'v5.1';
+  const ID = 'HG2tnhs8A', KEY = 'RfKAdPyMuIAyddUs05TnQW5uBBfGgJweyT66irHFQsM7YzhCNgRJN6PCNhl3dRKE', VER = 'v5.2';
   const OFFK = 'pc_nostats', SEENK = 'pc_privseen';
   let ok = false, errs = 0, hid = false, started = false, aliveT = 0, unst = 0, handlers = false;
   const t0 = Date.now();
@@ -457,7 +488,7 @@ const PCLOG = (function () {
     wrap(PL, 'unstick', () => { if (unst++ < 3) ev('pc_unstick', { x: String(Math.round(PL.x)), z: String(Math.round(PL.z)) }); });
     // how smooth it runs on this device (once, after half a minute of play)
     let n = 0, fps0 = 0, fpsT = 0;
-    const meter = () => { if (document.hidden) { fps0 = 0; return requestAnimationFrame(meter); } const now = performance.now(); if (!fps0) fps0 = now; n++; if (now - fps0 >= 10000) { if (fpsT++ === 2) { ev('pc_fps', { fps: String(Math.round(n * 1000 / (now - fps0))) }); return; } n = 0; fps0 = now; } requestAnimationFrame(meter); };
+    const meter = () => { if (document.hidden) { fps0 = 0; return requestAnimationFrame(meter); } const now = performance.now(); if (!fps0) fps0 = now; n++; if (now - fps0 >= 10000) { if (fpsT++ === 2) { let q = '?'; try { q = String(QUAL.tier); } catch (_) { } ev('pc_fps', { fps: String(Math.round(n * 1000 / (now - fps0))), q }); return; } n = 0; fps0 = now; } requestAnimationFrame(meter); };
     requestAnimationFrame(meter);
     setInterval(() => { if (!document.hidden) { aliveT++; if (aliveT % 120 === 0) ev('pc_alive'); } }, 1000);
     const bye = () => { if (hid) return; hid = true; ev('pc_quit', { jobs: String(Object.keys(GAME.done).length), ended: GAME.ended ? '1' : '0' }); };
@@ -1071,6 +1102,20 @@ const SNOW = {
     }
     this.markAll();
   },
+  // fresh snow only on finished jobs that ok(area) accepts (the daily storm); only the parts of the town it touches are redrawn
+  snowfallOn(amt, ok) {
+    const H = this.H, T = this.T, A = this.A, THR = this.THR, ar = this.areas, N = this.NX;
+    const pass = this._pass || (this._pass = new Uint8Array(256));
+    for (let i = 0; i < 256; i++) { const a = ar[i]; pass[i] = a && a.done && ok(a) ? 1 : 0; }
+    let n = 0;
+    for (let k = 0; k < H.length; k++) {
+      if (T[k] !== 1 || !pass[A[k]]) continue;
+      const h = H[k], nh = Math.min(1.2, h + amt * (0.85 + 0.3 * ((k * 2654435761 >>> 0) % 1000) / 1000));
+      H[k] = nh; if (h < THR && nh >= THR) ar[A[k]].cleared--;
+      this._mark(k % N, (k / N) | 0); n++;
+    }
+    return n;
+  },
   // clear every remaining sample of area (auto-finish). returns list of positions (subsampled) for fx
   clearArea(a) {
     const H = this.H, T = this.T, A = this.A, pts = [];
@@ -1494,8 +1539,8 @@ const CH_MAPLE = {
 // The yellow school bus follows the road you plow. Every stretch has a countdown: clear it before the bus gets there.
 const CH_SCHOOL = {
   id: 2, key: 'school', name: 'Pine Street School', tag: 'Beat the bus!',
-  intro: 'The school bus leaves at 7:30! Plow the road ahead of it and get every kid to school on time.',
-  twist: 'Every stretch has a countdown. Beat it for a big bonus!',
+  intro: 'The school bus leaves at 7:30! Plow the road ahead of it and get every kid to school.',
+  twist: 'Clear a stretch before its clock runs out for a big bonus!',
   color: '#ffc21a', icon: 'bus', pack: 'ch2',
   music: () => SONG_SCHOOL,
   grid: { X0: -24, Z0: -78, NX: 241, NZ: 701 },
@@ -1517,7 +1562,8 @@ const CH_SCHOOL = {
     { a: 'yard', t: 'Clear the playground', ico: 'kids' },
     { end: true, t: 'Pine Street School is open!', ico: 'star' },
   ],
-  legTime: [0, 44, 36, 36, 36, 34],
+  // (the clocks are a bonus, never a failure: when one runs out the bus just follows you, no alarms)
+  legTime: [0, 55, 45, 45, 45, 42],
   treasure: { leg1: [3, 1], leg2: [3, 1], leg3: [3, 1], leg4: [3, 1], bay: [3, 1], lot: [3, 1], yard: [3, 2] },
   stops: [{ id: 'A', z: 34, n: 3, leg: 1 }, { id: 'B', z: 9, n: 4, leg: 2 }, { id: 'C', z: -17, n: 3, leg: 3 }],
   truckSpots() { const c = []; for (let zz = -46; zz <= 46; zz += 2) for (const xx of [-2.2, 0, 2.2]) c.push([xx, zz]); for (const xx of [-4, -2, 0, 2, 4]) { c.push([xx, 55.5]); c.push([xx, -53]); } for (const xx of [-16, -14, 15, 14]) c.push([xx, -52]); return c; },
@@ -1711,18 +1757,18 @@ const CH_SCHOOL = {
     if (g.leg && !GAME.ended && this.bus.state !== 'parked' && !CHUI.busy() && CAM.intro <= 0.05) {
       if (!this.released[g.leg]) {
         this.legT -= dt;
-        if (this.legT <= 0) { this.released[g.leg] = 1; UI.banner('HURRY!', 'The bus is coming!', 'bus', 1.8); AUD.busHorn(); this.shiver(g.leg); }
+        if (this.legT <= 0) this.released[g.leg] = 1;   // (quietly: the bonus is gone, the bus just follows you)
       }
     }
     const kids = this.bus.kidsIn + '/' + this.kidsTotal() + ' kids';
     if (this.flashT > 0) { this.flashT -= dt; UI.timer(this.flashTxt, 'bus', kids, 'good'); }
-    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.busy()) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'LATE' : this.legT, 'bus', kids, this.released[g.leg] ? 'late' : '');
+    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.busy()) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'GO!' : this.legT, 'bus', kids, this.released[g.leg] ? 'go' : 'calm');
     else UI.timer(null);
     // kids at the stops cheer you on as you plow past
     this.chatT = (this.chatT || 0) - dt;
     if (this.chatT <= 0) for (const S of this.stops) {
       const kids = this.stopKids[S.id] || []; if (!kids.length) continue;
-      if (Math.abs(PL.z - S.z) < 9 && PL.x > -3) { const k = kids[(Math.random() * kids.length) | 0]; NPC.say(k, ['Go go go!', 'Hurry, the bus is coming!', 'Wow, look at it throw!', 'Snow day? No way!', 'Clear the road!'][(Math.random() * 5) | 0], 2.4); NPC.cheer(k, 1.2); k.h = Math.atan2(PL.x - k.x, PL.z - k.z); this.chatT = 5; break; }
+      if (Math.abs(PL.z - S.z) < 9 && PL.x > -3) { const k = kids[(Math.random() * kids.length) | 0]; NPC.say(k, ['Go go go!', 'You can do it!', 'Wow, look at it throw!', 'Snow day? No way!', 'Clear the road!'][(Math.random() * 5) | 0], 2.4); NPC.cheer(k, 1.2); k.h = Math.atan2(PL.x - k.x, PL.z - k.z); this.chatT = 5; break; }
     }
     // route bar: bus (yellow) and you (red), from the depot to the school
     if (g.leg && !GAME.ended) { const f = z => clamp((52 - z) / 112, 0, 1); UI.timerRoute(f(this.bus.z), f(PL.z)); } else UI.timerRoute(null);
@@ -1773,7 +1819,8 @@ const CH_SCHOOL = {
     B.spd = damp(B.spd, want, want < B.spd ? 4 : 1.6, dt);
     if ((blocked || meBlock) && B.spd < 0.5) {
       B.honkT -= dt;
-      if (B.honkT <= 0) { B.honkT = 2.8; AUD.busHorn(); UI.floatText(new V3(B.x + fx * 5, 3.6, B.z + fz * 5), 'BEEP BEEP!', '#ffe27a', 26); if (blocked && !this.stuckSaid) { this.stuckSaid = 1; UI.hint('The bus is stuck in the snow! Plow ahead of it!', 3); } }
+      // (a friendly toot now and then, not an alarm)
+      if (B.honkT <= 0) { B.honkT = 9; AUD.busHorn(); UI.floatText(new V3(B.x + fx * 5, 3.6, B.z + fz * 5), 'BEEP BEEP!', '#ffe27a', 26); if (blocked && !this.stuckSaid) { this.stuckSaid = 1; UI.hint('The bus waits for you: plow the road ahead!', 3); } }
     } else B.honkT = Math.min(B.honkT, 0.6);
     if (d > 0.3) { B.h = dampAng(B.h, Math.atan2(dx, dz), 2.2, dt); const st = Math.min(d, B.spd * dt); B.x += Math.sin(B.h) * st; B.z += Math.cos(B.h) * st; }
     if (d < (last ? 0.35 : 1.6)) {
@@ -5207,14 +5254,14 @@ const GAME = {
   chapter: 1, chapters: {}, totalTime: 0, finishT: 0, _cs: null,
   L(key) { return this.lv[key] || (this.lv[key] = [0, 0, 0]); },
   stats(key) {
-    const T = TIER[key], L = this.L(key);
-    return { w: T.base[0] * (1 + 0.14 * L[0]), cap: T.base[1], spd: T.base[2] * (1 + 0.08 * L[1]), pay: T.pay * (1 + 0.35 * L[2]), kind: T.kind };
+    const T = TIER[key], L = this.L(key), tb = TURBO.t > 0;   // (the daily TURBO gift: double coins, a bit quicker)
+    return { w: T.base[0] * (1 + 0.14 * L[0]), cap: T.base[1], spd: T.base[2] * (1 + 0.08 * L[1]) * (tb ? 1.15 : 1), pay: T.pay * (1 + 0.35 * L[2]) * (tb ? 2 : 1), kind: T.kind };
   },
   upCost(key, i) {
     const T = TIER[key], L = this.L(key)[i]; if (L >= upMax(key, i)) return Infinity;
     return Math.max(3, niceNum(T.up * UPK[L] * UPM[i]));
   },
-  price() { return this.stats(PL.tool).pay * STORM.mult * (CH.payMul || 1) * (this.boost || 1); },
+  price() { return this.stats(PL.tool).pay * STORM.mult * DSTORM.mult() * (CH.payMul || 1) * (this.boost || 1); },
   earn(v) { this.coins += v; this.earned += v; },
   spend(v) { if (this.coins + 1e-6 < v) return false; this.coins -= v; return true; },
   // the next machine after the one you use (machines you already own come back for free, e.g. when you replay a chapter)
@@ -5295,6 +5342,8 @@ const GAME = {
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
     STREAK.update(dt);
+    DSTORM.update(dt);
+    TURBO.update(dt);
   },
   completeArea(a, silent) {
     a.done = true; this.done[a.key] = 1;
@@ -5544,12 +5593,18 @@ const DAILY = {
   },
   num(s) { const m = /^(\d+)-(\d+)-(\d+)$/.exec(s || ''); return m ? Math.round(new Date(+m[1], +m[2] - 1, +m[3]).getTime() / 86400000) : -1; },
   // the gift is paid (and saved) the moment the day is counted; it flies into your counter a little later
-  pay(run) { const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run)); this.v = (this.v || 0) + v; GAME.earn(v); UI.pending += v; GAME.save(); },
+  // (and a few minutes of TURBO: 3 minutes, one more for every day in a row, up to 8)
+  pay(run) {
+    const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run)); this.v = (this.v || 0) + v; GAME.earn(v); UI.pending += v;
+    this.tb = 60 * Math.min(8, 2 + run); TURBO.add(this.tb);
+    GAME.save(); PCLOG.ev('pc_daily', { run: String(run) });
+  },
   give(run) {
     const v = this.v || 0; if (!v) return; this.v = 0;
     for (let i = 0; i < 18; i++) setTimeout(() => UI.flyCoin(null, v / 18), 300 + i * 45);
-    UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins' + (run > 1 ? ' \u00b7 day ' + run + ' in a row' : ''), 'star', 3.0);
+    UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins + TURBO ' + Math.round((this.tb || 180) / 60) + ' min', 'turbo', 3.2);
     AUD.bigWin && AUD.bigWin(); GAME.save();
+    setTimeout(() => UI.hint(run > 1 ? 'Day ' + run + ' in a row! TURBO: double coins while you plow' : 'TURBO: double coins while you plow!', 4.5), 3400);
   },
 };
 // ---------- snowstorms (endless loop after the street is saved) ----------
@@ -5557,6 +5612,7 @@ const STORM = {
   phase: 'idle', t: 0, next: 45, mult: 1, multT: 0, acc: 0,
   update(dt) {
     if (!GAME.ended) return;
+    if (DSTORM.st === 'fall' || DSTORM.st === 'rush') return;   // (the daily storm has the sky now)
     if (this.phase === 'idle') {
       this.next -= dt;
       if (this.next <= 0) { this.phase = 'storm'; this.t = 0; this.acc = 0; UI.banner('SNOWSTORM!', 'Fresh snow is falling...', 'star', 2.6); AUD.firework && AUD.thump(); }
@@ -5963,7 +6019,8 @@ const CHUI = {
     const mm = Math.floor(GAME.time / 60), ss = String(Math.floor(GAME.time % 60)).padStart(2, '0');
     const nextHtml = next ? `<div class="chnext"><div class="chico sm">${CH_ICONS[next.key] || ''}</div><div><b>Next: ${next.name}</b><span>${next.tag}</span></div></div>`
       : `<div class="chnext"><div><b>You plowed every town!</b><span>More chapters are on the way. Keep plowing the storms for coins</span></div></div>`;
-    const comeBack = '<div class="chback">Come back tomorrow for a daily gift!</div>';
+    // (a reason to come back: today's storm if it still waits, else tomorrow's gift)
+    const comeBack = `<div class="chback">${DSTORM.st === 'ready' ? 'Your Daily Storm is ready: x' + DSTORM.kind().mult + ' coins!' : 'Come back tomorrow: a TURBO gift + a new storm!'}</div>`;
     const el = this._show('chRes', `<div class="rays"></div><div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">COMPLETE!</div>
       <div class="stars">${[0, 1, 2].map(i => `<div class="st st${i}" id="st${i}">${STAR_SVG(false)}</div>`).join('')}</div>
       <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}${comeBack}</div>
@@ -5991,7 +6048,9 @@ const CHUI = {
         <div class="chinfo"><b>${C.id}. ${C.name}</b><span>${C.tag}</span><div class="mstars">${stars}</div></div>
         <div class="chbtn">${!open ? '🔒' : C.id === CH.id ? 'HERE' : 'PLAY'}</div></div>`;
     }).join('') + '<div class="chrow soon"><div class="chinfo"><b>More chapters soon</b><span>New places, new machines</span></div></div>';
-    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><div class="chlinks"><button class="chlink" id="chMapX">Close</button>${PCLOG.avail() ? '<button class="chlink sm" id="chPrivLink">Privacy</button>' : ''}</div></div>`);
+    const ds = DSTORM.st === 'ready' ? `<div class="chdaily on">Daily Storm ready: ${DSTORM.kind().name} x${DSTORM.kind().mult}</div>`
+      : DSTORM.st === 'done' ? `<div class="chdaily">Next Daily Storm in ${DSTORM.hoursLeft()} h · ${DSTORM.kind(1).name} x${DSTORM.kind(1).mult}</div>` : '';
+    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div>${ds}<div class="chlist">${rows}</div><div class="chwarn"></div><div class="chlinks"><button class="chlink" id="chMapX">Close</button>${PCLOG.avail() ? '<button class="chlink sm" id="chPrivLink">Privacy</button>' : ''}</div></div>`);
     { const p = $('chPrivLink'); if (p) p.onpointerdown = (e) => { e.stopPropagation(); AUD.click(); this.privacy('map'); }; }
     // (a long list: start with the chapter you are in shown in the middle)
     { const L = el.querySelector('.chlist'), cur = el.querySelector('.chrow.cur'); if (L && cur) L.scrollTop = Math.max(0, cur.offsetTop - L.offsetTop - (L.clientHeight - cur.offsetHeight) / 2); }
@@ -6141,6 +6200,207 @@ const NPC = {
   free(n) {
     WORLD.scene.remove(n.P.root); if (n.bub) { n.bub.remove(); n.bub = null; }
     n.P.root.traverse(o => { if (o.isMesh && o.userData.own) o.geometry.dispose(); });
+  },
+};
+
+// ==== h6_daily.js ====
+// ---------- reasons to come back: the daily storm and the turbo gift ----------
+// (the icons join the game's icon set at start-up: that set is made further down the script)
+const DAILY_ICONS = {
+  storm: '<svg viewBox="0 0 40 40"><path d="M10.5 25.5h19a6.2 6.2 0 000-12.4 8.4 8.4 0 00-15.8-2.6 6.6 6.6 0 00-3.2 15z" fill="#fff"/><circle cx="13" cy="31" r="2" fill="#dff0ff"/><circle cx="20" cy="34" r="2" fill="#dff0ff"/><circle cx="27" cy="31" r="2" fill="#dff0ff"/></svg>',
+  turbo: '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#fff6d2"/><path d="M23 6L11 23h9l-3 11 13-18h-9z" fill="#ff8a1e" stroke="#c8650a" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+};
+function dailyIcons() { Object.assign(ICONS, DAILY_ICONS); }
+
+// turbo: the daily gift. For a few minutes of plowing every load pays double and the machine is a bit quicker
+// (any machine, any chapter). The clock only runs while you drive.
+const TURBO = {
+  t: 0, _s: 0, _fx: 0,
+  load() {
+    dailyIcons(); this.t = QS.has('bot') ? 0 : Math.max(0, Math.min(900, +(STORE.get('plowtown_tb') || 0) || 0));
+    addEventListener('visibilitychange', () => { if (document.hidden && this.t > 0) this.save(); });
+  },
+  on() { return this.t > 0; },
+  add(sec) { this.t = Math.min(900, this.t + sec); this.save(); this.ui(); },
+  save() { STORE.set('plowtown_tb', String(Math.round(this.t))); },
+  update(dt) {
+    if (this.t <= 0) return;
+    // it runs while you play (not under a card, not while the camera shows a new machine, not while you stand still)
+    if (CHUI.busy() || CAM.hero > 0.3 || CAM.intro > 0.05 || document.hidden || PL.moveAmt < 0.05) return;
+    this.t -= dt; this._s -= dt;
+    if (this._s <= 0) { this._s = 10; this.save(); }
+    if (this.t <= 0) {
+      this.t = 0; this.save();
+      UI.toast('Turbo is over. A new gift waits tomorrow!');
+    }
+    this.ui();
+    // a golden trail at the blade while it runs
+    if (PL.moveAmt > 0.2) {
+      this._fx -= dt;
+      if (this._fx <= 0) {
+        this._fx = 0.09; const tr = PL.kind === 'truck', p = tr ? PL.truck.position : PL.kid.root.position, d = tr ? PL.geo.carve : 0.7;
+        FX.sparkle(p.x + Math.sin(PL.h) * d, 0.4, p.z + Math.cos(PL.h) * d, tr ? 2 : 1, tr ? 1.2 : 0.45, [1, 0.82, 0.3]);
+      }
+    }
+  },
+  ui() {
+    const el = $('turbo'); if (!el) return;
+    if (this.t <= 0) { if (el._on) { el.classList.remove('on'); el._on = 0; } return; }
+    if (!el._on) { el.classList.add('on'); el._on = 1; if (!el._ini) { el._ini = 1; el.querySelector('.tb-ico').innerHTML = ICONS.turbo; } }
+    const s = Math.ceil(this.t), txt = 'TURBO x2 · ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    if (el._t !== txt) { el.querySelector('b').textContent = txt; el._t = txt; }
+  },
+};
+
+// the daily storm: once a day, fresh snow falls on the streets you already cleared, and for a minute or so
+// every load pays x3 (or x4). Each day brings another kind of storm.
+const DSTORM = {
+  st: 'off', t: 0, acc: 0, e0: 0, _chk: 0, _hinted: 0, _calm: 0,
+  FALL: 6, STEP: 0.5,
+  // depth: how much fresh snow falls in all (meters)
+  KINDS: [
+    { key: 'blizzard', name: 'BLIZZARD', mult: 3, dur: 75, depth: 0.34 },
+    { key: 'gold', name: 'GOLDEN SNOW', mult: 4, dur: 70, depth: 0.3 },
+    { key: 'mega', name: 'MEGA STORM', mult: 3, dur: 100, depth: 0.42 },
+  ],
+  kind(off) { const n = DAILY.num(DAILY.day()) + (off || 0); return this.KINDS[((n % 3) + 3) % 3]; },
+  init() {
+    dailyIcons();
+    if (QS.has('bot') || QS.has('nodaily')) { this.st = 'off'; return; }
+    this.st = STORE.get('plowtown_ds') === DAILY.day() ? 'done' : 'ready';
+    const b = $('btnStorm');
+    if (b) b.addEventListener('pointerdown', e => { e.stopPropagation(); AUD.init(); if (this.st === 'ready' && this.can()) { AUD.click(); this.start(); } });
+  },
+  // the snow it brings lands on cleared streets and squares (not on driveways, and never on a job still to do)
+  okArea(a) { return !a.lot; },
+  room() {
+    const T = SNOW.T, A = SNOW.A, ar = SNOW.areas; let done = 0, all = 0;
+    for (let k = 0; k < T.length; k++) { if (T[k] !== 1 || !A[k]) continue; const a = ar[A[k]]; if (!a || a.lot) continue; all++; if (a.done) done++; }
+    return { done, all };
+  },
+  // (chapters whose bus or rocket drive on the cleared road get it only once their story is over)
+  can() {
+    if (this.st !== 'ready' || PL.kind !== 'truck') return false;
+    if (CHUI.busy() || CAM.show || CAM.hero > 0.3 || CAM.intro > 0.05 || GAME.finishT > 0 || CHUI._going) return false;
+    if (!GAME.ended && (CH.id === 2 || CH.id === 8)) return false;
+    const r = this._room || (this._room = this.room());
+    // (enough cleared road to make it worth it: a street or so)
+    return r.done >= 5000 && r.done >= r.all * 0.2;
+  },
+  start() {
+    this.st = 'fall'; this.t = 0; this.acc = 0; this.e0 = GAME.earned;
+    STORE.set('plowtown_ds', DAILY.day());
+    if (GAME.ended && STORM.phase !== 'idle') { STORM.phase = 'idle'; STORM.mult = 1; }
+    STORM.next = Math.max(STORM.next, 160);
+    const K = this.kind();
+    UI.banner(K.name + '!', 'Fresh snow is falling on the streets...', 'storm', 2.6);
+    AUD.thump && AUD.thump();
+    PCLOG.ev('pc_dstorm', { ph: 'start', k: K.key });
+    this.ui();
+  },
+  update(dt) {
+    if (this.st === 'off' || this.st === 'done') {
+      // (after the storm: the sky calms down again)
+      if (this._calm) { FX.snowRate = damp(FX.snowRate, 1, 0.6, dt); FX.wind = damp(FX.wind, 0.6, 0.6, dt); if (Math.abs(FX.snowRate - 1) < 0.03) this._calm = 0; }
+      this.ui(); return;
+    }
+    if (this.st === 'ready') {
+      this._chk -= dt;
+      if (this._chk <= 0) {
+        this._chk = 0.5; this._room = null;
+        const ok = this.can();
+        // the first time it shows up: say what it is
+        if (ok && !this._hinted && !STORE.get('plowtown_dsh')) { this._hinted = 1; STORE.set('plowtown_dsh', '1'); UI.hint('New: the Daily Storm! Tap it for x' + this.kind().mult + ' coins', 4.5); }
+        this._ok = ok; this.ui();
+      }
+      return;
+    }
+    if (CHUI.busy() || CAM.hero > 0.3) return;
+    const K = this.kind();
+    if (this.st === 'fall') {
+      this.t += dt; this.acc += dt;
+      FX.snowRate = damp(FX.snowRate, 3.6, 1.5, dt); FX.wind = damp(FX.wind, 2.4, 1, dt);
+      if (this.acc >= this.STEP) { this.acc -= this.STEP; SNOW.snowfallOn(K.depth * this.STEP / this.FALL, a => this.okArea(a)); }
+      if (this.t >= this.FALL) {
+        this.st = 'rush'; this.t = K.dur;
+        UI.banner('x' + K.mult + ' COINS!', 'Plow the fresh snow before the storm ends', 'storm', 2.6);
+        AUD.newTool && AUD.newTool();
+      }
+    } else if (this.st === 'rush') {
+      this.t -= dt;
+      FX.snowRate = damp(FX.snowRate, 1.6, 0.8, dt); FX.wind = damp(FX.wind, 1.0, 0.8, dt);
+      if (K.key === 'gold' && PL.moveAmt > 0.2 && Math.random() < dt * 6) { const p = PL.kind === 'truck' ? PL.truck.position : PL.kid.root.position; FX.sparkle(p.x, 1.2, p.z, 3, 1.6, [1, 0.85, 0.35]); }
+      if (this.t <= 0) this.end();
+    }
+    this.ui();
+  },
+  end() {
+    this.st = 'done'; this.t = 0; this._calm = 1;
+    const got = Math.max(0, Math.round(GAME.earned - this.e0)), N = this.kind(1);
+    UI.banner('STORM CLEARED!', '+' + fmt(got) + ' coins · tomorrow: ' + N.name + ' x' + N.mult, 'storm', 3.6);
+    AUD.bigWin && AUD.bigWin();
+    later(4.2, () => UI.toast('Come back tomorrow: a new storm and a TURBO gift!'));
+    PCLOG.ev('pc_dstorm', { ph: 'end', c: String(got) });
+    GAME.save(); this.ui();
+  },
+  mult() { return this.st === 'rush' ? this.kind().mult : 1; },
+  // hours until the next storm (it comes with the new day on this device)
+  hoursLeft() { const d = new Date(), m = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); return Math.max(1, Math.ceil((m - d) / 3600000)); },
+  ui() {
+    const b = $('btnStorm'); if (!b) return;
+    const show = (this.st === 'ready' && this._ok) || this.st === 'fall' || this.st === 'rush';
+    if (!show) { if (b._on) { b.classList.remove('on', 'ready', 'run'); b._on = 0; } return; }
+    if (!b._on) { b.classList.add('on'); b._on = 1; if (!b._ini) { b._ini = 1; b.querySelector('.ds-ico').innerHTML = ICONS.storm; } }
+    const K = this.kind(), run = this.st !== 'ready';
+    b.classList.toggle('ready', !run); b.classList.toggle('run', run);
+    const s = Math.max(0, Math.ceil(this.t));
+    const top = run ? (this.st === 'fall' ? 'SNOWING...' : 'x' + K.mult + ' COINS') : 'DAILY STORM';
+    const sub = run ? (this.st === 'fall' ? K.name : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' left') : K.name + ' x' + K.mult;
+    if (b._top !== top) { b.querySelector('b').textContent = top; b._top = top; }
+    if (b._sub !== sub) { b.querySelector('i').textContent = sub; b._sub = sub; }
+  },
+};
+
+// ---------- picture quality that fits the device: drops a step when the game runs slowly ----------
+const QUAL = {
+  tier: 0, t: 0, n: 0, low: 0, high: 0, warm: 4, stepped: false, upOnce: false, off: false,
+  // (kept on this device only: a slow phone must not make the same player's computer look worse)
+  saved(v) { try { if (v === undefined) return localStorage.getItem('plowtown_q'); localStorage.setItem('plowtown_q', v); } catch (e) { } return null; },
+  init() {
+    this.off = QS.has('bot') || QS.has('noq');
+    const s = this.off ? 0 : Math.min(2, Math.max(0, +(this.saved() || 0) || 0));
+    if (s) this.set(s, true);
+    this.warm = 4;
+  },
+  set(t, quiet) {
+    this.tier = t; this.warm = 3; this.t = 0; this.n = 0; this.low = 0; this.high = 0;
+    const dpr = devicePixelRatio || 1;
+    renderer.setPixelRatio(t === 0 ? Math.min(dpr, IS_MOBILE ? 1.6 : 2) : t === 1 ? Math.min(dpr, 1.25) : Math.min(dpr, 1));
+    const sun = WORLD.sun;
+    if (sun) {
+      sun.castShadow = t < 2;
+      const sm = t === 0 && !IS_MOBILE ? 2048 : 1024;
+      if (sun.shadow && sun.shadow.mapSize.x !== sm) { sun.shadow.mapSize.set(sm, sm); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+    }
+    onResize();
+    this.saved(String(t));
+    if (!quiet) PCLOG.ev('pc_q', { q: String(t) });
+  },
+  // fed with the real time between frames
+  tick(ms) {
+    if (this.off || document.hidden || CAM.intro > 0.05 || !$('loading').classList.contains('off')) { this.t = 0; this.n = 0; return; }
+    const dt = ms / 1000; if (dt <= 0 || dt > 2) return;   // (a longer gap is a pause, like coming back to the tab)
+    if (this.warm > 0) { this.warm -= dt; return; }
+    this.t += dt; this.n++;
+    if (this.t < 5) return;
+    const fps = this.n / this.t; this.t = 0; this.n = 0;
+    // two slow stretches in a row: one step lighter (and remembered on this device)
+    if (fps < 40 && this.tier < 2) { if (++this.low >= 2) { this.stepped = true; this.set(this.tier + 1); } }
+    else this.low = 0;
+    // a device that was set lighter on an earlier day and now runs smoothly gets one step back (never in a session
+    // that had to step down: no going back and forth)
+    if (fps >= 57 && this.tier > 0 && !this.stepped && !this.upOnce) { if (++this.high >= 3) { this.upOnce = true; this.set(this.tier - 1); } }
+    else if (fps < 57) this.high = 0;
   },
 };
 
@@ -6438,6 +6698,8 @@ const UI = {
     let f = 1, lab = '';
     if (g.a) { const a = WORLD.areaByKey[g.a]; f = a.done ? 1 : Math.min(1, SNOW.prog(a) / doneAt(a)); lab = Math.floor(f * 100) + '%'; }
     else if (g.tool) { const c = TIER[g.tool].cost; f = clamp(shown / c, 0, 1); lab = fmt(Math.min(shown, c)) + '/' + fmt(c); }
+    else if (DSTORM.st === 'rush') { const K = DSTORM.kind(); f = DSTORM.t / K.dur; lab = 'x' + K.mult + ' ' + Math.ceil(DSTORM.t) + 's'; }
+    else if (DSTORM.st === 'fall') { f = DSTORM.t / DSTORM.FALL; lab = 'storm'; }
     else if (STORM.phase === 'bonus') { f = STORM.multT / 90; lab = 'x2 ' + Math.ceil(STORM.multT) + 's'; }
     else if (STORM.phase === 'storm') { f = STORM.t / 12; lab = 'storm'; }
     else { lab = '★'; }
@@ -6479,16 +6741,17 @@ const UI = {
     const el = $('loadTag'); if (el) { el.classList.remove('paid'); void el.offsetWidth; el.classList.add('paid'); }
   },
   onUpgrade(i) { const b = this.upBtns[i]; b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); },
-  // countdown pill (chapter twists like "beat the bus"): sec=null hides it. mode: '' | 'good' | 'late'
+  // countdown pill (chapter twists like "beat the bus"): sec=null hides it.
+  // mode: '' (red and ticking in the last 10 seconds) | 'calm' (a plain countdown, no alarm) | 'good' | 'late' | 'go'
   timer(sec, ico, sub, mode) {
     const el = $('timer');
-    if (sec === null) { if (el._on) { el.classList.remove('on', 'warn', 'good', 'late'); el._on = 0; el._t = null; } return; }
+    if (sec === null) { if (el._on) { el.classList.remove('on', 'warn', 'good', 'late', 'go'); el._on = 0; el._t = null; } return; }
     if (!el._on) { el.classList.add('on'); el._on = 1; }
     if (el._ico !== ico) { el.querySelector('.ti-ico').innerHTML = ICONS[ico] || ICONS.star; el._ico = ico; }
     const t = Math.max(0, Math.ceil(sec)), txt = typeof sec === 'string' ? sec : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     if (el._t !== txt) { $('timerTxt').textContent = txt; el._t = txt; if (!mode && typeof sec === 'number' && sec > 0 && sec <= 10) AUD.tick(sec <= 5); }
     if (el._sub !== sub) { $('timerSub').textContent = sub || ''; el._sub = sub; }
-    el.classList.toggle('warn', !mode && typeof sec === 'number' && sec <= 10); el.classList.toggle('good', mode === 'good'); el.classList.toggle('late', mode === 'late');
+    el.classList.toggle('warn', !mode && typeof sec === 'number' && sec <= 10); el.classList.toggle('good', mode === 'good'); el.classList.toggle('late', mode === 'late'); el.classList.toggle('go', mode === 'go');
   },
   // little route bar in the countdown pill: where the bus is, where you are (0..1 along the route)
   timerRoute(fb, fm) {
@@ -7036,13 +7299,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v5.1'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v5.2'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v5.1'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v5.2'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
@@ -7073,6 +7336,7 @@ async function boot() {
   AUD.song = CH.music ? CH.music() : null;
   FX.init(scene);
   PL.init(scene);
+  TURBO.load();
   GUIDE.init(scene);
   TREASURE.init(scene);
   CREW.init(scene);
@@ -7102,12 +7366,15 @@ async function boot() {
   }
   UI.init();
   CHUI.init();
+  DSTORM.init(); TURBO.ui();
   INPUT.init($('c'));
   if (QS.has('bot')) { BOT.init(); if (QS.has('human')) HUMAN.init(); window.__hold = !QS.has('vid'); }
   lb.style.width = '100%';
   CAM.update(0, true);
   if (!resumed && !QS.has('bot') && !QS.has('nointro')) { CAM.intro = 1; setTimeout(() => CHUI.intro(), 700); }
   onResize(); addEventListener('resize', onResize);
+  // a slow device gets the lighter picture it settled on before (and keeps checking how it runs)
+  QUAL.init();
   // a hidden tab gets no frames, so tell CrazyGames right here that play stopped (frames turn it back on)
   document.addEventListener('visibilitychange', () => { if (document.hidden) { GAME.save(); CG.play(false); } if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
   // warm up shaders
@@ -7170,8 +7437,10 @@ function frame(now) {
   // you can play the moment the town shows (the chapter card and the fly-in never block): that is gameplay for CrazyGames
   CG.play(!CHUI.open && !CHUI._going && !document.hidden && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
-  let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const ms = now - last;
+  let dt = Math.min(0.05, ms / 1000); last = now;
   if (dt <= 0) return;
+  QUAL.tick(ms);
   for (let i = 0; i < FAST; i++) step(FAST > 1 ? 1 / 30 : dt);
   SNOW.flush();
   SNOW.uni.uTime.value = now / 1000; SNOW.uni.uPulse.value = 0.5 + 0.5 * Math.sin(now / 260);

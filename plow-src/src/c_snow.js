@@ -149,6 +149,20 @@ const SNOW = {
     }
     this.markAll();
   },
+  // fresh snow only on finished jobs that ok(area) accepts (the daily storm); only the parts of the town it touches are redrawn
+  snowfallOn(amt, ok) {
+    const H = this.H, T = this.T, A = this.A, THR = this.THR, ar = this.areas, N = this.NX;
+    const pass = this._pass || (this._pass = new Uint8Array(256));
+    for (let i = 0; i < 256; i++) { const a = ar[i]; pass[i] = a && a.done && ok(a) ? 1 : 0; }
+    let n = 0;
+    for (let k = 0; k < H.length; k++) {
+      if (T[k] !== 1 || !pass[A[k]]) continue;
+      const h = H[k], nh = Math.min(1.2, h + amt * (0.85 + 0.3 * ((k * 2654435761 >>> 0) % 1000) / 1000));
+      H[k] = nh; if (h < THR && nh >= THR) ar[A[k]].cleared--;
+      this._mark(k % N, (k / N) | 0); n++;
+    }
+    return n;
+  },
   // clear every remaining sample of area (auto-finish). returns list of positions (subsampled) for fx
   clearArea(a) {
     const H = this.H, T = this.T, A = this.A, pts = [];

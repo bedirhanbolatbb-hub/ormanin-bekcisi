@@ -2,8 +2,8 @@
 // The yellow school bus follows the road you plow. Every stretch has a countdown: clear it before the bus gets there.
 const CH_SCHOOL = {
   id: 2, key: 'school', name: 'Pine Street School', tag: 'Beat the bus!',
-  intro: 'The school bus leaves at 7:30! Plow the road ahead of it and get every kid to school on time.',
-  twist: 'Every stretch has a countdown. Beat it for a big bonus!',
+  intro: 'The school bus leaves at 7:30! Plow the road ahead of it and get every kid to school.',
+  twist: 'Clear a stretch before its clock runs out for a big bonus!',
   color: '#ffc21a', icon: 'bus', pack: 'ch2',
   music: () => SONG_SCHOOL,
   grid: { X0: -24, Z0: -78, NX: 241, NZ: 701 },
@@ -25,7 +25,8 @@ const CH_SCHOOL = {
     { a: 'yard', t: 'Clear the playground', ico: 'kids' },
     { end: true, t: 'Pine Street School is open!', ico: 'star' },
   ],
-  legTime: [0, 44, 36, 36, 36, 34],
+  // (the clocks are a bonus, never a failure: when one runs out the bus just follows you, no alarms)
+  legTime: [0, 55, 45, 45, 45, 42],
   treasure: { leg1: [3, 1], leg2: [3, 1], leg3: [3, 1], leg4: [3, 1], bay: [3, 1], lot: [3, 1], yard: [3, 2] },
   stops: [{ id: 'A', z: 34, n: 3, leg: 1 }, { id: 'B', z: 9, n: 4, leg: 2 }, { id: 'C', z: -17, n: 3, leg: 3 }],
   truckSpots() { const c = []; for (let zz = -46; zz <= 46; zz += 2) for (const xx of [-2.2, 0, 2.2]) c.push([xx, zz]); for (const xx of [-4, -2, 0, 2, 4]) { c.push([xx, 55.5]); c.push([xx, -53]); } for (const xx of [-16, -14, 15, 14]) c.push([xx, -52]); return c; },
@@ -219,18 +220,18 @@ const CH_SCHOOL = {
     if (g.leg && !GAME.ended && this.bus.state !== 'parked' && !CHUI.busy() && CAM.intro <= 0.05) {
       if (!this.released[g.leg]) {
         this.legT -= dt;
-        if (this.legT <= 0) { this.released[g.leg] = 1; UI.banner('HURRY!', 'The bus is coming!', 'bus', 1.8); AUD.busHorn(); this.shiver(g.leg); }
+        if (this.legT <= 0) this.released[g.leg] = 1;   // (quietly: the bonus is gone, the bus just follows you)
       }
     }
     const kids = this.bus.kidsIn + '/' + this.kidsTotal() + ' kids';
     if (this.flashT > 0) { this.flashT -= dt; UI.timer(this.flashTxt, 'bus', kids, 'good'); }
-    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.busy()) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'LATE' : this.legT, 'bus', kids, this.released[g.leg] ? 'late' : '');
+    else if (g.leg && this.bus.state !== 'parked' && !GAME.ended && !CHUI.busy()) UI.timer(this.released[g.leg] && !GAME.done[g.a] ? 'GO!' : this.legT, 'bus', kids, this.released[g.leg] ? 'go' : 'calm');
     else UI.timer(null);
     // kids at the stops cheer you on as you plow past
     this.chatT = (this.chatT || 0) - dt;
     if (this.chatT <= 0) for (const S of this.stops) {
       const kids = this.stopKids[S.id] || []; if (!kids.length) continue;
-      if (Math.abs(PL.z - S.z) < 9 && PL.x > -3) { const k = kids[(Math.random() * kids.length) | 0]; NPC.say(k, ['Go go go!', 'Hurry, the bus is coming!', 'Wow, look at it throw!', 'Snow day? No way!', 'Clear the road!'][(Math.random() * 5) | 0], 2.4); NPC.cheer(k, 1.2); k.h = Math.atan2(PL.x - k.x, PL.z - k.z); this.chatT = 5; break; }
+      if (Math.abs(PL.z - S.z) < 9 && PL.x > -3) { const k = kids[(Math.random() * kids.length) | 0]; NPC.say(k, ['Go go go!', 'You can do it!', 'Wow, look at it throw!', 'Snow day? No way!', 'Clear the road!'][(Math.random() * 5) | 0], 2.4); NPC.cheer(k, 1.2); k.h = Math.atan2(PL.x - k.x, PL.z - k.z); this.chatT = 5; break; }
     }
     // route bar: bus (yellow) and you (red), from the depot to the school
     if (g.leg && !GAME.ended) { const f = z => clamp((52 - z) / 112, 0, 1); UI.timerRoute(f(this.bus.z), f(PL.z)); } else UI.timerRoute(null);
@@ -281,7 +282,8 @@ const CH_SCHOOL = {
     B.spd = damp(B.spd, want, want < B.spd ? 4 : 1.6, dt);
     if ((blocked || meBlock) && B.spd < 0.5) {
       B.honkT -= dt;
-      if (B.honkT <= 0) { B.honkT = 2.8; AUD.busHorn(); UI.floatText(new V3(B.x + fx * 5, 3.6, B.z + fz * 5), 'BEEP BEEP!', '#ffe27a', 26); if (blocked && !this.stuckSaid) { this.stuckSaid = 1; UI.hint('The bus is stuck in the snow! Plow ahead of it!', 3); } }
+      // (a friendly toot now and then, not an alarm)
+      if (B.honkT <= 0) { B.honkT = 9; AUD.busHorn(); UI.floatText(new V3(B.x + fx * 5, 3.6, B.z + fz * 5), 'BEEP BEEP!', '#ffe27a', 26); if (blocked && !this.stuckSaid) { this.stuckSaid = 1; UI.hint('The bus waits for you: plow the road ahead!', 3); } }
     } else B.honkT = Math.min(B.honkT, 0.6);
     if (d > 0.3) { B.h = dampAng(B.h, Math.atan2(dx, dz), 2.2, dt); const st = Math.min(d, B.spd * dt); B.x += Math.sin(B.h) * st; B.z += Math.cos(B.h) * st; }
     if (d < (last ? 0.35 : 1.6)) {

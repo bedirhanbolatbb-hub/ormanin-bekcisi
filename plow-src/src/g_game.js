@@ -34,14 +34,14 @@ const GAME = {
   chapter: 1, chapters: {}, totalTime: 0, finishT: 0, _cs: null,
   L(key) { return this.lv[key] || (this.lv[key] = [0, 0, 0]); },
   stats(key) {
-    const T = TIER[key], L = this.L(key);
-    return { w: T.base[0] * (1 + 0.14 * L[0]), cap: T.base[1], spd: T.base[2] * (1 + 0.08 * L[1]), pay: T.pay * (1 + 0.35 * L[2]), kind: T.kind };
+    const T = TIER[key], L = this.L(key), tb = TURBO.t > 0;   // (the daily TURBO gift: double coins, a bit quicker)
+    return { w: T.base[0] * (1 + 0.14 * L[0]), cap: T.base[1], spd: T.base[2] * (1 + 0.08 * L[1]) * (tb ? 1.15 : 1), pay: T.pay * (1 + 0.35 * L[2]) * (tb ? 2 : 1), kind: T.kind };
   },
   upCost(key, i) {
     const T = TIER[key], L = this.L(key)[i]; if (L >= upMax(key, i)) return Infinity;
     return Math.max(3, niceNum(T.up * UPK[L] * UPM[i]));
   },
-  price() { return this.stats(PL.tool).pay * STORM.mult * (CH.payMul || 1) * (this.boost || 1); },
+  price() { return this.stats(PL.tool).pay * STORM.mult * DSTORM.mult() * (CH.payMul || 1) * (this.boost || 1); },
   earn(v) { this.coins += v; this.earned += v; },
   spend(v) { if (this.coins + 1e-6 < v) return false; this.coins -= v; return true; },
   // the next machine after the one you use (machines you already own come back for free, e.g. when you replay a chapter)
@@ -122,6 +122,8 @@ const GAME = {
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 8; this.save(); }
     STORM.update(dt);
     STREAK.update(dt);
+    DSTORM.update(dt);
+    TURBO.update(dt);
   },
   completeArea(a, silent) {
     a.done = true; this.done[a.key] = 1;
@@ -371,12 +373,18 @@ const DAILY = {
   },
   num(s) { const m = /^(\d+)-(\d+)-(\d+)$/.exec(s || ''); return m ? Math.round(new Date(+m[1], +m[2] - 1, +m[3]).getTime() / 86400000) : -1; },
   // the gift is paid (and saved) the moment the day is counted; it flies into your counter a little later
-  pay(run) { const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run)); this.v = (this.v || 0) + v; GAME.earn(v); UI.pending += v; GAME.save(); },
+  // (and a few minutes of TURBO: 3 minutes, one more for every day in a row, up to 8)
+  pay(run) {
+    const v = niceNum((CH.reward || 2000) * (0.15 + 0.1 * run)); this.v = (this.v || 0) + v; GAME.earn(v); UI.pending += v;
+    this.tb = 60 * Math.min(8, 2 + run); TURBO.add(this.tb);
+    GAME.save(); PCLOG.ev('pc_daily', { run: String(run) });
+  },
   give(run) {
     const v = this.v || 0; if (!v) return; this.v = 0;
     for (let i = 0; i < 18; i++) setTimeout(() => UI.flyCoin(null, v / 18), 300 + i * 45);
-    UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins' + (run > 1 ? ' \u00b7 day ' + run + ' in a row' : ''), 'star', 3.0);
+    UI.banner('DAILY GIFT!', '+' + fmt(v) + ' coins + TURBO ' + Math.round((this.tb || 180) / 60) + ' min', 'turbo', 3.2);
     AUD.bigWin && AUD.bigWin(); GAME.save();
+    setTimeout(() => UI.hint(run > 1 ? 'Day ' + run + ' in a row! TURBO: double coins while you plow' : 'TURBO: double coins while you plow!', 4.5), 3400);
   },
 };
 // ---------- snowstorms (endless loop after the street is saved) ----------
@@ -384,6 +392,7 @@ const STORM = {
   phase: 'idle', t: 0, next: 45, mult: 1, multT: 0, acc: 0,
   update(dt) {
     if (!GAME.ended) return;
+    if (DSTORM.st === 'fall' || DSTORM.st === 'rush') return;   // (the daily storm has the sky now)
     if (this.phase === 'idle') {
       this.next -= dt;
       if (this.next <= 0) { this.phase = 'storm'; this.t = 0; this.acc = 0; UI.banner('SNOWSTORM!', 'Fresh snow is falling...', 'star', 2.6); AUD.firework && AUD.thump(); }

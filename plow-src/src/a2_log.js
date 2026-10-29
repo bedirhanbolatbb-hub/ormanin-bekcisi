@@ -64,7 +64,7 @@ const PCLOG = (function () {
     wrap(PL, 'unstick', () => { if (unst++ < 3) ev('pc_unstick', { x: String(Math.round(PL.x)), z: String(Math.round(PL.z)) }); });
     // how smooth it runs on this device (once, after half a minute of play)
     let n = 0, fps0 = 0, fpsT = 0;
-    const meter = () => { if (document.hidden) { fps0 = 0; return requestAnimationFrame(meter); } const now = performance.now(); if (!fps0) fps0 = now; n++; if (now - fps0 >= 10000) { if (fpsT++ === 2) { ev('pc_fps', { fps: String(Math.round(n * 1000 / (now - fps0))) }); return; } n = 0; fps0 = now; } requestAnimationFrame(meter); };
+    const meter = () => { if (document.hidden) { fps0 = 0; return requestAnimationFrame(meter); } const now = performance.now(); if (!fps0) fps0 = now; n++; if (now - fps0 >= 10000) { if (fpsT++ === 2) { let q = '?'; try { q = String(QUAL.tier); } catch (_) { } ev('pc_fps', { fps: String(Math.round(n * 1000 / (now - fps0))), q }); return; } n = 0; fps0 = now; } requestAnimationFrame(meter); };
     requestAnimationFrame(meter);
     setInterval(() => { if (!document.hidden) { aliveT++; if (aliveT % 120 === 0) ev('pc_alive'); } }, 1000);
     const bye = () => { if (hid) return; hid = true; ev('pc_quit', { jobs: String(Object.keys(GAME.done).length), ended: GAME.ended ? '1' : '0' }); };

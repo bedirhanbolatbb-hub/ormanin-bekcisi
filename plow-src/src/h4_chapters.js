@@ -68,7 +68,8 @@ const CHUI = {
     const mm = Math.floor(GAME.time / 60), ss = String(Math.floor(GAME.time % 60)).padStart(2, '0');
     const nextHtml = next ? `<div class="chnext"><div class="chico sm">${CH_ICONS[next.key] || ''}</div><div><b>Next: ${next.name}</b><span>${next.tag}</span></div></div>`
       : `<div class="chnext"><div><b>You plowed every town!</b><span>More chapters are on the way. Keep plowing the storms for coins</span></div></div>`;
-    const comeBack = '<div class="chback">Come back tomorrow for a daily gift!</div>';
+    // (a reason to come back: today's storm if it still waits, else tomorrow's gift)
+    const comeBack = `<div class="chback">${DSTORM.st === 'ready' ? 'Your Daily Storm is ready: x' + DSTORM.kind().mult + ' coins!' : 'Come back tomorrow: a TURBO gift + a new storm!'}</div>`;
     const el = this._show('chRes', `<div class="rays"></div><div class="chwrap"><div class="chnum">CHAPTER ${C.id}</div><div class="chname">COMPLETE!</div>
       <div class="stars">${[0, 1, 2].map(i => `<div class="st st${i}" id="st${i}">${STAR_SVG(false)}</div>`).join('')}</div>
       <div class="chcard res"><div class="rrow"><span>Time</span><b>${mm}:${ss}</b></div><div class="rrow"><span>Bonus</span><b class="gold" id="resBonus">+0</b></div>${GAME.lastNew && rec.stars > 1 ? '<div class="newbest">NEW BEST!</div>' : ''}${nextHtml}${comeBack}</div>
@@ -96,7 +97,9 @@ const CHUI = {
         <div class="chinfo"><b>${C.id}. ${C.name}</b><span>${C.tag}</span><div class="mstars">${stars}</div></div>
         <div class="chbtn">${!open ? '🔒' : C.id === CH.id ? 'HERE' : 'PLAY'}</div></div>`;
     }).join('') + '<div class="chrow soon"><div class="chinfo"><b>More chapters soon</b><span>New places, new machines</span></div></div>';
-    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div><div class="chlist">${rows}</div><div class="chwarn"></div><div class="chlinks"><button class="chlink" id="chMapX">Close</button>${PCLOG.avail() ? '<button class="chlink sm" id="chPrivLink">Privacy</button>' : ''}</div></div>`);
+    const ds = DSTORM.st === 'ready' ? `<div class="chdaily on">Daily Storm ready: ${DSTORM.kind().name} x${DSTORM.kind().mult}</div>`
+      : DSTORM.st === 'done' ? `<div class="chdaily">Next Daily Storm in ${DSTORM.hoursLeft()} h · ${DSTORM.kind(1).name} x${DSTORM.kind(1).mult}</div>` : '';
+    const el = this._show('chMap', `<div class="chwrap map"><div class="chname sm">CHAPTERS</div>${ds}<div class="chlist">${rows}</div><div class="chwarn"></div><div class="chlinks"><button class="chlink" id="chMapX">Close</button>${PCLOG.avail() ? '<button class="chlink sm" id="chPrivLink">Privacy</button>' : ''}</div></div>`);
     { const p = $('chPrivLink'); if (p) p.onpointerdown = (e) => { e.stopPropagation(); AUD.click(); this.privacy('map'); }; }
     // (a long list: start with the chapter you are in shown in the middle)
     { const L = el.querySelector('.chlist'), cur = el.querySelector('.chrow.cur'); if (L && cur) L.scrollTop = Math.max(0, cur.offsetTop - L.offsetTop - (L.clientHeight - cur.offsetHeight) / 2); }

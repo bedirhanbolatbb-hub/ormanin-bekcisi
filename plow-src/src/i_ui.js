@@ -164,6 +164,8 @@ const UI = {
     let f = 1, lab = '';
     if (g.a) { const a = WORLD.areaByKey[g.a]; f = a.done ? 1 : Math.min(1, SNOW.prog(a) / doneAt(a)); lab = Math.floor(f * 100) + '%'; }
     else if (g.tool) { const c = TIER[g.tool].cost; f = clamp(shown / c, 0, 1); lab = fmt(Math.min(shown, c)) + '/' + fmt(c); }
+    else if (DSTORM.st === 'rush') { const K = DSTORM.kind(); f = DSTORM.t / K.dur; lab = 'x' + K.mult + ' ' + Math.ceil(DSTORM.t) + 's'; }
+    else if (DSTORM.st === 'fall') { f = DSTORM.t / DSTORM.FALL; lab = 'storm'; }
     else if (STORM.phase === 'bonus') { f = STORM.multT / 90; lab = 'x2 ' + Math.ceil(STORM.multT) + 's'; }
     else if (STORM.phase === 'storm') { f = STORM.t / 12; lab = 'storm'; }
     else { lab = '★'; }
@@ -205,16 +207,17 @@ const UI = {
     const el = $('loadTag'); if (el) { el.classList.remove('paid'); void el.offsetWidth; el.classList.add('paid'); }
   },
   onUpgrade(i) { const b = this.upBtns[i]; b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); },
-  // countdown pill (chapter twists like "beat the bus"): sec=null hides it. mode: '' | 'good' | 'late'
+  // countdown pill (chapter twists like "beat the bus"): sec=null hides it.
+  // mode: '' (red and ticking in the last 10 seconds) | 'calm' (a plain countdown, no alarm) | 'good' | 'late' | 'go'
   timer(sec, ico, sub, mode) {
     const el = $('timer');
-    if (sec === null) { if (el._on) { el.classList.remove('on', 'warn', 'good', 'late'); el._on = 0; el._t = null; } return; }
+    if (sec === null) { if (el._on) { el.classList.remove('on', 'warn', 'good', 'late', 'go'); el._on = 0; el._t = null; } return; }
     if (!el._on) { el.classList.add('on'); el._on = 1; }
     if (el._ico !== ico) { el.querySelector('.ti-ico').innerHTML = ICONS[ico] || ICONS.star; el._ico = ico; }
     const t = Math.max(0, Math.ceil(sec)), txt = typeof sec === 'string' ? sec : Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     if (el._t !== txt) { $('timerTxt').textContent = txt; el._t = txt; if (!mode && typeof sec === 'number' && sec > 0 && sec <= 10) AUD.tick(sec <= 5); }
     if (el._sub !== sub) { $('timerSub').textContent = sub || ''; el._sub = sub; }
-    el.classList.toggle('warn', !mode && typeof sec === 'number' && sec <= 10); el.classList.toggle('good', mode === 'good'); el.classList.toggle('late', mode === 'late');
+    el.classList.toggle('warn', !mode && typeof sec === 'number' && sec <= 10); el.classList.toggle('good', mode === 'good'); el.classList.toggle('late', mode === 'late'); el.classList.toggle('go', mode === 'go');
   },
   // little route bar in the countdown pill: where the bus is, where you are (0..1 along the route)
   timerRoute(fb, fm) {

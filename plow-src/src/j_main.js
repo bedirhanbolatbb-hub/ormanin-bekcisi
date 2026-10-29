@@ -452,6 +452,7 @@ async function boot() {
   AUD.song = CH.music ? CH.music() : null;
   FX.init(scene);
   PL.init(scene);
+  TURBO.load();
   GUIDE.init(scene);
   TREASURE.init(scene);
   CREW.init(scene);
@@ -481,12 +482,15 @@ async function boot() {
   }
   UI.init();
   CHUI.init();
+  DSTORM.init(); TURBO.ui();
   INPUT.init($('c'));
   if (QS.has('bot')) { BOT.init(); if (QS.has('human')) HUMAN.init(); window.__hold = !QS.has('vid'); }
   lb.style.width = '100%';
   CAM.update(0, true);
   if (!resumed && !QS.has('bot') && !QS.has('nointro')) { CAM.intro = 1; setTimeout(() => CHUI.intro(), 700); }
   onResize(); addEventListener('resize', onResize);
+  // a slow device gets the lighter picture it settled on before (and keeps checking how it runs)
+  QUAL.init();
   // a hidden tab gets no frames, so tell CrazyGames right here that play stopped (frames turn it back on)
   document.addEventListener('visibilitychange', () => { if (document.hidden) { GAME.save(); CG.play(false); } if (AUD.ctx) { if (document.hidden) AUD.ctx.suspend(); else AUD.ctx.resume(); } });
   // warm up shaders
@@ -549,8 +553,10 @@ function frame(now) {
   // you can play the moment the town shows (the chapter card and the fly-in never block): that is gameplay for CrazyGames
   CG.play(!CHUI.open && !CHUI._going && !document.hidden && $('loading').classList.contains('off'));
   if (window.__hold) { last = now; return; }
-  let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const ms = now - last;
+  let dt = Math.min(0.05, ms / 1000); last = now;
   if (dt <= 0) return;
+  QUAL.tick(ms);
   for (let i = 0; i < FAST; i++) step(FAST > 1 ? 1 / 30 : dt);
   SNOW.flush();
   SNOW.uni.uTime.value = now / 1000; SNOW.uni.uPulse.value = 0.5 + 0.5 * Math.sin(now / 260);

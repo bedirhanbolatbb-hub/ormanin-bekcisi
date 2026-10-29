@@ -159,6 +159,8 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #timer.good b{color:#23935a;}
 #timer.late{background:#fff1d6;}
 #timer.late b{color:#e08a00;font-size:20px;}
+#timer.go{background:#e4f0ff;}
+#timer.go b{color:#2a6fd6;font-size:20px;}
 @keyframes tw{50%{transform:translateX(-50%) scale(1.07)}}
 #timer .ti-route{position:relative;width:92px;height:8px;border-radius:4px;background:#e3eaf3;display:none;margin:0 2px;}
 #timer.route .ti-route{display:block;}
@@ -171,6 +173,27 @@ button{font-family:inherit;border:0;cursor:pointer;pointer-events:auto;touch-act
 #income.tick{animation:bump .2s ease-out;}
 #btnMap{position:absolute;left:max(12px,env(safe-area-inset-left));top:calc(max(12px,env(safe-area-inset-top)) + 58px);width:46px;height:46px;border-radius:14px;background:var(--card);box-shadow:0 4px 0 rgba(43,58,85,.15),0 8px 22px rgba(43,58,85,.18);padding:6px;}
 #btnMap svg{width:100%;height:100%;display:block;}
+/* the daily storm button and the turbo gift, under the chapter map button */
+#side{position:absolute;left:max(12px,env(safe-area-inset-left));top:calc(max(12px,env(safe-area-inset-top)) + 118px);display:flex;flex-direction:column;align-items:flex-start;gap:9px;}
+#btnStorm{display:none;align-items:center;gap:8px;padding:5px 15px 5px 5px;border-radius:16px;background:linear-gradient(180deg,#72b6ff,#3a7de0);color:#fff;text-align:left;box-shadow:0 4px 0 #285ead,0 8px 20px rgba(58,125,224,.45);}
+#btnStorm.on{display:flex;}
+#btnStorm.ready{animation:dsp 1.2s infinite;}
+#btnStorm.run{background:linear-gradient(180deg,#ffbe45,#ff8a1e);box-shadow:0 4px 0 #d0600a,0 8px 20px rgba(255,122,26,.45);cursor:default;}
+#btnStorm:active{transform:translateY(3px);}
+#btnStorm .ds-ico{width:40px;height:40px;flex:none;background:rgba(255,255,255,.24);border-radius:12px;padding:3px;}
+#btnStorm .ds-ico svg{width:100%;height:100%;display:block;}
+#btnStorm .ds-txt{display:flex;flex-direction:column;line-height:1.05;}
+#btnStorm b{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:18px;letter-spacing:.3px;text-shadow:0 2px 0 rgba(20,50,110,.3);}
+#btnStorm.run b{text-shadow:0 2px 0 rgba(160,60,0,.35);}
+#btnStorm i{font-style:normal;font-weight:800;font-size:12.5px;opacity:.95;}
+@keyframes dsp{0%,100%{transform:scale(1)}50%{transform:scale(1.06);box-shadow:0 4px 0 #285ead,0 0 0 7px rgba(114,182,255,.42),0 8px 20px rgba(58,125,224,.45)}}
+#turbo{display:none;align-items:center;gap:5px;padding:3px 13px 3px 4px;border-radius:999px;background:linear-gradient(180deg,#fff3c4,#ffd34d);color:#7a4300;box-shadow:0 3px 0 #d69a00,0 6px 14px rgba(255,194,61,.45);}
+#turbo.on{display:flex;}
+#turbo .tb-ico{width:28px;height:28px;flex:none;}
+#turbo .tb-ico svg{width:100%;height:100%;display:block;}
+#turbo b{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:17px;line-height:1;padding-top:2px;white-space:nowrap;}
+.chdaily{margin-top:8px;font-weight:800;font-size:14px;color:#2b3a55;background:#e4f0ff;padding:4px 14px;border-radius:999px;text-align:center;}
+.chdaily.on{background:#ffe9b8;color:#7a4300;}
 .chov{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,rgba(43,70,120,.55),rgba(14,22,42,.82));pointer-events:auto;overflow:hidden;}
 .chov.on{display:flex;animation:fadein .35s;}
 .chwrap{position:relative;display:flex;flex-direction:column;align-items:center;width:min(440px,92vw);max-height:96vh;}
@@ -265,6 +288,13 @@ body.privup #chIntro{visibility:hidden;}
   #tools{bottom:auto;top:70px;}
   .tool{width:48px;height:48px;}
   #coinTxt{font-size:25px;}
+  /* phones: lower down the left edge, clear of the hints and the big banners */
+  #side{top:38%;}
+  #btnStorm{padding:4px 12px 4px 4px;}
+  #btnStorm .ds-ico{width:34px;height:34px;}
+  #btnStorm b{font-size:16px;}
+  #btnStorm i{font-size:11.5px;}
+  #turbo b{font-size:15px;}
 }
 @media (max-width:400px){ #goalNext span{display:none;} }
 /* narrow phones: the school bus clock moves right, clear of the map button */
@@ -298,6 +328,7 @@ body.privup #chIntro{visibility:hidden;}
   <div id="ups"></div>
   <div id="loadTag"><span class="ci"></span><div class="lb"><i></i></div><b></b></div>
   <div id="streak"><div class="in"><span class="fl"></span><b>x2</b><div class="hb"><i></i></div></div></div>
+  <div id="side"><button id="btnStorm" aria-label="daily storm"><span class="ds-ico"></span><span class="ds-txt"><b>DAILY STORM</b><i></i></span></button><div id="turbo"><span class="tb-ico"></span><b></b></div></div>
   <div id="hint"></div>
   <div id="toast"></div>
   <div id="banner"></div>
