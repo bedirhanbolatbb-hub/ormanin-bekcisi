@@ -159,6 +159,7 @@ const GAME = {
     rec.stars = Math.max(rec.stars, st); rec.best = rec.best ? Math.min(rec.best, this.time) : this.time; rec.done = 1;
     // the chapter bonus is paid (and saved) right here; the results screen only shows it flying into your counter
     const bonus = niceNum((CH.reward || 2000) * st); this.lastBonus = bonus; this.earn(bonus); UI.pending += bonus;
+    DSTORM.e0 += bonus;   // (a daily storm still on counts only what its snow paid, not the chapter bonus)
     if (CH.finale) { try { CH.finale(); } catch (e) { console.warn('finale', e); } }
     if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam') || QS.has('vid'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
     this.finishT = CH.finaleDelay || 5.5;

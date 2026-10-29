@@ -142,6 +142,7 @@ const CHUI = {
   // snowy wipe to another chapter
   go(id) {
     if (this._going) return; this._going = true; CG.play(false);
+    DSTORM.cut();
     const f = $('chFade'), C = chapterById(id);
     f.innerHTML = `<div class="chname sm">Chapter ${id}</div><div class="chname">${C ? C.name : ''}</div>`;
     f.classList.add('on');

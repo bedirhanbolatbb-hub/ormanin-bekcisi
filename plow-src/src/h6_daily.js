@@ -137,6 +137,14 @@ const DSTORM = {
     PCLOG.ev('pc_dstorm', { ph: 'end', c: String(got) });
     GAME.save(); this.ui();
   },
+  // leaving for another chapter while the storm is on: it ends there (what it paid so far still counts in the log)
+  cut() {
+    if (this.st !== 'fall' && this.st !== 'rush') return;
+    const got = Math.max(0, Math.round(GAME.earned - this.e0));
+    this.st = 'done'; this.t = 0; this._calm = 1;
+    PCLOG.ev('pc_dstorm', { ph: 'cut', c: String(got) });
+    this.ui();
+  },
   mult() { return this.st === 'rush' ? this.kind().mult : 1; },
   // hours until the next storm (it comes with the new day on this device)
   hoursLeft() { const d = new Date(), m = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); return Math.max(1, Math.ceil((m - d) / 3600000)); },

@@ -425,7 +425,7 @@ addEventListener('wheel', e => { if (!(e.target && e.target.closest && e.target.
 // ---------- player log (ByteBrew): where players stop, what goes wrong. No names, emails or anything typed. ----------
 // Off in tests (bot / nolog / localhost / file), and when the player switches it off (Privacy card, in the chapter map).
 const PCLOG = (function () {
-  const ID = 'HG2tnhs8A', KEY = 'RfKAdPyMuIAyddUs05TnQW5uBBfGgJweyT66irHFQsM7YzhCNgRJN6PCNhl3dRKE', VER = 'v5.2';
+  const ID = 'HG2tnhs8A', KEY = 'RfKAdPyMuIAyddUs05TnQW5uBBfGgJweyT66irHFQsM7YzhCNgRJN6PCNhl3dRKE', VER = 'v5.3';
   const OFFK = 'pc_nostats', SEENK = 'pc_privseen';
   let ok = false, errs = 0, hid = false, started = false, aliveT = 0, unst = 0, handlers = false;
   const t0 = Date.now();
@@ -491,7 +491,7 @@ const PCLOG = (function () {
     const meter = () => { if (document.hidden) { fps0 = 0; return requestAnimationFrame(meter); } const now = performance.now(); if (!fps0) fps0 = now; n++; if (now - fps0 >= 10000) { if (fpsT++ === 2) { let q = '?'; try { q = String(QUAL.tier); } catch (_) { } ev('pc_fps', { fps: String(Math.round(n * 1000 / (now - fps0))), q }); return; } n = 0; fps0 = now; } requestAnimationFrame(meter); };
     requestAnimationFrame(meter);
     setInterval(() => { if (!document.hidden) { aliveT++; if (aliveT % 120 === 0) ev('pc_alive'); } }, 1000);
-    const bye = () => { if (hid) return; hid = true; ev('pc_quit', { jobs: String(Object.keys(GAME.done).length), ended: GAME.ended ? '1' : '0' }); };
+    const bye = () => { if (hid) return; hid = true; let ds = '?'; try { ds = DSTORM.st; } catch (_) { } ev('pc_quit', { jobs: String(Object.keys(GAME.done).length), ended: GAME.ended ? '1' : '0', ds }); };
     addEventListener('pagehide', bye);
     document.addEventListener('visibilitychange', () => { if (document.hidden) bye(); else hid = false; });
   }
@@ -5379,6 +5379,7 @@ const GAME = {
     rec.stars = Math.max(rec.stars, st); rec.best = rec.best ? Math.min(rec.best, this.time) : this.time; rec.done = 1;
     // the chapter bonus is paid (and saved) right here; the results screen only shows it flying into your counter
     const bonus = niceNum((CH.reward || 2000) * st); this.lastBonus = bonus; this.earn(bonus); UI.pending += bonus;
+    DSTORM.e0 += bonus;   // (a daily storm still on counts only what its snow paid, not the chapter bonus)
     if (CH.finale) { try { CH.finale(); } catch (e) { console.warn('finale', e); } }
     if (CH.finaleCam && (!QS.has('bot') || QS.has('fcam') || QS.has('vid'))) CAM.show = { from: CH.finaleCam.from, look: CH.finaleCam.look };
     this.finishT = CH.finaleDelay || 5.5;
@@ -6093,6 +6094,7 @@ const CHUI = {
   // snowy wipe to another chapter
   go(id) {
     if (this._going) return; this._going = true; CG.play(false);
+    DSTORM.cut();
     const f = $('chFade'), C = chapterById(id);
     f.innerHTML = `<div class="chname sm">Chapter ${id}</div><div class="chname">${C ? C.name : ''}</div>`;
     f.classList.add('on');
@@ -6342,6 +6344,14 @@ const DSTORM = {
     later(4.2, () => UI.toast('Come back tomorrow: a new storm and a TURBO gift!'));
     PCLOG.ev('pc_dstorm', { ph: 'end', c: String(got) });
     GAME.save(); this.ui();
+  },
+  // leaving for another chapter while the storm is on: it ends there (what it paid so far still counts in the log)
+  cut() {
+    if (this.st !== 'fall' && this.st !== 'rush') return;
+    const got = Math.max(0, Math.round(GAME.earned - this.e0));
+    this.st = 'done'; this.t = 0; this._calm = 1;
+    PCLOG.ev('pc_dstorm', { ph: 'cut', c: String(got) });
+    this.ui();
   },
   mult() { return this.st === 'rush' ? this.kind().mult : 1; },
   // hours until the next storm (it comes with the new day on this device)
@@ -7299,13 +7309,13 @@ async function loadArt(name) {
   let buf = null;
   try {
     if ('DecompressionStream' in window) {
-      const r = await fetch('assets/' + name + '.glb.gz?v=v5.2'); if (!r.ok) throw new Error('gz ' + r.status);
+      const r = await fetch('assets/' + name + '.glb.gz?v=v5.3'); if (!r.ok) throw new Error('gz ' + r.status);
       const ab = await r.arrayBuffer(); const u = new Uint8Array(ab);
       if (u[0] === 0x1f && u[1] === 0x8b) { const ds = new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip')); buf = await new Response(ds).arrayBuffer(); }
       else if (u[0] === 0x67 && u[1] === 0x6c) buf = ab; // already decoded by server
     }
   } catch (e) { console.warn('gz path failed', e); buf = null; }
-  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v5.2'); buf = await r.arrayBuffer(); }
+  if (!buf) { const r = await fetch('assets/' + name + '.glb?v=v5.3'); buf = await r.arrayBuffer(); }
   return new Promise((res, rej) => { const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder); L.parse(buf, '', res, rej); });
 }
 async function boot() {
